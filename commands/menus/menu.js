@@ -1487,16 +1487,16 @@ case 1: {
   const ramUsage = getRAMUsage();
   
   // ========== UPDATED MENU WITH NEW BOX STYLE ==========
-  let infoSection = `╭─⌈ \`${currentBotName}\` ⌋
-┃ Owner: ${ownerName}
-┃ Mode: ${botMode}
-┃ Prefix: [ ${botPrefix} ]
-┃ Version: ${botVersion}
-┃ Platform: ${deploymentPlatform.icon} ${deploymentPlatform.name}
-┃ Status: ${deploymentPlatform.status}
-┃ Uptime: ${formatUptime(process.uptime())}
-┃ RAM: ${ramUsage.bar} ${ramUsage.percent}%
-┃ Memory: ${ramUsage.usedMB}MB / ${ramUsage.totalMB}MB
+  let infoSection = `╭─⌈ ${currentBotName} ⌋
+▌ Owner: ${ownerName}
+▌ Mode: ${botMode}
+▌ Prefix: [ ${botPrefix} ]
+▌ Version: ${botVersion}
+▌ Panel: ${deploymentPlatform.name}
+▌ Status: ${deploymentPlatform.status}
+▌ Uptime: ${formatUptime(process.uptime())}
+▌ RAM: ${ramUsage.bar} ${ramUsage.percent}%
+▌ Memory: ${ramUsage.usedMB}MB / ${ramUsage.totalMB}MB
 ╰─⊷`;
 
   // Apply faded effect to the info section
