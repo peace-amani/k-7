@@ -208,7 +208,6 @@ export default {
         sender = cleanJid(sender);
 
         let isAdmin = false;
-        let botIsAdmin = false;
 
         try {
             const groupMetadata = await sock.groupMetadata(chatId);
@@ -216,10 +215,6 @@ export default {
 
             const participant = groupMetadata.participants.find(p => cleanJid(p.id) === cleanSender);
             isAdmin = participant?.admin === 'admin' || participant?.admin === 'superadmin';
-
-            const botJid = cleanJid(sock.user?.id);
-            const botParticipant = groupMetadata.participants.find(p => cleanJid(p.id) === botJid);
-            botIsAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
         } catch {
             return sock.sendMessage(chatId, {
                 text: '❌ Failed to fetch group information.'
@@ -243,12 +238,6 @@ export default {
             if (!mode || !['warn', 'delete', 'kick'].includes(mode)) {
                 return sock.sendMessage(chatId, {
                     text: `╭─⌈ ⚙️ *ANTI-LINK SETUP* ⌋\n│\n├─⊷ *${PREFIX}antilink on warn*\n│  └⊷ Warn senders\n├─⊷ *${PREFIX}antilink on delete*\n│  └⊷ Auto-delete links\n├─⊷ *${PREFIX}antilink on kick*\n│  └⊷ Kick senders\n╰───`
-                }, { quoted: msg });
-            }
-
-            if (!botIsAdmin && (mode === 'delete' || mode === 'kick')) {
-                await sock.sendMessage(chatId, {
-                    text: '⚠️ I need admin permissions for delete/kick modes to work!'
                 }, { quoted: msg });
             }
 
@@ -282,7 +271,6 @@ export default {
                 let statusText = `╭─⌈ 🔗 *ANTI-LINK STATUS* ⌋\n│\n`;
                 statusText += `├─⊷ *Status:* ✅ ENABLED\n`;
                 statusText += `├─⊷ *Mode:* ${gc.mode.toUpperCase()}\n`;
-                statusText += `├─⊷ *Bot admin:* ${botIsAdmin ? '✅' : '❌'}\n`;
                 statusText += `├─⊷ *Admins exempt:* ${gc.exemptAdmins ? 'Yes' : 'No'}\n`;
                 statusText += `├─⊷ *Allowed links:* ${gc.exemptLinks?.length || 0}\n`;
                 statusText += `├─⊷ *Detection:* All message types\n`;
