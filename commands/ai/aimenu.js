@@ -26,12 +26,14 @@ export default {
 │  • blackbox
 │  • chatgpt
 │  • claudeai
+│  • cohere
 │  • copilot
 │  • deepseek
-│  • deepseek+
 │  • flux
+│  • gemini
 │  • gpt
 │  • grok
+│  • groq
 │  • ilama
 │  • metai
 │  • mistral
@@ -39,6 +41,33 @@ export default {
 │  • qwenai
 │  • venice
 │  • wormgpt
+│
+╰─⊷
+
+╭─⊷ *🧠 OPEN SOURCE AI MODELS*
+│
+│  • chatglm
+│  • codellama
+│  • command
+│  • dolphin
+│  • falcon
+│  • internlm
+│  • mixtral
+│  • nemotron
+│  • neural
+│  • nous
+│  • openchat
+│  • openhermes
+│  • orca
+│  • phi
+│  • replitai
+│  • solar
+│  • starcoder
+│  • tinyllama
+│  • vicuna
+│  • wizard
+│  • yi
+│  • zephyr
 │
 ╰─⊷
 

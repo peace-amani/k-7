@@ -190,6 +190,18 @@ export default {
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
     } catch (error) {
+      try {
+        const wolfRes = await axios.get(`https://apis.wolf.space/api/ai/gpt?q=${encodeURIComponent(enhancedPrompt || query)}`, {
+          timeout: 30000,
+          headers: { 'User-Agent': 'WolfBot/1.0', 'Accept': 'application/json' }
+        });
+        const wolfData = wolfRes.data;
+        const wolfText = wolfData?.result || wolfData?.response || wolfData?.answer || wolfData?.text || wolfData?.content;
+        if (wolfText && wolfText.trim()) {
+          await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+          return await sock.sendMessage(jid, { text: `🤖 *GPT AI*\n\n${wolfText.trim()}\n\n🐺 _Powered by WOLF AI_` }, { quoted: m });
+        }
+      } catch {}
       console.error('❌ [GPT-5] ERROR:', error);
       
       let errorMessage = `❌ *GPT-5 ERROR*\n\n`;

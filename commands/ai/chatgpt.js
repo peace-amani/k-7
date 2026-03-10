@@ -1,5 +1,6 @@
 // commands/ai/chatgpt.js
 import fetch from "node-fetch";
+import axios from "axios";
 
 export default {
   name: "chatgpt",
@@ -89,6 +90,23 @@ ${reply}
       await sock.sendMessage(m.key.remoteJid, { text: formattedReply }, { quoted: m });
 
     } catch (err) {
+      try {
+        const endpoints = [
+          `https://apis.wolf.space/api/ai/gpt?q=${encodeURIComponent(query)}`,
+          `https://apis.wolf.space/api/ai/gpt4?q=${encodeURIComponent(query)}`,
+          `https://apis.wolf.space/api/ai/gpt4o?q=${encodeURIComponent(query)}`
+        ];
+        for (const url of endpoints) {
+          const wolfRes = await axios.get(url, { timeout: 25000, headers: { 'User-Agent': 'WolfBot/1.0' } });
+          const wolfData = wolfRes.data;
+          const wolfText = wolfData?.result || wolfData?.response || wolfData?.answer || wolfData?.text;
+          if (wolfText && wolfText.trim()) {
+            return await sock.sendMessage(m.key.remoteJid, {
+              text: `🤖 *ChatGPT Response*\n━━━━━━━━━━━━━━━━━\n${wolfText.trim()}\n━━━━━━━━━━━━━━━━━\n🐺 _Powered by WOLF AI_`
+            }, { quoted: m });
+          }
+        }
+      } catch {}
       console.error("ChatGPT Error:", err);
       await sock.sendMessage(m.key.remoteJid, {
         text: `❌ *ChatGPT Error*\n━━━━━━━━━━━━━━━━━\n${err.message}\n\n*Check:*\n1. OpenAI API key validity\n2. Account balance at platform.openai.com\n3. Network connectivity`

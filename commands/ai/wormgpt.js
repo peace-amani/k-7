@@ -61,6 +61,15 @@ export default {
                     const res = await axios.get(`https://apiskeith.top/ai/gpt5?q=${encodeURIComponent(systemPrompt + '\n\nUser: ' + query)}`, { timeout: 30000 });
                     return res.data?.result || res.data?.response || '';
                 }
+            },
+            {
+                name: 'wolfspace',
+                fn: async () => {
+                    const res = await axios.get(`https://apis.wolf.space/api/ai/wormgpt?q=${encodeURIComponent(systemPrompt + '\n\nUser: ' + query)}`, {
+                        timeout: 30000, headers: { 'User-Agent': 'WolfBot/1.0', 'Accept': 'application/json' }
+                    });
+                    return res.data?.result || res.data?.response || res.data?.answer || res.data?.text || '';
+                }
             }
         ];
 

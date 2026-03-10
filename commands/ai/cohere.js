@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const WOLF_API = 'https://apis.xwolf.space/api/ai/cohere';
+const WOLF_API = 'https://apis.wolf.space/api/ai/cohere';
 
 export default {
   name: 'cohere',

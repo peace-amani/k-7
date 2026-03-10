@@ -26,15 +26,12 @@ export default {
       await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
       const response = await axios({
-        method: 'POST',
-        url: 'https://apis.xwolf.space/api/ai/gemini',
+        method: 'GET',
+        url: `https://apis.wolf.space/api/ai/gemini?q=${encodeURIComponent(query)}`,
         timeout: 30000,
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        data: {
-          prompt: query
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
         }
       });
 

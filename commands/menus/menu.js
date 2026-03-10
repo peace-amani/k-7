@@ -26,6 +26,7 @@ import { getCurrentMenuStyle } from "./menustyle.js";
 import { setLastMenu, getAllFieldsStatus } from "../menus/menuToggles.js";
 import { getBotName as _getBotName } from '../../lib/botname.js';
 import { getPlatformInfo } from '../../lib/platformDetect.js';
+import { getOwnerName as _menuGetOwnerName } from '../../lib/menuHelper.js';
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1742,14 +1743,17 @@ case 1: {
 
 ╭─⊷ *🤖 AI COMMANDS*
 │
-├─⊷ *💬 AI CHAT*
+├─⊷ *💬 MAJOR AI MODELS*
 │  • gpt
 │  • chatgpt
+│  • gemini
+│  • cohere
 │  • copilot
 │  • bing
 │  • bard
 │  • claudeai
 │  • grok
+│  • groq
 │  • blackbox
 │  • mistral
 │  • metai
@@ -1758,8 +1762,21 @@ case 1: {
 │  • ilama
 │  • venice
 │  • wormgpt
-│  • deepseek+
+│  • deepseek
 │  • chatbot
+│
+├─⊷ *🧠 OPEN SOURCE AI*
+│  • falcon     • wizard
+│  • vicuna     • zephyr
+│  • mixtral    • dolphin
+│  • phi        • nous
+│  • openchat   • orca
+│  • codellama  • solar
+│  • starcoder  • yi
+│  • internlm   • chatglm
+│  • nemotron   • neural
+│  • openhermes • command
+│  • tinyllama  • replitai
 │
 ├─⊷ *🎨 AI GENERATION*
 │  • imagine
@@ -2074,7 +2091,7 @@ case 1: {
 │
 ╰─⊷
 
-🐺 *POWERED BY WOLF TECH* 🐺`;
+🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -2285,7 +2302,8 @@ case 2: {
 > • gemini — Google AI
 > • gpt — OpenAI ChatGPT
 > • deepseek — DeepSeek AI
-> • deepseek+ — DeepSeek advanced
+> • groq — Groq ultra-fast AI
+> • mistral — Mistral AI
 > • wolfbot — Wolf AI assistant
 > • analyze — analyze content
 > • suno — Suno AI music
@@ -2376,7 +2394,7 @@ case 2: {
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
 📌 *Available styles: 1-7*
 
-🐺🌕*POWERED BY WOLF TECH*🌕🐺
+🐺🌕*POWERED BY ${_menuGetOwnerName().toUpperCase()} TECH*🌕🐺
 `; 
   await sock.sendMessage(jid, { text }, { quoted: m });
   break;
@@ -3014,23 +3032,28 @@ case 3: {
 │ playlist
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
-│ gpt
-│ chatgpt
-│ copilot
-│ bing
-│ bard
-│ claudeai
-│ grok
-│ blackbox
-│ mistral
-│ metai
-│ perplexity
-│ qwenai
-│ ilama
-│ venice
-│ wormgpt
-│ deepseek+
-│ chatbot
+│ gpt       chatgpt
+│ gemini    cohere
+│ copilot   bing
+│ bard      claudeai
+│ grok      groq
+│ blackbox  mistral
+│ metai     perplexity
+│ qwenai    ilama
+│ venice    wormgpt
+│ deepseek  chatbot
+├─ Open Source AI ─
+│ falcon    wizard
+│ vicuna    zephyr
+│ mixtral   dolphin
+│ phi       nous
+│ openchat  orca
+│ codellama solar
+│ starcoder yi
+│ internlm  chatglm
+│ nemotron  neural
+│ openhermes command
+│ tinyllama replitai
 └───────────────`,
 `┌──⌈ \`AI GENERATION\` ⌋
 │ imagine
@@ -3292,7 +3315,7 @@ case 3: {
 │ comic3d
 │ ephotomenu
 └───────────────`,
-`🐺 *POWERED BY WOLFTECH* 🐺`
+`🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
   ];
 
   const readMoreSep = Array.from({ length: 550 }, (_, i) => ['\u200E','\u200F','\u200B','\u200C','\u200D','\u2060','\uFEFF'][i % 7]).join('');
@@ -4099,7 +4122,7 @@ case 4: {
 │
 ╰─⊷
 
-🐺 *POWERED BY WOLF TECH* 🐺`;
+🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -5746,14 +5769,17 @@ case 5: {
 
 ╭─⊷ *🤖 AI COMMANDS*
 │
-├─⊷ *💬 AI CHAT*
+├─⊷ *💬 MAJOR AI MODELS*
 │  • gpt
 │  • chatgpt
+│  • gemini
+│  • cohere
 │  • copilot
 │  • bing
 │  • bard
 │  • claudeai
 │  • grok
+│  • groq
 │  • blackbox
 │  • mistral
 │  • metai
@@ -5762,8 +5788,21 @@ case 5: {
 │  • ilama
 │  • venice
 │  • wormgpt
-│  • deepseek+
+│  • deepseek
 │  • chatbot
+│
+├─⊷ *🧠 OPEN SOURCE AI*
+│  • falcon     • wizard
+│  • vicuna     • zephyr
+│  • mixtral    • dolphin
+│  • phi        • nous
+│  • openchat   • orca
+│  • codellama  • solar
+│  • starcoder  • yi
+│  • internlm   • chatglm
+│  • nemotron   • neural
+│  • openhermes • command
+│  • tinyllama  • replitai
 │
 ├─⊷ *🎨 AI GENERATION*
 │  • imagine
@@ -6078,7 +6117,7 @@ case 5: {
 │
 ╰─⊷
 
-🐺 *POWERED BY WOLF TECH* 🐺`;
+🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   finalText = createReadMoreEffect(fadedInfoSection, commandsText);
@@ -6747,23 +6786,28 @@ case 6: {
 > │ playlist
 > └───────────────`,
 `> ┌──⌈ \`AI COMMANDS\` ⌋
-> │ gpt
-> │ chatgpt
-> │ copilot
-> │ bing
-> │ bard
-> │ claudeai
-> │ grok
-> │ blackbox
-> │ mistral
-> │ metai
-> │ perplexity
-> │ qwenai
-> │ ilama
-> │ venice
-> │ wormgpt
-> │ deepseek+
-> │ chatbot
+> │ gpt       chatgpt
+> │ gemini    cohere
+> │ copilot   bing
+> │ bard      claudeai
+> │ grok      groq
+> │ blackbox  mistral
+> │ metai     perplexity
+> │ qwenai    ilama
+> │ venice    wormgpt
+> │ deepseek  chatbot
+> ├─ Open Source AI ─
+> │ falcon    wizard
+> │ vicuna    zephyr
+> │ mixtral   dolphin
+> │ phi       nous
+> │ openchat  orca
+> │ codellama solar
+> │ starcoder yi
+> │ internlm  chatglm
+> │ nemotron  neural
+> │ openhermes command
+> │ tinyllama replitai
 > └───────────────`,
 `> ┌──⌈ \`AI GENERATION\` ⌋
 > │ imagine
@@ -7025,7 +7069,7 @@ case 6: {
 > │ comic3d
 > │ ephotomenu
 > └───────────────`,
-`> 🐺 *POWERED BY WOLFTECH* 🐺`
+`> 🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
   ];
 
   // Create the read more separator
@@ -8519,23 +8563,28 @@ case 7: {
 │ playlist
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
-│ gpt
-│ chatgpt
-│ copilot
-│ bing
-│ bard
-│ claudeai
-│ grok
-│ blackbox
-│ mistral
-│ metai
-│ perplexity
-│ qwenai
-│ ilama
-│ venice
-│ wormgpt
-│ deepseek+
-│ chatbot
+│ gpt       chatgpt
+│ gemini    cohere
+│ copilot   bing
+│ bard      claudeai
+│ grok      groq
+│ blackbox  mistral
+│ metai     perplexity
+│ qwenai    ilama
+│ venice    wormgpt
+│ deepseek  chatbot
+├─ Open Source AI ─
+│ falcon    wizard
+│ vicuna    zephyr
+│ mixtral   dolphin
+│ phi       nous
+│ openchat  orca
+│ codellama solar
+│ starcoder yi
+│ internlm  chatglm
+│ nemotron  neural
+│ openhermes command
+│ tinyllama replitai
 └───────────────`,
 `┌──⌈ \`AI GENERATION\` ⌋
 │ imagine
@@ -8797,7 +8846,7 @@ case 7: {
 │ comic3d
 │ ephotomenu
 └───────────────`,
-`🐺 *POWERED BY WOLFTECH* 🐺`
+`🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
   ];
 
   const readMoreSep = Array.from({ length: 550 }, (_, i) => ['\u200E','\u200F','\u200B','\u200C','\u200D','\u2060','\uFEFF'][i % 7]).join('');
