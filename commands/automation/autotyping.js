@@ -6,6 +6,7 @@ const CONFIG_FILE = './data/autotyping/config.json';
 const autoTypingConfig = {
     mode: 'off',
     duration: 10,
+    targetJid: null,
     activeTypers: new Map(),
     botSock: null,
     isHooked: false
@@ -22,6 +23,7 @@ function loadConfig() {
             const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
             autoTypingConfig.mode = data.mode || 'off';
             autoTypingConfig.duration = data.duration || 10;
+            autoTypingConfig.targetJid = data.targetJid || null;
         }
     } catch {}
 }
@@ -29,15 +31,20 @@ function loadConfig() {
 function saveConfig() {
     try {
         ensureDir();
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify({
+        const cfg = {
             mode: autoTypingConfig.mode,
-            duration: autoTypingConfig.duration
-        }, null, 2));
-        supabase.setConfig('autotyping_config', {
-            mode: autoTypingConfig.mode,
-            duration: autoTypingConfig.duration
-        }).catch(() => {});
+            duration: autoTypingConfig.duration,
+            targetJid: autoTypingConfig.targetJid || null
+        };
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+        supabase.setConfig('autotyping_config', cfg).catch(() => {});
     } catch {}
+}
+
+function normalizeToJid(input) {
+    const cleaned = input.replace(/[^0-9]/g, '');
+    if (cleaned.length >= 7) return `${cleaned}@s.whatsapp.net`;
+    return null;
 }
 
 (async () => {
@@ -57,6 +64,7 @@ loadConfig();
 function shouldTypeInChat(chatJid) {
     const mode = autoTypingConfig.mode;
     if (mode === 'off') return false;
+    if (mode === 'single') return chatJid === autoTypingConfig.targetJid;
     const isGroup = chatJid.endsWith('@g.us');
     if (mode === 'both') return true;
     if (mode === 'groups' && isGroup) return true;
@@ -155,9 +163,9 @@ class AutoTypingManager {
 export default {
     name: "autotyping",
     alias: ["autotype", "fake", "typingsim", "typingtoggle", "atype", "typingmode", "typing"],
-    desc: "Toggle auto fake typing/recording indicator",
+    desc: "Toggle auto fake typing indicator — can target a specific chat",
     category: "Owner",
-    usage: ".autotyping [dm|groups|both|off|status]",
+    usage: ".autotyping [dm|groups|both|off|status|<number>|<jid>]",
 
     async execute(sock, m, args, PREFIX, extra) {
         try {
@@ -176,7 +184,7 @@ export default {
                 }, { quoted: m });
             }
 
-            const sub = (args[0] || '').toLowerCase();
+            const sub = (args[0] || '').toLowerCase().trim();
 
             if (!sub || sub === 'status' || sub === 'info') {
                 const mode = autoTypingConfig.mode;
@@ -184,46 +192,51 @@ export default {
                     off: '❌ OFF',
                     dm: '💬 DMs only',
                     groups: '👥 Groups only',
-                    both: '🌐 DMs + Groups'
+                    both: '🌐 DMs + Groups',
+                    single: `🎯 Single chat: ${autoTypingConfig.targetJid || 'none'}`
                 };
 
                 return sock.sendMessage(targetJid, {
-                    text: `╭─⌈ 🤖 *AUTO-TYPING* ⌋\n│\n│ Mode: ${modeLabels[mode] || mode}\n│ Duration: ${autoTypingConfig.duration}s\n│ Active: ${autoTypingConfig.activeTypers.size}\n│\n├─⊷ *${PREFIX}autotyping dm*\n│  └⊷ DMs only\n├─⊷ *${PREFIX}autotyping groups*\n│  └⊷ Groups only\n├─⊷ *${PREFIX}autotyping both*\n│  └⊷ Both DMs & groups\n├─⊷ *${PREFIX}autotyping off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autotyping <1-60>*\n│  └⊷ Set duration\n╰───`
+                    text: `╭─⌈ 🤖 *AUTO-TYPING* ⌋\n│\n│ Mode: ${modeLabels[mode] || mode}\n│ Duration: ${autoTypingConfig.duration}s\n│ Active: ${autoTypingConfig.activeTypers.size}\n│\n├─⊷ *${PREFIX}autotyping <number>*\n│  └⊷ Type only in that person's DM\n│  └⊷ e.g. ${PREFIX}autotyping 254703397679\n├─⊷ *${PREFIX}autotyping dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autotyping groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autotyping both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autotyping off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autotyping <1-60>*\n│  └⊷ Set duration\n╰───`
                 }, { quoted: m });
             }
 
             if (['dm', 'dms', 'private'].includes(sub)) {
                 autoTypingConfig.mode = 'dm';
+                autoTypingConfig.targetJid = null;
                 saveConfig();
                 AutoTypingManager.clearAllTypers();
                 return sock.sendMessage(targetJid, {
-                    text: `✅ *Auto-Typing: DMs Only*\n\nBot will show typing indicator in private messages only.\nDuration: ${autoTypingConfig.duration}s`
+                    text: `✅ *Auto-Typing: DMs Only*\n\nTyping indicator will show in all private chats.\nDuration: ${autoTypingConfig.duration}s`
                 }, { quoted: m });
             }
 
             if (['groups', 'group', 'gc'].includes(sub)) {
                 autoTypingConfig.mode = 'groups';
+                autoTypingConfig.targetJid = null;
                 saveConfig();
                 AutoTypingManager.clearAllTypers();
                 return sock.sendMessage(targetJid, {
-                    text: `✅ *Auto-Typing: Groups Only*\n\nBot will show typing indicator in group chats only.\nDuration: ${autoTypingConfig.duration}s`
+                    text: `✅ *Auto-Typing: Groups Only*\n\nTyping indicator will show in all group chats.\nDuration: ${autoTypingConfig.duration}s`
                 }, { quoted: m });
             }
 
             if (['both', 'all', 'on', 'enable'].includes(sub)) {
                 autoTypingConfig.mode = 'both';
+                autoTypingConfig.targetJid = null;
                 saveConfig();
                 return sock.sendMessage(targetJid, {
-                    text: `✅ *Auto-Typing: DMs + Groups*\n\nBot will show typing indicator in all chats.\nDuration: ${autoTypingConfig.duration}s`
+                    text: `✅ *Auto-Typing: DMs + Groups*\n\nTyping indicator will show in all chats.\nDuration: ${autoTypingConfig.duration}s`
                 }, { quoted: m });
             }
 
             if (['off', 'disable', 'stop'].includes(sub)) {
                 autoTypingConfig.mode = 'off';
+                autoTypingConfig.targetJid = null;
                 saveConfig();
                 AutoTypingManager.clearAllTypers();
                 return sock.sendMessage(targetJid, {
-                    text: `❌ *Auto-Typing Disabled*\n\nBot will no longer show typing indicator.`
+                    text: `❌ *Auto-Typing Disabled*\n\nTyping indicator is now off for all chats.`
                 }, { quoted: m });
             }
 
@@ -232,12 +245,24 @@ export default {
                 autoTypingConfig.duration = duration;
                 saveConfig();
                 return sock.sendMessage(targetJid, {
-                    text: `✅ *Duration set to ${duration}s*\n\nCurrent mode: ${autoTypingConfig.mode}`
+                    text: `✅ *Duration set to ${duration}s*\n\nCurrent mode: ${autoTypingConfig.mode}${autoTypingConfig.targetJid ? `\nTarget: ${autoTypingConfig.targetJid}` : ''}`
+                }, { quoted: m });
+            }
+
+            const inputJid = args[0].includes('@') ? args[0].trim() : normalizeToJid(args[0]);
+            if (inputJid) {
+                autoTypingConfig.mode = 'single';
+                autoTypingConfig.targetJid = inputJid;
+                saveConfig();
+                AutoTypingManager.clearAllTypers();
+                const displayNum = inputJid.split('@')[0];
+                return sock.sendMessage(targetJid, {
+                    text: `✅ *Auto-Typing: Single Chat*\n\n🎯 Target: *+${displayNum}*\n⏱️ Duration: ${autoTypingConfig.duration}s\n\nTyping will only be simulated in that person's DM.\n\n• Change target: \`${PREFIX}autotyping <new_number>\`\n• Disable: \`${PREFIX}autotyping off\``
                 }, { quoted: m });
             }
 
             return sock.sendMessage(targetJid, {
-                text: `╭─⌈ 🤖 *AUTO-TYPING* ⌋\n│\n├─⊷ *${PREFIX}autotyping dm*\n│  └⊷ DMs only\n├─⊷ *${PREFIX}autotyping groups*\n│  └⊷ Groups only\n├─⊷ *${PREFIX}autotyping both*\n│  └⊷ Both DMs & groups\n├─⊷ *${PREFIX}autotyping off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autotyping <1-60>*\n│  └⊷ Set duration\n╰───`
+                text: `╭─⌈ 🤖 *AUTO-TYPING* ⌋\n│\n├─⊷ *${PREFIX}autotyping <number>*\n│  └⊷ Target one specific chat\n│  └⊷ e.g. ${PREFIX}autotyping 254703397679\n├─⊷ *${PREFIX}autotyping dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autotyping groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autotyping both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autotyping off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autotyping <1-60>*\n│  └⊷ Set duration\n╰───`
             }, { quoted: m });
 
         } catch (err) {
