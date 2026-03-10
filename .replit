@@ -1,4 +1,4 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-18"]
 [agent]
 expertMode = true
 
@@ -27,4 +27,4 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node --no-warnings index.js"
+args = "node --no-warnings --experimental-global-webcrypto index.js"
