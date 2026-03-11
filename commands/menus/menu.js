@@ -1547,6 +1547,7 @@ case 1: {
 │  • antiviewonce
 │  • antibadword
 │  • antigroupcall
+│  • antispam
 │
 ├─⊷ *📊 GROUP INFO & TOOLS*
 │  • groupinfo
@@ -1738,6 +1739,9 @@ case 1: {
 │  • ytvdoc
 │  • videodl
 │  • playlist
+│  • xvideos
+│  • xnxx
+│  • mediafire
 │
 ╰─⊷
 
@@ -2212,6 +2216,7 @@ case 2: {
 > • antigrouplink — block group links
 > • antibadword — filter bad words
 > • antigroupcall — block group calls
+> • antispam — detect spam messages
 > • addbadword — add banned word
 > • removebadword — remove banned word
 > • listbadword — list banned words
@@ -2299,6 +2304,9 @@ case 2: {
 > • facebook — Facebook downloader
 > • snapchat — Snapchat downloader
 > • apk — APK downloader
+> • xvideos — xvideos downloader
+> • xnxx — xnxx downloader
+> • mediafire — mediafire downloader
 > • gemini — Google AI
 > • gpt — OpenAI ChatGPT
 > • deepseek — DeepSeek AI
@@ -2863,6 +2871,7 @@ case 3: {
 │ antiviewonce
 │ antibadword
 │ antigroupcall
+│ antispam
 └───────────────`,
 `┌──⌈ \`GROUP INFO & TOOLS\` ⌋
 │ groupinfo
@@ -3030,6 +3039,9 @@ case 3: {
 │ ytvdoc
 │ videodl
 │ playlist
+│ xvideos
+│ xnxx
+│ mediafire
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
 │ gpt       chatgpt
@@ -3820,6 +3832,7 @@ case 4: {
 │  • antigrouplink
 │  • antibadword
 │  • antigroupcall
+│  • antispam
 │
 ├─⊷ *📊 GROUP INFO & TOOLS*
 │  • groupinfo
@@ -3943,6 +3956,9 @@ case 4: {
 │  • facebook
 │  • snapchat
 │  • apk
+│  • xvideos
+│  • xnxx
+│  • mediafire
 │
 ├─⊷ *🎨 AI GENERATION*
 │  • gpt
@@ -5573,6 +5589,7 @@ case 5: {
 │  • antiviewonce
 │  • antibadword
 │  • antigroupcall
+│  • antispam
 │
 ├─⊷ *📊 GROUP INFO & TOOLS*
 │  • groupinfo
@@ -5764,6 +5781,9 @@ case 5: {
 │  • ytvdoc
 │  • videodl
 │  • playlist
+│  • xvideos
+│  • xnxx
+│  • mediafire
 │
 ╰─⊷
 
@@ -6617,6 +6637,7 @@ case 6: {
 > │ antiviewonce
 > │ antibadword
 > │ antigroupcall
+> │ antispam
 > └───────────────`,
 `> ┌──⌈ \`GROUP INFO & TOOLS\` ⌋
 > │ groupinfo
@@ -6784,6 +6805,9 @@ case 6: {
 > │ ytvdoc
 > │ videodl
 > │ playlist
+> │ xvideos
+> │ xnxx
+> │ mediafire
 > └───────────────`,
 `> ┌──⌈ \`AI COMMANDS\` ⌋
 > │ gpt       chatgpt
@@ -8394,6 +8418,7 @@ case 7: {
 │ antiviewonce
 │ antibadword
 │ antigroupcall
+│ antispam
 └───────────────`,
 `┌──⌈ \`GROUP INFO & TOOLS\` ⌋
 │ groupinfo
@@ -8561,6 +8586,9 @@ case 7: {
 │ ytvdoc
 │ videodl
 │ playlist
+│ xvideos
+│ xnxx
+│ mediafire
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
 │ gpt       chatgpt
