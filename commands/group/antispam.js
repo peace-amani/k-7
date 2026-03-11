@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getBotName } from '../../lib/botname.js';
 
 const _requireAs = createRequire(import.meta.url);
 let giftedBtnsAs;
@@ -91,10 +91,10 @@ const antispamCommand = {
     name: 'antispam',
     aliases: ['spamfilter', 'antispamfilter'],
     category: 'group',
-    desc: 'Detect & auto-action repeated consecutive messages. Modes: warn or block.',
+    desc: 'Detect & auto-action repeated consecutive messages in groups or DMs.',
     usage: '.antispam on warn | .antispam on block | .antispam off | .antispam status | .antispam threshold <number>',
-    groupOnly: true,
-    adminOnly: true,
+    groupOnly: false,
+    adminOnly: false,
 
     async run({ sock, msg, args, chatJid, senderJid, extra, reply }) {
         const config = getConfig();
@@ -132,18 +132,24 @@ const antispamCommand = {
             }
 
             await reply(
-                `╭─⌈ 🚫 *ANTI-SPAM SYSTEM* ⌋\n` +
+                `╭─⌈ 🚫 *ANTI-SPAM* ⌋\n` +
+                `│\n` +
+                `├─⊷ *${prefix}antispam on warn*\n` +
+                `│  └⊷ Enable — warn spammers\n` +
+                `├─⊷ *${prefix}antispam on block*\n` +
+                `│  └⊷ Enable — block & remove spammers\n` +
+                `├─⊷ *${prefix}antispam off*\n` +
+                `│  └⊷ Disable spam detection\n` +
+                `├─⊷ *${prefix}antispam threshold <1-10>*\n` +
+                `│  └⊷ Set repeated msg trigger count\n` +
+                `├─⊷ *${prefix}antispam reset @user*\n` +
+                `│  └⊷ Clear a user's spam record\n` +
+                `│\n` +
                 `├─⊷ 📊 *Status:* ${status}\n` +
                 `├─⊷ 🔧 *Threshold:* ${threshold} repeated msgs\n` +
-                `├─⊷ ⏱️ *Window:* 10 seconds\n` +
+                `├─⊷ ⏱️ *Window:* 10s\n` +
                 `│\n` +
-                `├─⊷ 📝 *Commands:*\n` +
-                `│  ${prefix}antispam on warn\n` +
-                `│  ${prefix}antispam on block\n` +
-                `│  ${prefix}antispam off\n` +
-                `│  ${prefix}antispam threshold <1-10>\n` +
-                `│  ${prefix}antispam reset @user\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
             );
             return;
         }

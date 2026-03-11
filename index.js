@@ -5374,8 +5374,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
                 const _asJid = msg.key.remoteJid;
-                if (_asJid.endsWith('@g.us') && antispamEnabled(_asJid)) {
-                    const _asSenderJid = msg.key.participant || _asJid;
+                if (antispamEnabled(_asJid)) {
+                    const _asIsGroup = _asJid.endsWith('@g.us');
+                    const _asSenderJid = _asIsGroup ? (msg.key.participant || _asJid) : _asJid;
                     const _asIsOwner = jidManager.isOwner(msg);
                     if (!_asIsOwner) {
                         const _asMsg = msg.message;
@@ -5390,17 +5391,19 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                 if (_asAction === 'block') {
                                     try {
                                         await sock.updateBlockStatus(_asSenderJid, 'block');
-                                        await sock.groupParticipantsUpdate(_asJid, [_asSenderJid], 'remove');
-                                        await sock.sendMessage(_asJid, {
-                                            text: `🚫 *Anti-Spam:* @${_asSenderNum} has been *blocked & removed* for spamming repeated messages.`,
-                                            mentions: [_asSenderJid]
-                                        });
+                                        if (_asIsGroup) {
+                                            await sock.groupParticipantsUpdate(_asJid, [_asSenderJid], 'remove');
+                                            await sock.sendMessage(_asJid, {
+                                                text: `🚫 *Anti-Spam:* @${_asSenderNum} has been *blocked & removed* for spamming.`,
+                                                mentions: [_asSenderJid]
+                                            });
+                                        }
                                     } catch {}
                                 } else {
                                     try {
                                         await sock.sendMessage(_asJid, {
-                                            text: `⚠️ *Anti-Spam Warning:* @${_asSenderNum}, please stop sending the same message repeatedly!\n\n🚫 Continued spam may result in removal.`,
-                                            mentions: [_asSenderJid]
+                                            text: `⚠️ *Anti-Spam Warning:* @${_asSenderNum}, stop sending the same message repeatedly!`,
+                                            mentions: [_asIsGroup ? _asSenderJid : undefined].filter(Boolean)
                                         });
                                     } catch {}
                                 }
