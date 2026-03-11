@@ -3333,8 +3333,38 @@ case 3: {
   
   const menulist = `${infoSection}${readMoreSep}\n${commandsText}`;
 
-  await sock.sendMessage(jid, { text: menulist }, { quoted: fkontak });
-  console.log(`✅ ${currentBotName} menu sent`);
+  try {
+    let interactiveMsg = generateWAMessageFromContent(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: {
+              text: null,
+            },
+            footer: {
+              text: menulist,
+            },
+            nativeFlowMessage: {
+              buttons: [{ text: null }],
+            },
+          },
+        },
+      },
+    }, {
+      quoted: fkontak,
+      userJid: sock.user?.id || jid
+    });
+
+    await sock.relayMessage(jid, interactiveMsg.message, {
+      messageId: interactiveMsg.key.id
+    });
+
+    console.log(`✅ ${currentBotName} menu sent as interactive message`);
+  } catch (error) {
+    console.error("Error sending interactive menu:", error);
+    await sock.sendMessage(jid, { text: menulist }, { quoted: fkontak });
+    console.log(`✅ ${currentBotName} menu sent as text (fallback from interactive)`);
+  }
   
   break;
 }
