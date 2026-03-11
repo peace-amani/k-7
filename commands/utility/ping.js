@@ -4,7 +4,7 @@ import { getBotName } from '../../lib/botname.js';
 
 export default {
   name: 'ping',
-  aliases: ['p', 'speed', 'latency'],
+  aliases: ['speed', 'latency'],
   description: 'Check bot latency and response time',
   category: 'utility',
 
