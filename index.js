@@ -3848,11 +3848,10 @@ async function loadCommandsFromFolder(folderPath, category = 'general') {
                         UltraCleanLogger.info(`[${category}] Loaded: ${command.name}`);
                         categoryCount++;
                         
-                        if (Array.isArray(command.alias)) {
-                            command.alias.forEach(alias => {
-                                commands.set(alias.toLowerCase(), command);
-                            });
-                        }
+                        const aliasList = Array.isArray(command.alias) ? command.alias : Array.isArray(command.aliases) ? command.aliases : [];
+                        aliasList.forEach(alias => {
+                            commands.set(alias.toLowerCase(), command);
+                        });
                     }
                 } catch {
                     // Silent fail
