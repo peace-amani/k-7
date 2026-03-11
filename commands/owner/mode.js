@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { isButtonModeEnabled, setButtonMode } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getBotName } from '../../lib/botname.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,26 +99,27 @@ export default {
                 }
             }
             
-            let modeList = '';
-            for (const [mode, info] of Object.entries(modes)) {
-                let isCurrent = '';
-                if (mode === 'buttons' && buttonsActive) {
-                    isCurrent = ' ✅';
-                } else if (mode === 'default' && !buttonsActive && currentMode === 'public') {
-                    isCurrent = ' ✅';
-                } else if (mode !== 'buttons' && mode !== 'default' && mode === currentMode) {
-                    isCurrent = buttonsActive ? '' : ' ✅';
-                }
-                modeList += `├─⊷ *${PREFIX}mode ${mode}*${isCurrent}\n│  └⊷ ${info.description}\n`;
-            }
-            
-            let statusLine = `├─⊷ *Current:* ${modes[currentMode]?.name || currentMode}`;
-            if (buttonsActive) {
-                statusLine += `\n├─⊷ *Buttons:* 🔘 ACTIVE`;
-            }
-            
+            const currentLabel = modes[currentMode]?.name || currentMode;
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🤖 *BOT MODE* ⌋\n${statusLine}\n${modeList}╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text:
+                    `╭─⌈ 🤖 *BOT MODE* ⌋\n` +
+                    `│\n` +
+                    `├─⊷ *${PREFIX}mode public*\n` +
+                    `│  └⊷ Responds to everyone\n` +
+                    `├─⊷ *${PREFIX}mode groups*\n` +
+                    `│  └⊷ Groups only\n` +
+                    `├─⊷ *${PREFIX}mode dms*\n` +
+                    `│  └⊷ DMs only\n` +
+                    `├─⊷ *${PREFIX}mode silent*\n` +
+                    `│  └⊷ Owner only\n` +
+                    `├─⊷ *${PREFIX}mode buttons*\n` +
+                    `│  └⊷ Interactive button responses\n` +
+                    `├─⊷ *${PREFIX}mode default*\n` +
+                    `│  └⊷ Normal text responses\n` +
+                    `│\n` +
+                    `├─⊷ *Current:* ${currentLabel}${buttonsActive ? ' + 🔘 Buttons' : ''}\n` +
+                    `│\n` +
+                    `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
             }, { quoted: msg });
         }
         
@@ -127,7 +128,7 @@ export default {
         if (!modes[requestedMode]) {
             const validModes = Object.keys(modes).join(', ');
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ ❌ *INVALID MODE* ⌋\n├─⊷ *${PREFIX}mode <name>*\n│  └⊷ ${validModes}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `❌ *Invalid mode.* Use: ${PREFIX}mode public | groups | dms | silent | buttons | default`
             }, { quoted: msg });
         }
         
@@ -168,7 +169,7 @@ export default {
                     }
                 } else {
                     await sock.sendMessage(chatId, {
-                        text: `╭─⌈ ✅ *BUTTONS MODE ACTIVATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ All bot responses now use interactive buttons\n│  └⊷ Use *${PREFIX}mode default* to switch back\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ Interactive button responses enabled\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
                     }, { quoted: msg });
                 }
                 
@@ -182,7 +183,7 @@ export default {
                 const currentOperatingMode = this.getCurrentMode();
                 
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *DEFAULT MODE RESTORED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Buttons disabled, using normal text responses\n│  └⊷ Operating mode: ${modes[currentOperatingMode]?.name || currentOperatingMode}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
                 }, { quoted: msg });
                 
                 console.log(`✅ Button mode DISABLED by ${cleaned.cleanNumber}`);
@@ -229,7 +230,7 @@ export default {
                 }
             } else {
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
                 }, { quoted: msg });
             }
             
