@@ -28,3 +28,7 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node --no-warnings --experimental-global-webcrypto index.js"
+
+[[ports]]
+localPort = 3000
+externalPort = 80

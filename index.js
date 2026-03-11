@@ -654,6 +654,7 @@ import { checkMessageForLinks as antilinkCheck, isEnabled as antilinkEnabled, ge
 import { checkMessageForBadWord, isGroupEnabled as isBadWordEnabled, getGroupAction as getBadWordAction } from './lib/badwords-store.js';
 import { isEnabled as antispamEnabled, getAction as antispamGetAction, checkSpam as antispamCheck } from './commands/group/antispam.js';
 import banCommand from './commands/group/ban.js';
+import { setupWebServer, updateWebStatus } from './lib/webServer.js';
 
 // Pre-imported group event modules (avoids dynamic import disk I/O in hot event handlers)
 import { handleGroupParticipantUpdate as antidemoteHandler } from './commands/group/antidemote.js';
@@ -4697,6 +4698,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (connection === 'open') {
                 isConnected = true;
                 connectionOpenTime = Date.now();
+                updateWebStatus({ connected: true, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown' });
                 if (connectionStableTimer) clearTimeout(connectionStableTimer);
                 connectionStableTimer = setTimeout(() => {
                     connectionAttempts = 0;
@@ -4889,6 +4891,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             
             if (connection === 'close') {
                 isConnected = false;
+                updateWebStatus({ connected: false });
                 if (connectionStableTimer) { clearTimeout(connectionStableTimer); connectionStableTimer = null; }
                 stopHeartbeat();
                 
@@ -5119,7 +5122,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             UltraCleanLogger.success(`✅ Loaded ${commands.size} commands`);
             commandsLoaded = true;
         }
-        
+        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled) });
+
         sock.ev.on('group-participants.update', async (update) => {
             try {
                 if (memberDetector && memberDetector.enabled && sock?.ws?.isOpen) {
@@ -5815,7 +5819,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             UltraCleanLogger.success(`✅ Loaded ${commands.size} commands`);
             commandsLoaded = true;
         }
-        
+        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled) });
+
         setTimeout(() => {
             if (!isConnected) {
                 UltraCleanLogger.warning('⚠️ Connection taking longer than expected...');
@@ -7348,8 +7353,8 @@ async function main() {
         UltraCleanLogger.info(`🌐 Environment: ${process.env.NODE_ENV || 'production'}`);
         UltraCleanLogger.info(`🔧 Platform: ${detectPlatform()}`);
         
-        // Initialize Heroku systems
-        setupHerokuHealthCheck();
+        // Initialize web status server (universal — all platforms)
+        setupWebServer();
         setupHerokuKeepAlive();
         
         // ====== HEROKU DETECTION & SETUP ======
