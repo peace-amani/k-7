@@ -26,7 +26,15 @@ export default {
 
         if (!url) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🔞 *XNXX DOWNLOADER* ⌋\n│\n├─⊷ *Usage:* ${PREFIX}xnxx <url>\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}xnxx https://www.xnxx.com/video-abc123/title\n│\n╰─⊷ *Powered by ${BOT_NAME}*`
+                text:
+                    `╭─⌈ 🔞 *XNXX DOWNLOADER* ⌋\n` +
+                    `│\n` +
+                    `├⊷ *Usage:* ${PREFIX}xnxx <url>\n` +
+                    `├⊷ *Example:*\n` +
+                    `│  └⊷ ${PREFIX}xnxx https://www.xnxx.com/video-abc123/title\n` +
+                    `├⊷ *Aliases:* xnxxdl, xnx\n` +
+                    `│\n` +
+                    `╰⊷ *Powered by ${BOT_NAME}*`
             }, { quoted: m });
         }
 

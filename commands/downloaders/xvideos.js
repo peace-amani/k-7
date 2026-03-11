@@ -51,6 +51,7 @@ export default {
                     `│  └⊷ ${PREFIX}xvideos https://www.xvideos.com/video.abc/title\n` +
                     `├⊷ *By Name:*\n` +
                     `│  └⊷ ${PREFIX}xvideos sexy massage\n` +
+                    `├⊷ *Aliases:* xvdl, xvid\n` +
                     `│\n` +
                     `╰⊷ *Powered by ${BOT_NAME}*`
             }, { quoted: m });
