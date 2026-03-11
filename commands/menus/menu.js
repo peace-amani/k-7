@@ -2444,7 +2444,7 @@ case 3: {
   // ========== LOADING MESSAGE ==========
   const loadingMessage = `⚡ ${currentBotName} menu loading...`;
   
-  await sock.sendMessage(jid, { text: loadingMessage }, { quoted: m });
+  await sock.sendMessage(jid, { text: loadingMessage }, { quoted: fkontak });
   
   // Add a small delay
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -3307,8 +3307,32 @@ case 3: {
   
   const menulist = `${infoSection}${readMoreSep}\n${commandsText}`;
 
-  await sock.sendMessage(jid, { text: menulist }, { quoted: m });
-  console.log(`✅ ${currentBotName} menu sent`);
+  // ========== INTERACTIVE MESSAGE SEND ==========
+  const interactiveMenuMsg = generateWAMessageFromContent(jid, {
+    viewOnceMessage: {
+      message: {
+        interactiveMessage: {
+          header: {
+            title: currentBotName,
+            hasMediaAttachment: false
+          },
+          body: {
+            text: menulist
+          },
+          footer: {
+            text: `╰⊷ Powered by ${currentBotName.toUpperCase()}`
+          },
+          nativeFlowMessage: {
+            buttons: [],
+            messageParamsJson: ''
+          }
+        }
+      }
+    }
+  }, { quoted: fkontak, userJid: sock.user?.id });
+
+  await sock.relayMessage(jid, interactiveMenuMsg.message, { messageId: interactiveMenuMsg.key.id });
+  console.log(`✅ ${currentBotName} interactive menu sent`);
   
   break;
 }
