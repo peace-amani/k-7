@@ -3,7 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getBotName } from '../../lib/botname.js';
 
 export default {
     name: 'zip',
@@ -56,15 +56,11 @@ export default {
                 throw new Error(`ZIP too large (${sizeMB}MB). Max is 100MB.`);
             }
 
-            let repoInfo = '';
+            let stars = 0, forks = 0;
             try {
                 const apiResp = await axios.get(`https://api.github.com/repos/${repoFullName}`, { timeout: 5000 });
-                const data = apiResp.data;
-                repoInfo =
-                    `│ ✧ *Stars:* ${data.stargazers_count || 0}\n` +
-                    `│ ✧ *Forks:* ${data.forks_count || 0}\n` +
-                    `│ ✧ *Language:* ${data.language || 'N/A'}\n` +
-                    `│ ✧ *Updated:* ${new Date(data.updated_at).toLocaleDateString()}\n`;
+                stars = apiResp.data.stargazers_count || 0;
+                forks = apiResp.data.forks_count || 0;
             } catch {}
 
             await sock.sendMessage(chatId, {
@@ -72,20 +68,10 @@ export default {
                 fileName: `${repoName}.zip`,
                 mimetype: 'application/zip',
                 caption:
-                    `╭─⌈ 🐺 *WOLF BOT* ⌋\n` +
-                    `│\n` +
-                    `│ ✧ *Repo:* ${repoFullName}\n` +
-                    `│ ✧ *Size:* ${sizeMB}MB\n` +
-                    `${repoInfo}` +
-                    `│\n` +
-                    `│ 📦 Bot source code\n` +
-                    `│ 🔗 github.com/${repoFullName}\n` +
-                    `│\n` +
-                    `│ *Related:*\n` +
-                    `│ • \`${PREFIX}gitclone user/repo\` - Clone any repo\n` +
-                    `│ • \`${PREFIX}gitinfo user/repo\` - Repo details\n` +
-                    `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╭─⌈ 🐺 *${getBotName().toUpperCase()} ZIP* ⌋\n` +
+                    `│ ✧ *Stars:* ⭐ ${stars}\n` +
+                    `│ ✧ *Forks:* 🍴 ${forks}\n` +
+                    `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
             }, { quoted: m });
 
             setTimeout(() => {
@@ -99,14 +85,7 @@ export default {
 
             await sock.sendMessage(chatId, {
                 text:
-                    `╭─⌈ ❌ *ZIP FAILED* ⌋\n` +
-                    `│\n` +
-                    `│ ✧ *Error:* ${error.message}\n` +
-                    `│\n` +
-                    `│ 💡 Try again later or use:\n` +
-                    `│ • \`${PREFIX}gitclone ${repoFullName}\`\n` +
-                    `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `❌ *Failed to get ZIP file*\n${error.message}`
             }, { quoted: m });
 
             try { await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } }); } catch {}
