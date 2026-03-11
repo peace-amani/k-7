@@ -738,6 +738,7 @@ globalThis.updateBotModeCache = function(newMode) {
     _cache_bot_mode = { mode: newMode };
     BOT_MODE = newMode;
     _saveConfigCache('bot_mode', { mode: newMode });
+    updateWebStatus({ botMode: newMode });
 };
 globalThis._fontConfig = { font: 'default' };
 globalThis._antibugConfig = null;
@@ -1144,6 +1145,7 @@ function savePrefixToFile(newPrefix) {
         };
         _cache_prefix_config = config;
         _saveConfigCache('prefix_config', config);
+        updateWebStatus({ prefix: isNone ? 'none' : newPrefix });
         
         const settings = {
             prefix: isNone ? '' : newPrefix,
