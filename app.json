@@ -1,50 +1,42 @@
 {
-  "name": "SilentWolf Bot",
-  "description": "WOLFBOT — A feature-rich WhatsApp bot built with Baileys",
-  "keywords": ["whatsapp", "bot", "baileys", "wolfbot"],
-  "website": "https://github.com/7silent-wolf/silentwolf",
-  "repository": "https://github.com/7silent-wolf/silentwolf",
-  "logo": "https://avatars.githubusercontent.com/u/7silent-wolf",
-  "success_url": "/",
+  "name": "Silent WolfBot",
+  "description": "Professional WhatsApp Bot with auto-session authentication",
+  "logo": "https://raw.githubusercontent.com/SuhailTechInfo/Suhail-Md/main/src/logo.jpg",
+  "keywords": ["whatsapp", "bot", "wolfbot", "baileys", "session"],
+  "repository": "https://github.com/7silent-wolf/silentwolf.git",
+  "addons": [
+    {
+      "plan": "heroku-postgresql"
+    }
+  ],
+  "scripts": {
+    "start": "node index.js"
+  },
   "env": {
     "SESSION_ID": {
       "description": "REQUIRED: Your session ID. Must begin with 'WOLF-BOT'",
+      "value": "",
       "required": true
-    },
-    "OWNER_NUMBER": {
-      "description": "Your WhatsApp number with country code (e.g. 2547XXXXXXXX)",
-      "required": true
-    },
-    "BOT_NAME": {
-      "description": "Name for your bot",
-      "value": "WOLFBOT",
-      "required": false
-    },
-    "PREFIX": {
-      "description": "Command prefix (default: .)",
-      "value": ".",
-      "required": false
-    },
-    "NODE_ENV": {
-      "description": "Node environment",
-      "value": "production",
-      "required": false
     }
   },
   "formation": {
-    "web": {
-      "quantity": 1,
-      "size": "eco"
-    },
     "worker": {
-      "quantity": 0,
-      "size": "eco"
+      "quantity": 1,
+      "size": "basic"
     }
   },
   "buildpacks": [
     {
       "url": "heroku/nodejs"
+    },
+    {
+      "url": "https://github.com/DuckyTeam/heroku-buildpack-imagemagick.git"
+    },
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+    },
+    {
+      "url": "https://github.com/clhuang/heroku-buildpack-webp-binaries.git"
     }
-  ],
-  "stack": "heroku-22"
+  ]
 }
