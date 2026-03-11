@@ -52,7 +52,7 @@ export default {
 
     if (!searchQuery) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎵 *DLMP3 DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}dlmp3 <song name or URL>*\n│  └⊷ Download audio\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n╰───`
+        text: `╭─⌈ 🎵 *DLMP3 DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}dlmp3 <song name or URL>*\n│  └⊷ Download audio\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getBotName()}*`
       }, { quoted: m });
     }
 

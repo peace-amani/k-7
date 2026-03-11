@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getBotName } from '../../lib/botname.js';
 
 export default {
     name: "lyrics",
@@ -19,7 +20,7 @@ export default {
                     `│  ▸ .lyrics what shall I render to Jehovah\n` +
                     `│  ▸ .lyrics Blinding Lights\n` +
                     `│  ▸ .lyrics Home by NF\n│\n` +
-                    `╰───`
+                    `╰⊷ *Powered by ${getBotName()}*`
             }, { quoted: msg });
         }
 

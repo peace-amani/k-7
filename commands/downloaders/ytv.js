@@ -1,5 +1,6 @@
 import axios from "axios";
 import yts from "yt-search";
+import { getBotName } from '../../lib/botname.js';
 
 const WOLF_API = "https://apis.xwolf.space/download/mp4";
 const WOLF_STREAM = "https://apis.xwolf.space/download/stream/mp4";
@@ -38,7 +39,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎬 *YTV DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}ytv <video name>*\n│  └⊷ Download video\n├─⊷ *${prefix}ytv <YouTube URL>*\n│  └⊷ Download from link\n╰───`
+          text: `╭─⌈ 🎬 *YTV DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}ytv <video name>*\n│  └⊷ Download video\n├─⊷ *${prefix}ytv <YouTube URL>*\n│  └⊷ Download from link\n│\n╰⊷ *Powered by ${getBotName()}*`
         }, { quoted: m });
         return;
       }

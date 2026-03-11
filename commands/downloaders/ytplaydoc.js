@@ -660,7 +660,7 @@ export default {
 
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎬 *VIDEO2 DOWNLOADER* ⌋\n│\n├─⊷ *video2 <video name>*\n│  └⊷ Download video\n├─⊷ *video2 <YouTube URL>*\n│  └⊷ Download from link\n├─⊷ *video2 <name> -low*\n│  └⊷ Smaller file size\n╰───`
+          text: `╭─⌈ 🎬 *VIDEO2 DOWNLOADER* ⌋\n│\n├─⊷ *video2 <video name>*\n│  └⊷ Download video\n├─⊷ *video2 <YouTube URL>*\n│  └⊷ Download from link\n├─⊷ *video2 <name> -low*\n│  └⊷ Smaller file size\n│\n╰⊷ *Powered by ${getBotName()}*`
         }, { quoted: m });
         return;
       }

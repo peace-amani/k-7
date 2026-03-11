@@ -34,7 +34,7 @@ export default {
     try {
       if (!args[0]) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 👻 *SNAPCHAT DOWNLOADER* ⌋\n│\n├─⊷ *snapchat <url>*\n│  └⊷ Download Spotlight videos\n╰───` 
+          text: `╭─⌈ 👻 *SNAPCHAT DOWNLOADER* ⌋\n│\n├─⊷ *snapchat <url>*\n│  └⊷ Download Spotlight videos\n│\n╰⊷ *Powered by ${getBotName()}*` 
         }, { quoted: m });
         return;
       }

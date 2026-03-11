@@ -417,6 +417,7 @@ import yts from "yt-search";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getBotName } from '../../lib/botname.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -674,7 +675,7 @@ export default {
 
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎵 *YTPLAY COMMAND* ⌋\n│\n├─⊷ *ytplay <song name>*\n│  └⊷ Play audio\n├─⊷ *ytplay <YouTube URL>*\n│  └⊷ Play from link\n╰───`
+          text: `╭─⌈ 🎵 *YTPLAY COMMAND* ⌋\n│\n├─⊷ *ytplay <song name>*\n│  └⊷ Play audio\n├─⊷ *ytplay <YouTube URL>*\n│  └⊷ Play from link\n│\n╰⊷ *Powered by ${getBotName()}*`
         }, { quoted: m });
         return;
       }

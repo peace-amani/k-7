@@ -1,6 +1,7 @@
 import axios from "axios";
 import yts from "yt-search";
 import { queryXWolfVideo } from "../../lib/xwolfApi.js";
+import { getBotName } from '../../lib/botname.js';
 
 const WOLF_API = "https://apis.xwolf.space/download/mp4";
 const WOLF_STREAM = "https://apis.xwolf.space/download/stream/mp4";
@@ -43,7 +44,7 @@ export default {
       
       if (!searchQuery) {
         return sock.sendMessage(jid, {
-          text: `╭─⌈ 🎬 *VIDEO DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}video <name/URL>*\n│  └⊷ Download video from YouTube\n│\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n├─⊷ *Examples:*\n│  └⊷ ${prefix}video funny cats\n│  └⊷ ${prefix}video https://youtube.com/...\n│\n╰───`
+          text: `╭─⌈ 🎬 *VIDEO DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}video <name/URL>*\n│  └⊷ Download video from YouTube\n│\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n├─⊷ *Examples:*\n│  └⊷ ${prefix}video funny cats\n│  └⊷ ${prefix}video https://youtube.com/...\n│\n╰⊷ *Powered by ${getBotName()}*`
         }, { quoted: m });
       }
 

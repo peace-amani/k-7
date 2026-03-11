@@ -53,7 +53,7 @@ export default {
 
     if (!searchQuery) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎬 *MP4 DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}mp4 <video name or URL>*\n│  └⊷ Download video\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n╰───`
+        text: `╭─⌈ 🎬 *MP4 DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}mp4 <video name or URL>*\n│  └⊷ Download video\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getBotName()}*`
       }, { quoted: m });
     }
 

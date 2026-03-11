@@ -28,7 +28,7 @@ export default {
     try {
       if (!args[0]) {
         await sock.sendMessage(jid, {
-          text: `╭─⌈ 🎵 *TIKTOK DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}tiktok <url>*\n│  └⊷ Download without watermark\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}tiktok https://vt.tiktok.com/xyz\n│  └⊷ ${PREFIX}tt https://www.tiktok.com/@user/video/123\n╰───`
+          text: `╭─⌈ 🎵 *TIKTOK DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}tiktok <url>*\n│  └⊷ Download without watermark\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}tiktok https://vt.tiktok.com/xyz\n│  └⊷ ${PREFIX}tt https://www.tiktok.com/@user/video/123\n│\n╰⊷ *Powered by ${getBotName()}*`
         }, { quoted: m });
         return;
       }

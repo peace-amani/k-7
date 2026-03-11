@@ -397,7 +397,7 @@ export default {
     
     if (!args || !args[0]) {
       await sock.sendMessage(jid, { 
-        text: `╭─⌈ 📘 *FACEBOOK DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}facebook <url>*\n│  └⊷ Download video from Facebook\n╰───` 
+        text: `╭─⌈ 📘 *FACEBOOK DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}facebook <url>*\n│  └⊷ Download video from Facebook\n│\n╰⊷ *Powered by ${getBotName()}*` 
       }, { quoted: m });
       return;
     }

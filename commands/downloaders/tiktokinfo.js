@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getBotName } from '../../lib/botname.js';
 
 export default {
   name: 'tiktokinfo',
@@ -19,7 +20,7 @@ export default {
           `├─⊷ *Examples:*\n` +
           `│  └⊷ ${PREFIX}tiktokinfo khaby.lame\n` +
           `│  └⊷ ${PREFIX}ttinfo @zachking\n│\n` +
-          `╰───`;
+          `╰⊷ *Powered by ${getBotName()}*`;
         
         return sock.sendMessage(jid, { text: helpText }, { quoted: m });
       }
