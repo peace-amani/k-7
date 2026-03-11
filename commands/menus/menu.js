@@ -2441,10 +2441,36 @@ case 3: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  // ========== LOADING MESSAGE ==========
+  // ========== LOADING MESSAGE (INTERACTIVE) ==========
   const loadingMessage = `⚡ ${currentBotName} menu loading...`;
   
-  await sock.sendMessage(jid, { text: loadingMessage }, { quoted: fkontak });
+  try {
+    let loadingInteractiveMsg = generateWAMessageFromContent(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: {
+              text: null,
+            },
+            footer: {
+              text: loadingMessage,
+            },
+            nativeFlowMessage: {
+              buttons: [{ text: null }],
+            },
+          },
+        },
+      },
+    }, {
+      quoted: fkontak,
+      userJid: sock.user?.id || jid
+    });
+    await sock.relayMessage(jid, loadingInteractiveMsg.message, {
+      messageId: loadingInteractiveMsg.key.id
+    });
+  } catch (e) {
+    await sock.sendMessage(jid, { text: loadingMessage }, { quoted: fkontak });
+  }
   
   // Add a small delay
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -3307,32 +3333,8 @@ case 3: {
   
   const menulist = `${infoSection}${readMoreSep}\n${commandsText}`;
 
-  // ========== INTERACTIVE MESSAGE SEND ==========
-  const interactiveMenuMsg = generateWAMessageFromContent(jid, {
-    viewOnceMessage: {
-      message: {
-        interactiveMessage: {
-          header: {
-            title: currentBotName,
-            hasMediaAttachment: false
-          },
-          body: {
-            text: menulist
-          },
-          footer: {
-            text: `╰⊷ Powered by ${currentBotName.toUpperCase()}`
-          },
-          nativeFlowMessage: {
-            buttons: [],
-            messageParamsJson: ''
-          }
-        }
-      }
-    }
-  }, { quoted: fkontak, userJid: sock.user?.id });
-
-  await sock.relayMessage(jid, interactiveMenuMsg.message, { messageId: interactiveMenuMsg.key.id });
-  console.log(`✅ ${currentBotName} interactive menu sent`);
+  await sock.sendMessage(jid, { text: menulist }, { quoted: fkontak });
+  console.log(`✅ ${currentBotName} menu sent`);
   
   break;
 }
