@@ -5219,7 +5219,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (!msg) return;
             
             const _upsertTs = msg.messageTimestamp ? (typeof msg.messageTimestamp === 'object' ? msg.messageTimestamp.low || 0 : Number(msg.messageTimestamp)) * 1000 : 0;
-            const _isOldMsg = _upsertTs > 0 && (Date.now() - _upsertTs > 60000 || (connectionOpenTime > 0 && _upsertTs < connectionOpenTime - 5000));
+            const _isOldMsg = _upsertTs > 0 && (Date.now() - _upsertTs > 120000 || (connectionOpenTime > 0 && _upsertTs < connectionOpenTime - 5000));
             
             if (_isOldMsg) return;
 
@@ -6043,6 +6043,7 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
     
     connectionAttempts++;
     isConnected = false;
+    hasSentRestartMessage = false;
     
     const loggedOut = statusCode === DisconnectReason.loggedOut;
     
@@ -7547,10 +7548,16 @@ process.on('SIGINT', () => {
 process.on('uncaughtException', (error) => {
     UltraCleanLogger.error(`Uncaught exception: ${error.message}`);
     UltraCleanLogger.error(error.stack);
+    if (!error.message?.includes('SIGINT') && !error.message?.includes('shutdown')) {
+        setTimeout(async () => {
+            UltraCleanLogger.info('🔄 Auto-recovering from uncaught exception...');
+            try { await main(); } catch (e) { UltraCleanLogger.error(`Recovery failed: ${e.message}`); }
+        }, 5000);
+    }
 });
 
 process.on('unhandledRejection', (error) => {
-    UltraCleanLogger.error(`Unhandled rejection: ${error.message}`);
+    UltraCleanLogger.error(`Unhandled rejection: ${error?.message || error}`);
 });
 
 // Start web server immediately so Heroku/Render/Railway bind PORT before main() runs

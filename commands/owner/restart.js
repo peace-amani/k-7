@@ -40,7 +40,7 @@ export default {
     let statusMessage;
     try {
       statusMessage = await sock.sendMessage(jid, {
-        text: '🔄 **${getBotName()} Restart v1.1.5**\nStarting restart process...'
+        text: `🔄 *${getBotName()} Restart v1.1.5*\nStarting restart process...`
       }, { quoted: m });
 
       const editStatus = async (text) => {
@@ -57,78 +57,53 @@ export default {
 
       const softRestart = args.includes('soft') || args.includes('no-restart');
       const skipClean = args.includes('fast') || args.includes('quick');
+      const skipGit = args.includes('fast') || args.includes('quick') || args.includes('nogit');
       const installDeps = args.includes('deps') || args.includes('install');
 
       if (!skipClean) {
-        await editStatus('🧹 **Cleaning all media & temp files...**\nSettings & configs will be preserved.');
+        await editStatus('🧹 *Cleaning media & temp files...*\nSettings & configs preserved.');
         try {
-          const dfOut = await run('df -BM --output=avail . 2>/dev/null || df -m . 2>/dev/null', 5000).catch(() => '');
-          const freeMatch = dfOut.match(/(\d+)M?\s*$/m);
-          const beforeMB = freeMatch ? parseInt(freeMatch[1]) : null;
-
           const cleanCmds = [
-            'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz 2>/dev/null',
-            'rm -rf ./data/viewonce_private/* 2>/dev/null',
-            'rm -rf ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.jpeg ./data/viewonce_messages/*.png ./data/viewonce_messages/*.gif ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp ./data/viewonce_messages/*.opus ./data/viewonce_messages/*.pdf ./data/viewonce_messages/*.doc 2>/dev/null',
-            'rm -rf ./data/antidelete/media/* 2>/dev/null',
-            'rm -rf ./data/antidelete/status/media/* 2>/dev/null',
-            'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.jpeg ./data/antiviewonce/*.png ./data/antiviewonce/*.gif ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.ogg ./data/antiviewonce/*.webp ./data/antiviewonce/*.opus 2>/dev/null',
-            'find ./session -name "sender-key-*" -delete 2>/dev/null',
-            'find ./session -name "pre-key-*" -delete 2>/dev/null',
-            'find ./session -name "app-state-sync-version-*" -delete 2>/dev/null',
-            'rm -rf session_backup 2>/dev/null',
-            'find ./data -name "*.bak" -delete 2>/dev/null',
-            'find . -maxdepth 2 -name "*.log" -not -path "./node_modules/*" -delete 2>/dev/null',
-            'rm -rf ./temp/* 2>/dev/null',
-            'rm -rf ./logs/* 2>/dev/null',
-            'npm cache clean --force 2>/dev/null || true'
+            'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz 2>/dev/null || true',
+            'rm -rf ./data/viewonce_private/* ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp 2>/dev/null || true',
+            'rm -rf ./data/antidelete/media/* ./data/antidelete/status/media/* 2>/dev/null || true',
+            'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.webp 2>/dev/null || true',
+            'find ./session -name "sender-key-*" -o -name "pre-key-*" -o -name "app-state-sync-version-*" | xargs rm -f 2>/dev/null || true',
+            'rm -rf session_backup ./temp/* ./logs/* 2>/dev/null || true',
+            'find ./data -name "*.bak" -delete 2>/dev/null || true',
           ];
-          for (const cmd of cleanCmds) {
-            await run(cmd, 15000).catch(() => {});
-          }
-          const dfAfter = await run('df -BM --output=avail . 2>/dev/null || df -m . 2>/dev/null', 5000).catch(() => '');
-          const afterMatch = dfAfter.match(/(\d+)M?\s*$/m);
-          const afterMB = afterMatch ? parseInt(afterMatch[1]) : beforeMB;
-          const recovered = (beforeMB !== null && afterMB !== null) ? (afterMB - beforeMB) : 0;
-          await editStatus(`💾 **Media cleanup done!** ${afterMB !== null ? afterMB + 'MB free' : ''}${recovered > 0 ? ' (recovered ' + recovered + 'MB)' : ''}\n✅ Settings, prefix, configs preserved\nContinuing restart...`);
-        } catch (diskErr) {
-        }
+          await Promise.allSettled(cleanCmds.map(cmd => run(cmd, 8000)));
+          await editStatus('💾 *Media cleanup done!*\n✅ Settings & configs preserved\nContinuing restart...');
+        } catch (diskErr) {}
       }
 
-      await editStatus('🌐 **Checking for updates...**');
-      try {
-        const GIT_REPO_URL = "https://github.com/nk-apex/n7.git";
-        const oldRev = await run('git rev-parse HEAD').catch(() => 'unknown');
-
-        await run('git prune --expire=now').catch(() => {});
-        await run('git gc --auto').catch(() => {});
-
+      if (!skipGit) {
+        await editStatus('🌐 *Checking for updates...*');
         try {
-          await run('git remote get-url n7-upstream');
-        } catch {
-          await run(`git remote add n7-upstream ${GIT_REPO_URL}`);
+          const GIT_REPO_URL = "https://github.com/nk-apex/n7.git";
+          const oldRev = await run('git rev-parse HEAD').catch(() => 'unknown');
+          try {
+            await run('git remote get-url n7-upstream');
+          } catch {
+            await run(`git remote add n7-upstream ${GIT_REPO_URL}`);
+          }
+          await run('git fetch n7-upstream --depth=5 --prune', 30000);
+          const currentBranch = await run('git rev-parse --abbrev-ref HEAD').catch(() => 'main');
+          let newRev;
+          try {
+            newRev = await run(`git rev-parse n7-upstream/${currentBranch}`);
+          } catch {
+            newRev = await run('git rev-parse n7-upstream/main');
+          }
+          if (oldRev === newRev) {
+            await editStatus(`✅ *Already up to date*\nBranch: ${currentBranch} | Commit: ${newRev?.slice(0, 7) || 'N/A'}`);
+          } else {
+            await run(`git merge --ff-only ${newRev}`);
+            await editStatus(`✅ *Updated to latest!*\nCommit: ${newRev?.slice(0, 7) || 'N/A'}`);
+          }
+        } catch (gitErr) {
+          await editStatus(`⚠️ *Git update skipped:* ${gitErr.message}\nContinuing with current version...`);
         }
-
-        await run('git fetch n7-upstream --depth=20 --prune');
-
-        const currentBranch = await run('git rev-parse --abbrev-ref HEAD').catch(() => 'main');
-        let newRev;
-        try {
-          newRev = await run(`git rev-parse n7-upstream/${currentBranch}`);
-        } catch {
-          newRev = await run('git rev-parse n7-upstream/main');
-        }
-
-        if (oldRev === newRev) {
-          await editStatus(`✅ **Already up to date**\nBranch: ${currentBranch} | Commit: ${newRev?.slice(0, 7) || 'N/A'}`);
-        } else {
-          await run(`git merge --ff-only ${newRev}`);
-          await run('git prune --expire=now').catch(() => {});
-          await run('git gc --aggressive --prune=now').catch(() => {});
-          await editStatus(`✅ **Updated to latest!**\nCommit: ${newRev?.slice(0, 7) || 'N/A'}`);
-        }
-      } catch (gitErr) {
-        await editStatus(`⚠️ **Git update failed:** ${gitErr.message}\nContinuing with current version...`);
       }
 
       if (installDeps) {
