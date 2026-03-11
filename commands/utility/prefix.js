@@ -75,7 +75,7 @@ export default {
         }
 
         text += `│\n`;
-        text += `╰⊷ *Powered by ${getBotName().toUpperCase()} TECH*`;
+        text += `╰⊷ *Powered by ${getBotName().toUpperCase()}*`;
 
         await sock.sendMessage(chatId, { text }, { quoted: msg });
     }
