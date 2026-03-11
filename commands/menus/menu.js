@@ -1010,11 +1010,11 @@ case 1: {
   // ========== SIMPLE LOADING MESSAGE ==========
   const loadingMessage = `⚡ ${currentBotName} menu loading...`;
   
-  // Send loading message with fake contact
+  // Send loading message quoted by fake contact
   await sock.sendMessage(jid, { 
     text: loadingMessage 
   }, { 
-    quoted: m 
+    quoted: fkontak 
   });
   
   // Add a small delay
@@ -2104,13 +2104,13 @@ case 1: {
 
   const media = getMenuMedia();
   if (!media) {
-    await sock.sendMessage(jid, { text: "⚠️ Menu media not found!" }, { quoted: m });
+    await sock.sendMessage(jid, { text: "⚠️ Menu media not found!" }, { quoted: fkontak });
     return;
   }
   if (media.type === 'gif' && media.mp4Buffer) {
-    await sock.sendMessage(jid, { video: media.mp4Buffer, gifPlayback: true, caption: finalCaption, mimetype: "video/mp4" }, { quoted: m });
+    await sock.sendMessage(jid, { video: media.mp4Buffer, gifPlayback: true, caption: finalCaption, mimetype: "video/mp4" }, { quoted: fkontak });
   } else {
-    await sock.sendMessage(jid, { image: media.buffer, caption: finalCaption, mimetype: "image/jpeg" }, { quoted: m });
+    await sock.sendMessage(jid, { image: media.buffer, caption: finalCaption, mimetype: "image/jpeg" }, { quoted: fkontak });
   }
   
   console.log(`✅ ${currentBotName} menu sent with new box style, faded effect, and "Read more" effect`);
