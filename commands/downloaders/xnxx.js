@@ -1,46 +1,91 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 
-const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download/xnxxdl';
-const XNXX_REGEX = /xnxx\.(com|health|net|one)/i;
+const GIFTED_DL   = 'https://api.giftedtech.co.ke/api/download/xnxxdl';
+const GIFTED_SRCH = 'https://api.giftedtech.co.ke/api/search/xnxxsearch';
+const XNXX_REGEX  = /xnxx\.(com|health|net|one)/i;
+
+function isUrl(input) {
+    return /^https?:\/\//i.test(input) || XNXX_REGEX.test(input);
+}
 
 function formatDuration(seconds) {
     const s = parseInt(seconds, 10);
     if (isNaN(s)) return seconds || 'N/A';
-    const m = Math.floor(s / 60);
+    const min = Math.floor(s / 60);
     const sec = s % 60;
-    return `${m}m ${sec}s`;
+    return `${min}m ${sec}s`;
+}
+
+async function searchXnxx(query) {
+    const res = await axios.get(GIFTED_SRCH, {
+        params: { apikey: 'gifted', query },
+        timeout: 20000
+    });
+    if (!res.data?.success || !res.data?.results?.length) return null;
+    return res.data.results[0];
+}
+
+async function downloadVideoBuffer(url) {
+    const res = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 120000,
+        maxRedirects: 5,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    const buf = Buffer.from(res.data);
+    if (buf.length < 5000) throw new Error('Received invalid video data');
+    return buf;
 }
 
 export default {
     name: 'xnxx',
     aliases: ['xnxxdl', 'xnx'],
-    desc: 'Download videos from XNXX',
+    desc: 'Download or search XNXX by URL or name',
     category: 'Downloaders',
-    usage: '.xnxx <xnxx url>',
+    usage: '.xnxx <url or search name>',
 
     async execute(sock, m, args, PREFIX) {
         const jid = m.key.remoteJid;
         const BOT_NAME = getBotName();
-        const url = args[0];
+        const input = args.join(' ').trim();
 
-        if (!url) {
+        if (!input) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🔞 *XNXX DOWNLOADER* ⌋\n│\n├─⊷ *Usage:* ${PREFIX}xnxx <url>\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}xnxx https://www.xnxx.com/video-abc123/title\n│\n╰─⊷ *Powered by ${BOT_NAME}*`
-            }, { quoted: m });
-        }
-
-        if (!XNXX_REGEX.test(url)) {
-            return sock.sendMessage(jid, {
-                text: `❌ Please provide a valid XNXX URL.\n\n*Example:* https://www.xnxx.com/video-abc123/title`
+                text:
+                    `╭─⌈ 🔞 *XNXX DOWNLOADER* ⌋\n` +
+                    `│\n` +
+                    `├─⊷ *By URL:*\n` +
+                    `│  └⊷ ${PREFIX}xnxx https://www.xnxx.com/video-abc/title\n` +
+                    `├─⊷ *By Name:*\n` +
+                    `│  └⊷ ${PREFIX}xnxx sexy massage\n` +
+                    `│\n` +
+                    `╰─⊷ *Powered by ${BOT_NAME}*`
             }, { quoted: m });
         }
 
         await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
         try {
-            const res = await axios.get(GIFTED_BASE, {
-                params: { apikey: 'gifted', url },
+            let videoUrl = input;
+
+            if (!isUrl(input)) {
+                await sock.sendMessage(jid, {
+                    text: `🔍 *Searching XNXX for:* _${input}_`
+                }, { quoted: m });
+
+                const hit = await searchXnxx(input);
+                if (!hit?.link) {
+                    await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+                    return sock.sendMessage(jid, {
+                        text: `❌ *No results found for:* _${input}_\n\nTry a different search term.`
+                    }, { quoted: m });
+                }
+                videoUrl = hit.link;
+            }
+
+            const res = await axios.get(GIFTED_DL, {
+                params: { apikey: 'gifted', url: videoUrl },
                 timeout: 30000
             });
 
@@ -52,7 +97,6 @@ export default {
             }
 
             const { title, duration, image, info, files } = res.data.result;
-
             const downloadUrl = files?.high || files?.low;
 
             if (!downloadUrl) {
@@ -89,19 +133,7 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-            const videoRes = await axios.get(downloadUrl, {
-                responseType: 'arraybuffer',
-                timeout: 120000,
-                maxRedirects: 5,
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-            });
-
-            const videoBuffer = Buffer.from(videoRes.data);
-
-            if (videoBuffer.length < 5000) {
-                throw new Error('Received invalid video data');
-            }
-
+            const videoBuffer = await downloadVideoBuffer(downloadUrl);
             const safeTitle = (title || 'xnxx').replace(/[^a-zA-Z0-9 ]/g, '').trim().substring(0, 50);
 
             await sock.sendMessage(jid, {
