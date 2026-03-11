@@ -652,6 +652,7 @@ import antidemote from './commands/group/antidemote.js';
 import { isBugMessage as antibugCheck, isEnabled as antibugEnabled, getAction as antibugGetAction } from './commands/group/antibug.js';
 import { checkMessageForLinks as antilinkCheck, isEnabled as antilinkEnabled, getMode as antilinkGetMode, getGroupConfig as antilinkGetConfig, isLinkExempt as antilinkIsExempt } from './commands/group/antilink.js';
 import { checkMessageForBadWord, isGroupEnabled as isBadWordEnabled, getGroupAction as getBadWordAction } from './lib/badwords-store.js';
+import { isEnabled as antispamEnabled, getAction as antispamGetAction, checkSpam as antispamCheck } from './commands/group/antispam.js';
 import banCommand from './commands/group/ban.js';
 
 // Pre-imported group event modules (avoids dynamic import disk I/O in hot event handlers)
@@ -752,6 +753,13 @@ globalThis._saveAntilinkConfig = function(data) {
 _loadConfigCache('antilink_config', {}).then(config => {
     globalThis._antilinkConfig = config || {};
 }).catch(() => { globalThis._antilinkConfig = {}; });
+globalThis._antispamConfig = null;
+globalThis._saveAntispamConfig = function(data) {
+    _saveConfigCache('antispam_config', data);
+};
+_loadConfigCache('antispam_config', {}).then(config => {
+    globalThis._antispamConfig = config || {};
+}).catch(() => { globalThis._antispamConfig = {}; });
 globalThis.reloadConfigCaches = reloadConfigCaches;
 async function reloadConfigCaches() {
     try {
@@ -777,6 +785,9 @@ async function reloadConfigCaches() {
 
         const antilinkData = await _loadConfigCache('antilink_config', {});
         globalThis._antilinkConfig = (antilinkData && Object.keys(antilinkData).length > 0) ? antilinkData : (globalThis._antilinkConfig || {});
+
+        const antispamData = await _loadConfigCache('antispam_config', {});
+        globalThis._antispamConfig = (antispamData && Object.keys(antispamData).length > 0) ? antispamData : (globalThis._antispamConfig || {});
 
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
@@ -5353,6 +5364,45 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             } else if (_bwAction === 'delete') {
                             }
                             return;
+                        }
+                    }
+                }
+            }
+
+            if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
+                const _asJid = msg.key.remoteJid;
+                if (_asJid.endsWith('@g.us') && antispamEnabled(_asJid)) {
+                    const _asSenderJid = msg.key.participant || _asJid;
+                    const _asIsOwner = jidManager.isOwner(msg);
+                    if (!_asIsOwner) {
+                        const _asMsg = msg.message;
+                        const _asText = _asMsg?.conversation || _asMsg?.extendedTextMessage?.text || _asMsg?.imageMessage?.caption || _asMsg?.videoMessage?.caption || _asMsg?.documentMessage?.caption || '';
+                        if (_asText.trim().length > 0) {
+                            const _asIsSpam = antispamCheck(_asJid, _asSenderJid, _asText.trim());
+                            if (_asIsSpam) {
+                                const _asAction = antispamGetAction(_asJid);
+                                const _asSenderNum = _asSenderJid.split('@')[0].split(':')[0];
+                                UltraCleanLogger.warning(`🚫 ANTISPAM: Repeated msg from ${_asSenderNum} in ${_asJid.split('@')[0]} [action: ${_asAction}]`);
+                                try { await sock.sendMessage(_asJid, { delete: msg.key }); } catch {}
+                                if (_asAction === 'block') {
+                                    try {
+                                        await sock.updateBlockStatus(_asSenderJid, 'block');
+                                        await sock.groupParticipantsUpdate(_asJid, [_asSenderJid], 'remove');
+                                        await sock.sendMessage(_asJid, {
+                                            text: `🚫 *Anti-Spam:* @${_asSenderNum} has been *blocked & removed* for spamming repeated messages.`,
+                                            mentions: [_asSenderJid]
+                                        });
+                                    } catch {}
+                                } else {
+                                    try {
+                                        await sock.sendMessage(_asJid, {
+                                            text: `⚠️ *Anti-Spam Warning:* @${_asSenderNum}, please stop sending the same message repeatedly!\n\n🚫 Continued spam may result in removal.`,
+                                            mentions: [_asSenderJid]
+                                        });
+                                    } catch {}
+                                }
+                                return;
+                            }
                         }
                     }
                 }
