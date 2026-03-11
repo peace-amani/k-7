@@ -33,6 +33,13 @@ export default {
 │
 ╰─⊷
 
+╭─⊷ *🔞 ADULT*
+│
+│  • xvideos
+│  • xnxx
+│
+╰─⊷
+
 ╭─⊷ *📦 OTHER*
 │
 │  • apk
