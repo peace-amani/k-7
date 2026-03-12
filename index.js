@@ -7374,9 +7374,7 @@ async function main() {
         setupHerokuKeepAlive();
         
         // ====== HEROKU DETECTION & SETUP ======
-        //const isHeroku = process.env.HEROKU || process.env.DYNO || false;
-        // ====== HEROKU DETECTION & SETUP ======
-const isHeroku = process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.HEROKU_API_KEY || false;
+        const isHeroku = process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.HEROKU_API_KEY || false;
         const herokuSessionId = process.env.SESSION_ID;
         
         if (isHeroku) {
@@ -7523,7 +7521,7 @@ const isHeroku = process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.
         UltraCleanLogger.error(`Main error: ${error.message}`);
         
         // Handle restarts based on platform
-        if (process.env.HEROKU) {
+        if (process.env.HEROKU || process.env.DYNO) {
             // Longer delay on Heroku to avoid rapid restarts
             UltraCleanLogger.warning('🔄 Heroku restart scheduled in 30 seconds...');
             setTimeout(async () => {

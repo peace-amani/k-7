@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
@@ -12,11 +12,8 @@ function findPython() {
     const candidates = ['python3', 'python'];
     for (const cmd of candidates) {
         try {
-            const { execSync } = require ? require('child_process') : { execSync: null };
-            if (execSync) {
-                execSync(`${cmd} --version`, { timeout: 3000, stdio: 'pipe' });
-                return cmd;
-            }
+            execSync(`${cmd} --version`, { timeout: 3000, stdio: 'pipe' });
+            return cmd;
         } catch {}
     }
     return null;
