@@ -10,10 +10,11 @@ const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
-const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download';
+const GIFTED_BASE_DEFAULT = 'https://api.giftedtech.co.ke/api/download';
 const AUDIO_ENDPOINTS = ['ytmp3', 'yta', 'dlmp3'];
 
-async function queryAPI(url, endpoints) {
+async function queryAPI(url, endpoints, base) {
+  const GIFTED_BASE = base || globalThis._apiOverrides?.['ytmp3'] || GIFTED_BASE_DEFAULT;
   for (const endpoint of endpoints) {
     try {
       const params = { apikey: 'gifted', url };

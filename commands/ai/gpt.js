@@ -21,7 +21,7 @@ export default {
     try {
       await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
-      const res = await axios.post('https://apis.xwolf.space/api/ai/gpt', { prompt: query }, {
+      const res = await axios.post(globalThis._apiOverrides?.['gpt'] || 'https://apis.xwolf.space/api/ai/gpt', { prompt: query }, {
         timeout: 30000,
         headers: { 'Content-Type': 'application/json', 'User-Agent': 'WolfBot/1.0' }
       });

@@ -23,7 +23,7 @@ export default {
     await sock.sendMessage(jid, { react: { text: '🔍', key: m.key } });
 
     try {
-      const res = await axios.get(GIFTED_API, {
+      const res = await axios.get(globalThis._apiOverrides?.['gitstalk'] || GIFTED_API, {
         params: { apikey: 'gifted', username },
         timeout: 20000
       });

@@ -10,10 +10,11 @@ const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
-const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download';
+const GIFTED_BASE_DEFAULT = 'https://api.giftedtech.co.ke/api/download';
 const VIDEO_ENDPOINTS = ['ytv', 'dlmp4', 'ytmp4'];
 
 async function queryAPI(url, endpoints) {
+  const GIFTED_BASE = globalThis._apiOverrides?.['ytmp4'] || GIFTED_BASE_DEFAULT;
   for (const endpoint of endpoints) {
     try {
       const res = await axios.get(`${GIFTED_BASE}/${endpoint}`, {
