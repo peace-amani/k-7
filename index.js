@@ -3848,7 +3848,6 @@ async function loadCommandsFromFolder(folderPath, category = 'general') {
                         }
                         commandCategories.get(category).push(command.name);
                         
-                        UltraCleanLogger.info(`[${category}] Loaded: ${command.name}`);
                         categoryCount++;
                         
                         const aliasList = Array.isArray(command.alias) ? command.alias : Array.isArray(command.aliases) ? command.aliases : [];
@@ -3863,7 +3862,7 @@ async function loadCommandsFromFolder(folderPath, category = 'general') {
         }
         
         if (categoryCount > 0) {
-            UltraCleanLogger.info(`${categoryCount} commands loaded from ${category}`);
+            // silent — total reported after full load
         }
     } catch {
         // Silent fail
@@ -4413,7 +4412,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         
         let commandLoadPromise = Promise.resolve();
         if (!initialCommandsLoaded) {
-            UltraCleanLogger.info('📦 Loading commands (first time)...');
+            UltraCleanLogger.info('⏳ Loading commands...');
             commands.clear();
             commandCategories.clear();
             commandLoadPromise = loadCommandsFromFolder('./commands');
@@ -5128,7 +5127,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
         await commandLoadPromise;
         if (!commandsLoaded) {
-            UltraCleanLogger.success(`✅ Loaded ${commands.size} commands`);
+            UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled) });
@@ -5834,7 +5833,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         await commandLoadPromise;
         
         if (!commandsLoaded) {
-            UltraCleanLogger.success(`✅ Loaded ${commands.size} commands`);
+            UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled) });
