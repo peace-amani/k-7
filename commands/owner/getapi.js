@@ -1,5 +1,9 @@
 import { getCommandInfo, getAllApiCommands } from '../../lib/apiRegistry.js';
 import { getBotName } from '../../lib/botname.js';
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+let _giftedBtns = null;
+try { _giftedBtns = _require('gifted-btns'); } catch {}
 
 export default {
     name: 'getapi',
@@ -69,32 +73,21 @@ export default {
             `│\n` +
             `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
 
-        try {
-            const { createRequire } = await import('module');
-            const require = createRequire(import.meta.url);
-            const { sendInteractiveMessage } = require('gifted-btns');
-            await sendInteractiveMessage(sock, chatJid, {
-                text,
-                footer: BOT_NAME,
-                interactiveButtons: [
-                    {
-                        name: 'cta_copy',
-                        buttonParamsJson: JSON.stringify({
-                            display_text: '📡 FETCH API',
-                            copy_code: `${PREFIX}fetchapi ${cmdName}`
-                        })
-                    },
-                    {
-                        name: 'cta_url',
-                        buttonParamsJson: JSON.stringify({
-                            display_text: '🌐 Open API URL',
-                            url: info.currentUrl,
-                            merchant_url: info.currentUrl
-                        })
-                    }
-                ]
-            });
-        } catch {
+        if (_giftedBtns?.sendButtons) {
+            try {
+                await _giftedBtns.sendButtons(sock, chatJid, {
+                    text,
+                    footer: BOT_NAME,
+                    buttons: [
+                        { type: 'reply', title: '📡 FETCH API', payload: `${PREFIX}fetchapi ${cmdName}` },
+                        { type: 'reply', title: '🔄 REPLACE API', payload: `${PREFIX}replaceapi ${cmdName} ` }
+                    ],
+                    headerType: 1
+                }, msg);
+            } catch {
+                await reply(text);
+            }
+        } else {
             await reply(text);
         }
     }
