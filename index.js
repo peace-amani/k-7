@@ -4043,43 +4043,16 @@ function setupHerokuSession() {
 
 // ====== HEROKU HEALTH CHECK ======
 function setupHerokuHealthCheck() {
-    // Heroku needs a health check endpoint to prevent sleeping
-    if (process.env.HEROKU || process.env.PORT) {
-        try {
-            const http = require('http');
-            
-            const server = http.createServer((req, res) => {
-                if (req.url === '/health') {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        status: 'ok',
-                        bot: getCurrentBotName(),
-                        version: VERSION,
-                        uptime: process.uptime(),
-                        platform: 'Heroku',
-                        timestamp: new Date().toISOString()
-                    }));
-                } else {
-                    res.writeHead(200);
-                    res.end(`${getCurrentBotName()} is running on Heroku`);
-                }
-            });
-            
-            const PORT = process.env.PORT || 3000;
-            server.listen(PORT, () => {
-                UltraCleanLogger.success(`🌐 Heroku health check server listening on port ${PORT}`);
-                UltraCleanLogger.info(`🔗 Health check URL: http://localhost:${PORT}/health`);
-            });
-            
-        } catch (error) {
-            UltraCleanLogger.warning(`Could not start health check server: ${error.message}`);
-        }
-    }
+    // Health check is fully handled by lib/webServer.js (PORT-aware, ESM-safe).
+    // No duplicate server needed here.
+    UltraCleanLogger.info('🌐 Health check endpoint served by webServer.js — no duplicate server needed');
 }
 
 // ====== HEROKU KEEP-ALIVE ======
 function setupHerokuKeepAlive() {
-    if (process.env.HEROKU) {
+    // process.env.DYNO is set automatically by Heroku; HEROKU must be added manually
+    const onHeroku = !!(process.env.HEROKU || process.env.DYNO);
+    if (onHeroku) {
         UltraCleanLogger.info('🔧 Setting up Heroku keep-alive system...');
         
         // Auto-restart prevention
@@ -5227,9 +5200,20 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (!msg) return;
             
             const _upsertTs = msg.messageTimestamp ? (typeof msg.messageTimestamp === 'object' ? msg.messageTimestamp.low || 0 : Number(msg.messageTimestamp)) * 1000 : 0;
-            const _isOldMsg = _upsertTs > 0 && (Date.now() - _upsertTs > 120000 || (connectionOpenTime > 0 && _upsertTs < connectionOpenTime - 5000));
+            const _isOldMsg = _upsertTs > 0 && (Date.now() - _upsertTs > 60000 || (connectionOpenTime > 0 && _upsertTs < connectionOpenTime - 30000));
             
             if (_isOldMsg) return;
+
+            // Log every incoming text message immediately — nothing should block this
+            if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
+                const _iJid = msg.key.remoteJid;
+                if (_iJid !== 'status@broadcast') {
+                    const _iSender = (msg.key.participant || _iJid).split('@')[0].split(':')[0];
+                    const _iLoc = _iJid.endsWith('@g.us') ? `[${_iJid.split('@')[0].substring(0, 10)}]` : '[DM]';
+                    const _iText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+                    if (_iText) originalConsoleMethods.log(`📨 ← ${_iSender} ${_iLoc}: "${_iText.length > 80 ? _iText.substring(0, 80) + '…' : _iText}"`);
+                }
+            }
 
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
                 const chatJid = msg.key.remoteJid;
@@ -5552,7 +5536,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             lastActivityTime = Date.now();
             
-            handleIncomingMessage(sock, msg).catch(() => {});
+            handleIncomingMessage(sock, msg).catch(e => {
+                if (e?.message && !e.message.includes('closed') && !e.message.includes('Stream') && !e.message.includes('timed out')) {
+                    originalConsoleMethods.log(`❌ [Handler] ${e.message}`);
+                }
+            });
 
             handleReactOwner(sock, msg).catch(() => {});
 
