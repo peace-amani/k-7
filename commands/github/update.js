@@ -243,7 +243,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Deep Git cleanup failed:', error);
+//     console.error('Deep Git cleanup failed:', safeErr(error));
     
 //     // Try to restore from backup
 //     try {
@@ -426,7 +426,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Smart Git update failed:', error);
+//     console.error('Smart Git update failed:', safeErr(error));
 //     throw error;
 //   }
 // }
@@ -536,7 +536,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Git update failed:', error);
+//     console.error('Git update failed:', safeErr(error));
     
 //     try {
 //       const branches = await run('git branch --list backup-*');
@@ -888,7 +888,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('ZIP update failed:', error);
+//     console.error('ZIP update failed:', safeErr(error));
     
 //     // Cleanup temp dir on error
 //     try {
@@ -1234,7 +1234,7 @@
 //       }
       
 //     } catch (err) {
-//       console.error('Update failed:', err);
+//       console.error('Update failed:', safeErr(err));
       
 //       let errorText = `❌ **Update Failed**\nError: ${err.message || err}\n\n`;
       
@@ -1328,9 +1328,15 @@ const UPDATE_ZIP_URL = process.env.BOT_UPDATE_ZIP_URL || process.env.UPDATE_ZIP_
 const GIT_REPO_URL   = process.env.BOT_GIT_REPO_URL   || process.env.GIT_REPO_URL   || "";
 const OWNER_REPO_URL = "https://github.com/7silent-wolf/silentwolf.git";
 
-// Strips any raw URL patterns from text before sending to WhatsApp
+// Strips raw URL patterns from text — use before sending to WhatsApp or printing to console
 function sanitizeForChat(text = "") {
-    return text.replace(/https?:\/\/[^\s"'`\])]*/g, '[private-url]');
+    return String(text).replace(/https?:\/\/[^\s"'`\])>]*/g, '[private-url]');
+}
+// Sanitizes an Error (or any value) for safe console output
+function safeErr(err) {
+    if (!err) return err;
+    const msg = err.message || String(err);
+    return sanitizeForChat(msg);
 }
 
 // Timeout configurations
@@ -1518,7 +1524,7 @@ async function deepCleanGitHistory(options = {}) {
     };
     
   } catch (error) {
-    console.error('Deep Git cleanup failed:', error);
+    console.error('Deep Git cleanup failed:', safeErr(error));
     
     // Try to restore from backup
     try {
@@ -1701,7 +1707,7 @@ async function smartGitUpdate(options = {}) {
     };
     
   } catch (error) {
-    console.error('Smart Git update failed:', error);
+    console.error('Smart Git update failed:', safeErr(error));
     throw error;
   }
 }
@@ -1807,7 +1813,7 @@ async function updateViaGit(cleanAfter = false) {
     };
     
   } catch (error) {
-    console.error('Git update failed:', error);
+    console.error('Git update failed:', safeErr(error));
     
     try {
       const branches = await run('git branch --list backup-*');
@@ -2079,7 +2085,7 @@ async function copyDirectoryFast(src, dest, timeout = PRESERVE_TIMEOUT) {
 
 /* -------------------- ZIP Update -------------------- */
 async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
-  console.log(`Starting fast ZIP update from: ${zipUrl}`);
+  console.log('Starting fast ZIP update...');
   
   const tmpDir = path.join(process.cwd(), 'tmp_update_fast_' + Date.now());
   const zipPath = path.join(tmpDir, 'update.zip');
@@ -2148,7 +2154,7 @@ async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
     };
     
   } catch (error) {
-    console.error('ZIP update failed:', error);
+    console.error('ZIP update failed:', safeErr(error));
     
     try {
       if (fs.existsSync(tmpDir)) {
@@ -2519,7 +2525,7 @@ export default {
       }
       
     } catch (err) {
-      console.error('Update failed:', err);
+      console.error('Update failed:', safeErr(err));
       
       let errorText = `❌ **Update Failed**\nError: ${sanitizeForChat(err.message || String(err))}\n\n`;
       
