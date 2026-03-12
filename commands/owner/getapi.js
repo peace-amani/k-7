@@ -1,7 +1,5 @@
 import { getCommandInfo, getAllApiCommands } from '../../lib/apiRegistry.js';
 import { getBotName } from '../../lib/botname.js';
-import { isButtonModeEnabled } from '../../lib/buttonMode.js';
-import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
 import { createRequire } from 'module';
 
 const _require = createRequire(import.meta.url);
@@ -21,7 +19,6 @@ export default {
         const reply = (text) => sock.sendMessage(chatJid, { text }, { quoted: msg });
         const BOT_NAME = extra?.BOT_NAME || getBotName() || 'WOLFBOT';
         const cmdName = (args[0] || '').toLowerCase().trim();
-        const btnMode = isButtonModeEnabled() && isGiftedBtnsAvailable() && _giftedBtns;
 
         if (!cmdName) {
             const all = getAllApiCommands();
@@ -77,7 +74,7 @@ export default {
             `│\n` +
             `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
 
-        if (btnMode) {
+        if (_giftedBtns?.sendInteractiveMessage) {
             try {
                 await _giftedBtns.sendInteractiveMessage(sock, chatJid, {
                     text,
@@ -109,7 +106,7 @@ export default {
                 });
                 return;
             } catch (e) {
-                console.log('[getapi] Interactive buttons failed:', e?.message);
+                console.log('[getapi] Buttons failed:', e?.message);
             }
         }
 

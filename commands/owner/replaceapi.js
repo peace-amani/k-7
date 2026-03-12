@@ -1,5 +1,10 @@
 import { getCommandInfo, setCommandApi, resetCommandApi } from '../../lib/apiRegistry.js';
 import { getBotName } from '../../lib/botname.js';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+let _giftedBtns = null;
+try { _giftedBtns = _require('gifted-btns'); } catch {}
 
 export default {
     name: 'replaceapi',
@@ -100,32 +105,42 @@ export default {
             `│\n` +
             `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
 
-        try {
-            const { createRequire } = await import('module');
-            const require = createRequire(import.meta.url);
-            const { sendInteractiveMessage } = require('gifted-btns');
-            await sendInteractiveMessage(sock, chatJid, {
-                text,
-                footer: BOT_NAME,
-                interactiveButtons: [
-                    {
-                        name: 'cta_reply',
-                        buttonParamsJson: JSON.stringify({
-                            display_text: '📡 Fetch API',
-                            id: `${PREFIX}fetchapi ${cmdName}`
-                        })
-                    },
-                    {
-                        name: 'cta_reply',
-                        buttonParamsJson: JSON.stringify({
-                            display_text: '♻️ Reset to Default',
-                            id: `${PREFIX}replaceapi ${cmdName} reset`
-                        })
-                    }
-                ]
-            });
-        } catch {
-            await reply(text);
+        if (_giftedBtns?.sendInteractiveMessage) {
+            try {
+                await _giftedBtns.sendInteractiveMessage(sock, chatJid, {
+                    text,
+                    footer: BOT_NAME,
+                    interactiveButtons: [
+                        {
+                            name: 'quick_reply',
+                            buttonParamsJson: JSON.stringify({
+                                display_text: '📡 FETCH API',
+                                id: `${PREFIX}fetchapi ${cmdName}`
+                            })
+                        },
+                        {
+                            name: 'quick_reply',
+                            buttonParamsJson: JSON.stringify({
+                                display_text: '♻️ RESET TO DEFAULT',
+                                id: `${PREFIX}replaceapi ${cmdName} reset`
+                            })
+                        },
+                        {
+                            name: 'cta_url',
+                            buttonParamsJson: JSON.stringify({
+                                display_text: '🌐 Open New URL',
+                                url: newUrl,
+                                merchant_url: newUrl
+                            })
+                        }
+                    ]
+                });
+                return;
+            } catch (e) {
+                console.log('[replaceapi] Buttons failed:', e?.message);
+            }
         }
+
+        await reply(text);
     }
 };
