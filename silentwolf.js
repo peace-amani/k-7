@@ -34,7 +34,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import supabase from '../../lib/supabase.js';   // optional — handles DB persistence so config survives restarts
+import supabase from './lib/database.js';   // optional — handles DB persistence so config survives restarts
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);

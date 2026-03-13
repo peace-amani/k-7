@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { join } from 'path';
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const CONFIG_DIR = './data/antiviewonce';

@@ -230,7 +230,7 @@ import axios from "axios";
 import { normalizeMessageContent, downloadContentFromMessage, downloadMediaMessage, jidNormalizedUser, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
 import NodeCache from 'node-cache';
 import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudoByLid, getPhoneFromLid, getSudoList } from './lib/sudo-store.js';
-import supabaseDb, { setConfigBotId } from './lib/supabase.js';
+import supabaseDb, { setConfigBotId } from './lib/database.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';

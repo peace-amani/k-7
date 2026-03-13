@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 import { downloadMediaMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import { getBotName } from '../../lib/botname.js';
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
 import { getOwnerName } from '../../lib/menuHelper.js';

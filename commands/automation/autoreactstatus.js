@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import supabase from '../../lib/supabase.js';
+import supabase from '../../lib/database.js';
 import { getBotName } from '../../lib/botname.js';
 
 const __filename = fileURLToPath(import.meta.url);

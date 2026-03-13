@@ -1,4 +1,4 @@
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { applyFont, AVAILABLE_FONTS } from '../../lib/fontTransformer.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 

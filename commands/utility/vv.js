@@ -9,7 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import * as db from '../../lib/supabase.js';
+import * as db from '../../lib/database.js';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 

@@ -2,7 +2,7 @@
 import { createRequire } from 'module';
 import axios from "axios";
 import { downloadMediaFromMessage } from "@whiskeysockets/baileys";
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 
 const _requireCb = createRequire(import.meta.url);

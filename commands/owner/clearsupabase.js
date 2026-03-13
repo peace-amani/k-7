@@ -1,4 +1,4 @@
-import * as supabaseDb from '../../lib/supabase.js';
+import * as supabaseDb from '../../lib/database.js';
 
 export default {
     name: 'cleardb',

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { jidNormalizedUser } from '@whiskeysockets/baileys';
-import supabase from '../../lib/supabase.js';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const DATA_DIR = './data/antipromote';

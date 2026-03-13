@@ -3,7 +3,7 @@ import { getBotName } from '../../lib/botname.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getWarnLimit as getPerGroupLimit } from '../../lib/warnings-store.js';
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { getStatusAntideleteInfo } from './antideletestatus.js';
 import { getAntieditInfo } from './antiedit.js';
 import { detectPlatform } from '../../lib/platformDetect.js';

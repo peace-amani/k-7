@@ -1,5 +1,5 @@
 import axios from 'axios';
-import db from '../../lib/supabase.js';
+import db from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 let welcomeCache = null;

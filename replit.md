@@ -20,9 +20,9 @@ The bot runs on Node.js 20 (upgraded from 18 during import), using ESM modules. 
 *   `commands/`: Holds command handlers by category.
 
 **Database Integration:**
-*   **Local SQLite (sql.js)**: Bot data stored locally in `data/bot.sqlite` using sql.js (SQLite compiled to WebAssembly). Zero native dependencies — works on every platform (Replit, Heroku, Pterodactyl, VPS, etc.) without C++ compilation or build tools.
+*   **Local SQLite (better-sqlite3)**: Bot data stored locally in `data/bot.sqlite` using better-sqlite3 (native synchronous SQLite). WAL mode enabled for performance.
 *   **Zero-Config**: No database server, no credentials, no environment variables needed. Database file created automatically on first run.
-*   **Module**: `lib/supabase.js` manages all database operations (name kept for backward compatibility with all importers). Drop-in replacement — same API surface as the previous PostgreSQL implementation.
+*   **Module**: `lib/database.js` manages all database operations. Replaced the old `lib/supabase.js` (which has been deleted). All command files now import from `lib/database.js`.
 *   **Persistence**: Database auto-saves to disk every 30 seconds when dirty, plus on process exit (SIGINT/SIGTERM). Uses atomic write (tmp file + rename) to prevent corruption.
 *   **Tables**: 14 tables covering bot configurations, warnings, sudoers, chatbot data, antidelete, welcome/goodbye, group features, auto-configurations, and media storage.
 *   **Per-Bot Isolation**: All tables use composite primary keys with `bot_id`. Each bot instance is single-user (no shared data between users).

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import supabase from '../../lib/supabase.js';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const CONFIG_FILE = './data/autotyping/config.json';

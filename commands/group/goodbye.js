@@ -1,6 +1,6 @@
 import fs from 'fs';
 import axios from 'axios';
-import supabase from '../../lib/supabase.js';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 (async () => {
