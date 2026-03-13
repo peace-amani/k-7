@@ -459,7 +459,7 @@ async function buildLidMapFromGroup(chatId, sock) {
             admin: p.admin || 'none',
             keys: Object.keys(p).filter(k => !['id','lid','admin','phoneNumber'].includes(k)).join(',')
         }));
-        UltraCleanLogger.info(`📋 Group participant structure (${metadata.subject || chatId.split('@')[0].substring(0, 10)}): ${JSON.stringify(sample)}`);
+        // participant structure debug log suppressed
     }
     
     for (const p of participants) {
@@ -602,7 +602,7 @@ async function autoScanGroupsForSudo(sock) {
                     phoneNumber: p.phoneNumber || 'none',
                     keys: Object.keys(p).filter(k => !['id','lid','admin','phoneNumber'].includes(k)).join(',')
                 }));
-                UltraCleanLogger.info(`📋 Scan participant structure: ${JSON.stringify(sample)}`);
+                // scan participant structure debug log suppressed
             }
 
             for (const p of participants) {
@@ -876,6 +876,10 @@ const _CYAN = '\x1b[38;2;0;220;255m';
 const _CYANB = '\x1b[1m\x1b[38;2;0;220;255m';
 const _MAG = '\x1b[38;2;200;100;255m';
 const _MAGB = '\x1b[1m\x1b[38;2;200;100;255m';
+const _BL = '\x1b[38;2;80;160;255m';
+const _BLB = '\x1b[1m\x1b[38;2;80;160;255m';
+const _ORG = '\x1b[38;2;255;140;0m';
+const _ORGB = '\x1b[1m\x1b[38;2;255;140;0m';
 
 const _systemBuffer = [];
 const _FLUSH_INTERVAL = 25000;
@@ -1062,6 +1066,23 @@ class UltraCleanLogger {
     static antiviewonce(...args) {
         const timestamp = `${_MAGB}[${_getTime()}]${_R}`;
         originalConsoleMethods.log(timestamp, `${_MAG}🔐${_R}`, ...args.map(a => `${_MAG}${a}${_R}`));
+    }
+
+    static message(phone, chatType, groupName, text, time) {
+        const t = time || _getTime();
+        const isGroup = chatType === 'GROUP';
+        const typeIcon = isGroup ? '👥' : '💬';
+        const typeLabel = isGroup ? 'GROUP' : '  DM ';
+        const preview = text.length > 90 ? text.substring(0, 90) + '…' : text;
+        const color = isGroup ? _BL : _ORG;
+        const colorB = isGroup ? _BLB : _ORGB;
+        originalConsoleMethods.log(`${colorB}╭─⌈ ${typeIcon} ${typeLabel} ⌋─── ${color}${t}${_R}`);
+        if (isGroup && groupName) {
+            originalConsoleMethods.log(`${color}├─ 📱 +${phone}   👥 ${groupName}${_R}`);
+        } else {
+            originalConsoleMethods.log(`${color}├─ 📱 +${phone}${_R}`);
+        }
+        originalConsoleMethods.log(`${color}╰─⊷ "${preview}"${_R}`);
     }
 
     static flushSystem() {
@@ -5194,10 +5215,22 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
                 const _iJid = msg.key.remoteJid;
                 if (_iJid !== 'status@broadcast') {
-                    const _iSender = (msg.key.participant || _iJid).split('@')[0].split(':')[0];
-                    const _iLoc = _iJid.endsWith('@g.us') ? `[${_iJid.split('@')[0].substring(0, 10)}]` : '[DM]';
+                    const _iRawSender = (msg.key.participant || _iJid).split('@')[0].split(':')[0];
                     const _iText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-                    if (_iText) originalConsoleMethods.log(`📨 ← ${_iSender} ${_iLoc}: "${_iText.length > 80 ? _iText.substring(0, 80) + '…' : _iText}"`);
+                    if (_iText) {
+                        const _iIsGroup = _iJid.endsWith('@g.us');
+                        const _iResolved = lidPhoneCache.get(_iRawSender) || _iRawSender;
+                        const _iGroupName = _iIsGroup
+                            ? (groupMetadataCache.get(_iJid)?.subject || null)
+                            : null;
+                        UltraCleanLogger.message(
+                            _iResolved,
+                            _iIsGroup ? 'GROUP' : 'DM',
+                            _iGroupName,
+                            _iText,
+                            _getTime()
+                        );
+                    }
                 }
             }
 
