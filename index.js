@@ -231,6 +231,7 @@ import { normalizeMessageContent, downloadContentFromMessage, downloadMediaMessa
 import NodeCache from 'node-cache';
 import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudoByLid, getPhoneFromLid, getSudoList } from './lib/sudo-store.js';
 import supabaseDb, { setConfigBotId } from './lib/database.js';
+import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';
@@ -4412,25 +4413,26 @@ async function startBot(loginMode = 'auto', loginData = null) {
         autoConnectOnStart.reset();
         
         const { default: makeWASocket } = await import('@whiskeysockets/baileys');
-        const { useMultiFileAuthState } = await import('@whiskeysockets/baileys');
         const { fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = await import('@whiskeysockets/baileys');
         
         let state, saveCreds;
         
         try {
-            const authState = await useMultiFileAuthState(SESSION_DIR);
+            const rawDb = supabaseDb.getClient();
+            const authState = await useSQLiteAuthState(rawDb, SESSION_DIR);
             state = authState.state;
             saveCreds = authState.saveCreds;
-            
-            UltraCleanLogger.info(`🔑 Auth state loaded: ${state.creds.registered ? 'Registered' : 'Not registered'}`);
+
+            const stats = getSessionStats(rawDb);
+            UltraCleanLogger.info(`🔑 Auth state loaded from SQLite: ${state.creds.registered ? 'Registered' : 'Not registered'} | keys: ${stats.totalKeys}`);
             
         } catch (authError) {
             UltraCleanLogger.error(`❌ Auth state error: ${authError.message}`);
             
             try {
-                cleanSession();
-                UltraCleanLogger.info('🔄 Creating fresh session...');
-                const freshAuth = await useMultiFileAuthState(SESSION_DIR);
+                const rawDb = supabaseDb.getClient();
+                UltraCleanLogger.info('🔄 Creating fresh session in SQLite...');
+                const freshAuth = await useSQLiteAuthState(rawDb, SESSION_DIR);
                 state = freshAuth.state;
                 saveCreds = freshAuth.saveCreds;
             } catch (freshError) {
