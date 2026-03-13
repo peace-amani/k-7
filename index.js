@@ -5007,28 +5007,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
         const debouncedSaveCreds = () => {
             credsPending = true;
             if (credsTimer) clearTimeout(credsTimer);
-            credsTimer = setTimeout(async () => {
+            credsTimer = setTimeout(() => {
                 credsPending = false;
                 try {
-                    const freeMB = await DiskManager.getDiskFreeAsync();
-                    if (freeMB !== null && freeMB < DiskManager.CRITICAL_MB) {
-                        UltraCleanLogger.warning(`💾 Low disk (${freeMB}MB) before saveCreds - cleaning first...`);
-                        await DiskManager.runCleanupAsync(true);
-                    } else if (DiskManager.isLow) {
-                        await DiskManager.runCleanupAsync(true);
-                    }
-                } catch {}
-                try {
-                    await saveCreds();
+                    saveCreds();
                 } catch (err) {
-                    if (err?.code === 'ENOSPC') {
-                        UltraCleanLogger.error('💾 Disk full during saveCreds! Running emergency cleanup...');
-                        await DiskManager.runCleanupAsync(true);
-                        await new Promise(r => setTimeout(r, 1000));
-                        try { await saveCreds(); } catch (e2) {
-                            UltraCleanLogger.error(`💾 saveCreds still failing after cleanup: ${e2.message}`);
-                        }
-                    }
+                    UltraCleanLogger.error(`💾 saveCreds error: ${err.message}`);
                 }
             }, 500);
         };
