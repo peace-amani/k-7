@@ -243,7 +243,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Deep Git cleanup failed:', safeErr(error));
+//     console.error('Deep Git cleanup failed:', error);
     
 //     // Try to restore from backup
 //     try {
@@ -426,7 +426,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Smart Git update failed:', safeErr(error));
+//     console.error('Smart Git update failed:', error);
 //     throw error;
 //   }
 // }
@@ -536,7 +536,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('Git update failed:', safeErr(error));
+//     console.error('Git update failed:', error);
     
 //     try {
 //       const branches = await run('git branch --list backup-*');
@@ -888,7 +888,7 @@
 //     };
     
 //   } catch (error) {
-//     console.error('ZIP update failed:', safeErr(error));
+//     console.error('ZIP update failed:', error);
     
 //     // Cleanup temp dir on error
 //     try {
@@ -1234,7 +1234,7 @@
 //       }
       
 //     } catch (err) {
-//       console.error('Update failed:', safeErr(err));
+//       console.error('Update failed:', err);
       
 //       let errorText = `❌ **Update Failed**\nError: ${err.message || err}\n\n`;
       
@@ -1323,21 +1323,9 @@ const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
 /* -------------------- Configuration -------------------- */
-// Private URLs are read from environment variables — never hardcoded in source
-const UPDATE_ZIP_URL = process.env.BOT_UPDATE_ZIP_URL || process.env.UPDATE_ZIP_URL || "";
-const GIT_REPO_URL   = process.env.BOT_GIT_REPO_URL   || process.env.GIT_REPO_URL   || "";
+const UPDATE_ZIP_URL = "https://github.com/nk-apex/n7/archive/refs/heads/main.zip";
+const GIT_REPO_URL = "https://github.com/nk-apex/n7.git";
 const OWNER_REPO_URL = "https://github.com/7silent-wolf/silentwolf.git";
-
-// Strips raw URL patterns from text — use before sending to WhatsApp or printing to console
-function sanitizeForChat(text = "") {
-    return String(text).replace(/https?:\/\/[^\s"'`\])>]*/g, '[private-url]');
-}
-// Sanitizes an Error (or any value) for safe console output
-function safeErr(err) {
-    if (!err) return err;
-    const msg = err.message || String(err);
-    return sanitizeForChat(msg);
-}
 
 // Timeout configurations
 const DOWNLOAD_TIMEOUT = 120000;
@@ -1524,7 +1512,7 @@ async function deepCleanGitHistory(options = {}) {
     };
     
   } catch (error) {
-    console.error('Deep Git cleanup failed:', safeErr(error));
+    console.error('Deep Git cleanup failed:', error);
     
     // Try to restore from backup
     try {
@@ -1707,7 +1695,7 @@ async function smartGitUpdate(options = {}) {
     };
     
   } catch (error) {
-    console.error('Smart Git update failed:', safeErr(error));
+    console.error('Smart Git update failed:', error);
     throw error;
   }
 }
@@ -1813,7 +1801,7 @@ async function updateViaGit(cleanAfter = false) {
     };
     
   } catch (error) {
-    console.error('Git update failed:', safeErr(error));
+    console.error('Git update failed:', error);
     
     try {
       const branches = await run('git branch --list backup-*');
@@ -2085,7 +2073,7 @@ async function copyDirectoryFast(src, dest, timeout = PRESERVE_TIMEOUT) {
 
 /* -------------------- ZIP Update -------------------- */
 async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
-  console.log('Starting fast ZIP update...');
+  console.log(`Starting fast ZIP update from: ${zipUrl}`);
   
   const tmpDir = path.join(process.cwd(), 'tmp_update_fast_' + Date.now());
   const zipPath = path.join(tmpDir, 'update.zip');
@@ -2154,7 +2142,7 @@ async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
     };
     
   } catch (error) {
-    console.error('ZIP update failed:', safeErr(error));
+    console.error('ZIP update failed:', error);
     
     try {
       if (fs.existsSync(tmpDir)) {
@@ -2295,7 +2283,7 @@ async function extractZip(zipPath, outDir) {
 /* -------------------- Main Command -------------------- */
 export default {
   name: "update",
-  description: "Update bot to the latest version with automatic history cleaning",
+  description: "Update bot from n7 repository with automatic history cleaning",
   category: "owner",
   ownerOnly: true,
 
@@ -2330,16 +2318,11 @@ export default {
       };
       
       await editStatus('🔄 **Analyzing update options...**');
-
-      // Guard: update URLs must be set as env vars (not hardcoded for security)
+      
+      // Parse arguments
       const forceMethod = args[0]?.toLowerCase();
       const useZip = forceMethod === 'zip';
       const useGit = forceMethod === 'git';
-      const needsUrl = useZip || (!useGit && !args.includes('clean') && !args.includes('size') && !args.includes('deep'));
-      if (needsUrl && !UPDATE_ZIP_URL && !GIT_REPO_URL) {
-          await editStatus('❌ *Update source not configured.*\nSet *BOT_UPDATE_ZIP_URL* or *BOT_GIT_REPO_URL* in your environment variables, then restart.');
-          return;
-      }
       const softUpdate = args.includes('soft') || args.includes('no-restart');
       const hotReload = args.includes('hot') || args.includes('reload');
       const cleanHistory = args.includes('clean') || args.includes('fresh') || args.includes('reset');
@@ -2525,9 +2508,9 @@ export default {
       }
       
     } catch (err) {
-      console.error('Update failed:', safeErr(err));
+      console.error('Update failed:', err);
       
-      let errorText = `❌ **Update Failed**\nError: ${sanitizeForChat(err.message || String(err))}\n\n`;
+      let errorText = `❌ **Update Failed**\nError: ${err.message || err}\n\n`;
       
       if (err.message.includes('timeout')) {
         errorText += '**Reason:** Operation timed out\n';
