@@ -5240,11 +5240,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
                 const _iJid = msg.key.remoteJid;
                 if (_iJid !== 'status@broadcast') {
-                    const _iRawSender = (msg.key.participant || _iJid).split('@')[0].split(':')[0];
+                    const _iSenderJid = msg.key.participant || _iJid;
+                    const _iRawSender = _iSenderJid.split('@')[0].split(':')[0];
                     const _iText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
                     if (_iText) {
                         const _iIsGroup = _iJid.endsWith('@g.us');
-                        const _iResolved = lidPhoneCache.get(_iRawSender) || _iRawSender;
+                        const _iResolved = resolvePhoneFromLid(_iSenderJid) || _iRawSender;
                         const _iGroupName = _iIsGroup
                             ? (groupMetadataCache.get(_iJid)?.subject || null)
                             : null;
