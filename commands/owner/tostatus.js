@@ -1,5 +1,6 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
 // ─── Core poster ─────────────────────────────────────────────────────────────
 // Uses sock.sendMessage (routed to Baileys' originalSendMessage for
@@ -79,6 +80,50 @@ const isValidPnJid = (jid) =>
     jid.endsWith('@s.whatsapp.net') &&
     !jid.includes(':');
 
+// Resolve a @lid JID → "phoneNumber@s.whatsapp.net"
+// Tries: in-memory lidPhoneCache → sudo-store DB → Baileys signal repo
+function resolveLidJid(jid, sock) {
+    if (!jid || !jid.endsWith('@lid')) return null;
+    const lidNum = jid.split('@')[0].split(':')[0];
+
+    // 1. in-memory cache (globalThis.lidPhoneCache set by index.js)
+    const cached = globalThis.lidPhoneCache?.get(lidNum);
+    if (cached) return `${cached}@s.whatsapp.net`;
+
+    // 2. sudo-store DB (741 entries pre-loaded)
+    const stored = getPhoneFromLid(lidNum);
+    if (stored) return `${stored}@s.whatsapp.net`;
+
+    // 3. Baileys signal repository
+    try {
+        const sig = sock?.signalRepository?.lidMapping;
+        if (sig?.getPNForLID) {
+            const formats = [jid, `${lidNum}:0@lid`, `${lidNum}@lid`];
+            for (const fmt of formats) {
+                try {
+                    const pn = sig.getPNForLID(fmt);
+                    if (pn) {
+                        const num = String(pn).split('@')[0].replace(/[^0-9]/g, '');
+                        if (num.length >= 7 && num !== lidNum) return `${num}@s.whatsapp.net`;
+                    }
+                } catch {}
+            }
+        }
+    } catch {}
+
+    return null;
+}
+
+// Add a participant JID (pn or lid) to the set, resolving lids as needed
+function addParticipant(jid, jidSet, sock) {
+    if (!jid) return;
+    if (isValidPnJid(jid)) { jidSet.add(jid); return; }
+    if (jid.endsWith('@lid')) {
+        const resolved = resolveLidJid(jid, sock);
+        if (resolved) jidSet.add(resolved);
+    }
+}
+
 async function buildStatusJidList(sock) {
     const rawId   = globalThis.OWNER_JID || sock.user?.id || '';
     const numPart = rawId.split('@')[0].split(':')[0];
@@ -95,19 +140,16 @@ async function buildStatusJidList(sock) {
 
     // Source 1: global.contactNames
     const contactMap = global.contactNames || new Map();
-    for (const [jid] of contactMap) {
-        if (isValidPnJid(jid)) jidSet.add(jid);
-    }
+    for (const [jid] of contactMap) addParticipant(jid, jidSet, sock);
 
-    // Source 2: in-memory groupMetadataCache (fast, populated on-demand)
+    // Source 2: in-memory groupMetadataCache
     const groupCache = globalThis.groupMetadataCache || new Map();
     for (const [, entry] of groupCache) {
-        for (const p of (entry?.data?.participants || [])) {
-            if (isValidPnJid(p.id)) jidSet.add(p.id);
-        }
+        for (const p of (entry?.data?.participants || [])) addParticipant(p.id, jidSet, sock);
     }
 
-    // Source 3: live fetch of ALL participating groups (definitive, ~3-5s)
+    // Source 3: live fetch of ALL participating groups
+    let lidCount = 0, resolvedCount = 0;
     try {
         const groups = await Promise.race([
             sock.groupFetchAllParticipating(),
@@ -115,10 +157,13 @@ async function buildStatusJidList(sock) {
         ]);
         for (const [, group] of Object.entries(groups)) {
             for (const p of (group.participants || [])) {
-                if (isValidPnJid(p.id)) jidSet.add(p.id);
+                const before = jidSet.size;
+                if (p.id?.endsWith('@lid')) lidCount++;
+                addParticipant(p.id, jidSet, sock);
+                if (p.id?.endsWith('@lid') && jidSet.size > before) resolvedCount++;
             }
         }
-        console.log(`📱 [toStatus] Fetched ${Object.keys(groups).length} groups for contact list`);
+        console.log(`📱 [toStatus] Fetched ${Object.keys(groups).length} groups — ${lidCount} LIDs, resolved ${resolvedCount}`);
     } catch (e) {
         console.log(`📱 [toStatus] groupFetchAllParticipating skipped: ${e.message}`);
     }
