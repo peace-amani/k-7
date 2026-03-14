@@ -7,6 +7,10 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+let _cachedGithubData = null;
+let _lastGithubFetch = 0;
+const GITHUB_CACHE_TTL = 5 * 60 * 1000;
+
 export default {
   name: "p",
   description: "Check bot ping and status",
@@ -52,7 +56,6 @@ export default {
         ownerInfo.number = ownerDataJson.OWNER_NUMBER || ownerDataJson.OWNER_CLEAN_NUMBER || "";
         ownerInfo.name = ownerDataJson.OWNER_NAME || "Silent Wolf";
         
-        console.log(`📋 [PING] Owner info loaded: ${ownerInfo.name} | ${ownerInfo.number}`);
       } catch (ownerError) {
         console.error("❌ [PING] Failed to read owner.json:", ownerError.message);
         ownerInfo.name = "Silent Wolf";
@@ -61,28 +64,22 @@ export default {
       }
 
       const githubOwner = "7silent-wolf";
-      let githubData = {
+      let githubData = _cachedGithubData || {
         avatar_url: "https://avatars.githubusercontent.com/u/10639145",
         html_url: `https://github.com/${githubOwner}`,
         name: "Silent Wolf"
       };
-      
-      try {
-        const githubUserUrl = `https://api.github.com/users/${githubOwner}`;
-        console.log(`🌐 [PING] Fetching GitHub data for: ${githubOwner}`);
-        
-        const githubResponse = await axios.get(githubUserUrl, { 
-          timeout: 10000,
-          headers: { 
-            "User-Agent": "Silent-Wolf-Bot",
-            "Accept": "application/vnd.github.v3+json"
-          } 
-        });
-        
-        githubData = githubResponse.data;
-        console.log(`✅ [PING] GitHub data fetched successfully`);
-      } catch (githubError) {
-        console.error("⚠️ [PING] GitHub API failed, using defaults:", githubError.message);
+
+      if (!_cachedGithubData || Date.now() - _lastGithubFetch > GITHUB_CACHE_TTL) {
+        try {
+          const githubResponse = await axios.get(`https://api.github.com/users/${githubOwner}`, {
+            timeout: 5000,
+            headers: { "User-Agent": "Silent-Wolf-Bot", "Accept": "application/vnd.github.v3+json" }
+          });
+          _cachedGithubData = githubResponse.data;
+          _lastGithubFetch = Date.now();
+          githubData = _cachedGithubData;
+        } catch {}
       }
 
       const pingTime = Date.now() - pingStartTime;
@@ -98,8 +95,7 @@ export default {
       else if (pingTime < 3000) responseQuality = "🐢 Moderate";
       else responseQuality = "🐌 Slow";
 
-      const text = `
-`.trim();
+      const text = `🐺 *${getBotName()}* — Pong!\n⚡ *Latency:* ${pingTime}ms  •  *Uptime:* ${hours}h ${minutes}m ${seconds}s\n📶 *Quality:* ${responseQuality}`;
 
       await sock.sendMessage(
         jid,
@@ -118,12 +114,8 @@ export default {
             },
           },
         },
-        { 
-          quoted: fkontak
-        }
+        { quoted: fkontak }
       );
-
-      console.log(`✅ [PING] Command executed - Latency: ${pingTime}ms | Quality: ${responseQuality}`);
 
     } catch (err) {
       console.error("❌ [PING] Command error:", err.message || err);

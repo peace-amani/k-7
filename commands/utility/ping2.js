@@ -34,21 +34,7 @@ export default {
 
         // Check if it's a group chat
         const isGroup = jid.endsWith("@g.us");
-        
-        // Prepare mentions array
-        let mentions = [];
-        
-        if (isGroup) {
-            try {
-                const groupMetadata = await sock.groupMetadata(jid);
-                mentions = groupMetadata.participants.map(p => p.id);
-            } catch (error) {
-                console.error("Failed to fetch group participants:", error);
-                mentions = [sender];
-            }
-        } else {
-            mentions = [sender];
-        }
+        const mentions = [sender];
 
         // Calculate latency
         const latency = Date.now() - startTime;
@@ -61,7 +47,7 @@ export default {
 ╭──────────────╮
    ⚡ *SPEED TEST* ⚡
 ╰──────────────╯
-👋 Hello @everyone
+👋 Hello @${sender.split("@")[0]}
 ╭──────────────╮
 │ 📊 *RESPONSE TIME*     
 │ ⏱️ *${latency}ms*            
