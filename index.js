@@ -1562,7 +1562,7 @@ const DiskManager = {
         try {
             if (!fs.existsSync(statusMediaDir)) return 0;
             const now = Date.now();
-            const maxAge = (aggressive ? 1 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000);
+            const maxAge = (aggressive ? 15 * 60 * 1000 : 60 * 60 * 1000);
             const files = await fs.promises.readdir(statusMediaDir);
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -1615,9 +1615,9 @@ const DiskManager = {
         const results = {};
         results.sessionFiles = await this.cleanSessionSignalFilesAsync(aggressive);
         await yieldToLoop();
-        results.viewonceMedia = await this.cleanOldMediaAsync('./data/viewonce_messages', 1, aggressive) + await this.cleanOldMediaAsync('./data/viewonce_private', 1, aggressive);
+        results.viewonceMedia = await this.cleanOldMediaAsync('./data/viewonce_messages', 1/12, aggressive) + await this.cleanOldMediaAsync('./data/viewonce_private', 1/12, aggressive);
         await yieldToLoop();
-        results.antideleteMedia = await this.cleanOldMediaAsync('./data/antidelete/media', 1, aggressive);
+        results.antideleteMedia = await this.cleanOldMediaAsync('./data/antidelete/media', 1/48, aggressive);
         await yieldToLoop();
         results.statusMedia = await this.cleanStatusMediaAsync(aggressive);
         await yieldToLoop();
