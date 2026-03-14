@@ -69,13 +69,30 @@ async function processQuoted(quoted, captionOverride) {
     };
 }
 
-// Build the statusJidList — explicit device 0 bypasses USync and directly
-// targets the primary phone without a round-trip to WA's USync endpoint.
+// Build the statusJidList from all known contacts so every contact
+// receives the sender key and can actually see/decrypt the posted status.
 function buildStatusJidList(sock) {
     const rawId = globalThis.OWNER_JID || sock.user?.id || '';
     const numPart = rawId.split('@')[0].split(':')[0];
-    if (!numPart) return ['0@s.whatsapp.net'];
-    return [`${numPart}:0@s.whatsapp.net`];
+    const ownerJid = numPart ? `${numPart}@s.whatsapp.net` : null;
+
+    const jidSet = new Set();
+
+    // Pull from global.contactNames (populated via contacts.upsert events)
+    const contactMap = global.contactNames || new Map();
+    for (const [jid] of contactMap) {
+        // Only individual @s.whatsapp.net JIDs (no groups, no lid, no device suffix)
+        if (typeof jid === 'string' && jid.endsWith('@s.whatsapp.net') && !jid.includes(':')) {
+            jidSet.add(jid);
+        }
+    }
+
+    // Always include the owner's own JID
+    if (ownerJid) jidSet.add(ownerJid);
+
+    const list = Array.from(jidSet);
+    console.log(`📱 [toStatus] statusJidList built: ${list.length} contacts`);
+    return list.length > 0 ? list : (ownerJid ? [ownerJid] : ['0@s.whatsapp.net']);
 }
 
 // Force-refresh the Signal session with device 0 before posting.
@@ -177,12 +194,7 @@ export default {
             await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
             const statusJidList = buildStatusJidList(sock);
-            const numPart = (globalThis.OWNER_JID || sock.user?.id || '').split('@')[0].split(':')[0];
-            console.log(`📱 [toStatus] Posting ${mediaType} → status@broadcast`);
-            console.log(`📱 [toStatus] statusJidList: ${JSON.stringify(statusJidList)}`);
-            console.log(`📱 [toStatus] sock.user.id: ${sock.user?.id} | OWNER_JID: ${globalThis.OWNER_JID}`);
-
-            await refreshSessionForDevice0(sock, numPart);
+            console.log(`📱 [toStatus] Posting ${mediaType} to ${statusJidList.length} contacts`);
 
             const extraOpts = mediaType === 'Text' ? { backgroundColor: bgColor, font } : {};
             const result = await postPersonalStatus(sock, content, statusJidList, extraOpts);
