@@ -27,7 +27,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node --no-warnings --expose-gc --max-old-space-size=512 --experimental-global-webcrypto index.js"
+args = "node --no-warnings --expose-gc --max-old-space-size=1024 --experimental-global-webcrypto index.js"
 
 [[ports]]
 localPort = 3000

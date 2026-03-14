@@ -2870,29 +2870,44 @@ const autoLinkSystem = new AutoLinkSystem();
 const memoryMonitor = {
     _interval: null,
     _trimInterval: null,
+    _emergencyInterval: null,
     start() {
         if (this._interval) return;
         this._lastMemWarn = 0;
+        // Main check every 30 seconds — catch memory spikes before they cascade
         this._interval = setInterval(() => {
             try {
                 const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-                if (memMB > 250) {
+                if (memMB > 200) {
                     const now = Date.now();
-                    if (now - this._lastMemWarn > 5 * 60 * 1000) {
+                    if (now - this._lastMemWarn > 3 * 60 * 1000) {
                         UltraCleanLogger.warning(`High memory: ${memMB}MB - trimming caches`);
                         this._lastMemWarn = now;
                     }
-                    setImmediate(() => this.trimCaches(memMB > 350));
+                    setImmediate(() => this.trimCaches(memMB > 400));
                 }
             } catch {}
-        }, 60 * 1000);
+        }, 30 * 1000);
+        // Routine trim every 3 minutes regardless of memory level
         this._trimInterval = setInterval(() => {
             try { this.trimCaches(false); } catch {}
-        }, 5 * 60 * 1000);
+        }, 3 * 60 * 1000);
+        // Emergency GC every 20 seconds when memory is critically high
+        this._emergencyInterval = setInterval(() => {
+            try {
+                const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+                if (memMB > 700) {
+                    if (global.gc) { global.gc(); global.gc(); }
+                    setImmediate(() => this.trimCaches(true));
+                    UltraCleanLogger.warning(`Emergency GC: ${memMB}MB - forcing collection`);
+                }
+            } catch {}
+        }, 20 * 1000);
     },
     stop() {
         if (this._interval) { clearInterval(this._interval); this._interval = null; }
         if (this._trimInterval) { clearInterval(this._trimInterval); this._trimInterval = null; }
+        if (this._emergencyInterval) { clearInterval(this._emergencyInterval); this._emergencyInterval = null; }
     },
     trimCaches(aggressive = false) {
         try {
@@ -2912,19 +2927,20 @@ const memoryMonitor = {
                 if (now - v.ts > GROUP_CACHE_TTL) groupMetadataCache.delete(k);
             }
             _capSet(groupDiagDone, MAX_GROUP_DIAG);
-            const factor = aggressive ? 0.5 : 1;
-            trimMap(lidPhoneCache, Math.floor(400 * factor), Math.floor(200 * factor), 'LID cache');
-            trimMap(phoneLidCache, Math.floor(400 * factor), Math.floor(200 * factor), null);
+            const factor = aggressive ? 0.4 : 1;
+            trimMap(lidPhoneCache, Math.floor(300 * factor), Math.floor(150 * factor), 'LID cache');
+            trimMap(phoneLidCache, Math.floor(300 * factor), Math.floor(150 * factor), null);
             trimMap(groupMetadataCache, Math.floor(20 * factor), Math.floor(10 * factor), 'Group metadata cache');
-            trimMap(global.contactNames, Math.floor(1000 * factor), Math.floor(500 * factor), null);
+            // contactNames stores up to 5 keys per contact — keep cap low
+            trimMap(global.contactNames, Math.floor(500 * factor), Math.floor(200 * factor), null);
             if (store && store.messages) {
-                trimMap(store.messages, Math.floor(150 * factor), Math.floor(75 * factor), 'Message store');
+                trimMap(store.messages, Math.floor(100 * factor), Math.floor(50 * factor), 'Message store');
             }
             if (store && store.sentMessages) {
-                trimMap(store.sentMessages, Math.floor(100 * factor), Math.floor(50 * factor), null);
+                trimMap(store.sentMessages, Math.floor(80 * factor), Math.floor(40 * factor), null);
             }
-            trimMap(viewOnceCache, Math.floor(50 * factor), Math.floor(25 * factor), null);
-            trimMap(_lidResolveAttempts, 100, 50, null);
+            trimMap(viewOnceCache, Math.floor(50 * factor), Math.floor(20 * factor), null);
+            trimMap(_lidResolveAttempts, 80, 40, null);
             trimMap(_pendingGroupFetches, 20, 10, null);
             // Clean stale antispam tracker entries (older than 5 minutes)
             if (globalThis._antispamTracker instanceof Map && globalThis._antispamTracker.size > 0) {
@@ -2933,14 +2949,12 @@ const memoryMonitor = {
                     const ts = val?.lastTime || 0;
                     if (_antispamNow - ts > 5 * 60 * 1000) globalThis._antispamTracker.delete(key);
                 }
-                trimMap(globalThis._antispamTracker, 2000, 1000, null);
+                trimMap(globalThis._antispamTracker, 1500, 750, null);
             }
             if (global.gc) { global.gc(); }
             if (aggressive) {
                 const memAfter = Math.round(process.memoryUsage().rss / 1024 / 1024);
-                if (memAfter > 350) {
-                    UltraCleanLogger.info(`Aggressive trim: ${memAfter}MB`);
-                }
+                UltraCleanLogger.info(`Aggressive trim: ${memAfter}MB`);
             }
         } catch {}
     }
@@ -5597,11 +5611,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 const senderJid = msg.key.participant || msg.key.remoteJid;
                 if (senderJid && !senderJid.includes('status') && !senderJid.includes('broadcast')) {
                     global.contactNames = global.contactNames || new Map();
-                    if (global.contactNames.size > 2000) {
+                    if (global.contactNames.size > 800) {
                         const newMap = new Map();
                         let kept = 0;
                         for (const [k, v] of global.contactNames) {
-                            if (++kept > global.contactNames.size - 1000) newMap.set(k, v);
+                            if (++kept > global.contactNames.size - 400) newMap.set(k, v);
                         }
                         global.contactNames = newMap;
                     }
@@ -5622,9 +5636,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             handleReactDev(sock, msg).catch(() => {});
 
-            handleViewOnceDetection(sock, msg).catch(err => {
-                originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
-            });
+            // Only call view-once handler if message is actually a view-once
+            if (msg.message && detectViewOnceMedia(msg.message)) {
+                handleViewOnceDetection(sock, msg).catch(err => {
+                    originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
+                });
+            }
 
             if (msg.message?.groupStatusMentionMessage) {
                 console.log(`⚠️ [GSM] groupStatusMentionMessage received at ${msg.key?.remoteJid} from ${msg.key?.participant || 'unknown'}`);
@@ -5900,7 +5917,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             key: update.key,
                             message: update.update.message
                         };
-                        handleViewOnceDetection(sock, updatedMsg).catch(() => {});
+                        if (detectViewOnceMedia(update.update.message)) {
+                            handleViewOnceDetection(sock, updatedMsg).catch(() => {});
+                        }
                     }
                 } catch {}
             }
