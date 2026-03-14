@@ -5208,6 +5208,17 @@ async function startBot(loginMode = 'auto', loginData = null) {
         });
 
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            // TRACE: log view-once arrivals regardless of upsert type so we can see what type they use
+            try {
+                const _t0 = messages?.[0];
+                if (_t0?.message && !_t0?.key?.fromMe) {
+                    const _tVo = detectViewOnceMedia(_t0.message);
+                    if (_tVo) {
+                        originalConsoleMethods.log(`🔍 [AV-TRACE] upsert type="${type}" fromMe=${_t0?.key?.fromMe} — ${_tVo.type} view-once detected`);
+                    }
+                }
+            } catch {}
+
             if (type !== 'notify') {
                 // Also process 'append' fromMe messages that are button responses —
                 // these arrive from the owner's secondary device (phone) as type='append'.
@@ -5221,6 +5232,23 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         if (!hasBtn && !hasReaction) return;
                         // fall through — let button responses and reactions be processed
                     } else {
+                        // For non-fromMe append messages: check for fresh view-once
+                        // (view-once can arrive as 'append' when delivered during reconnection/restart)
+                        if (m0?.message && !m0?.key?.fromMe) {
+                            const _avTs = m0.messageTimestamp
+                                ? (typeof m0.messageTimestamp === 'object' ? m0.messageTimestamp.low || 0 : Number(m0.messageTimestamp)) * 1000
+                                : 0;
+                            const _avFresh = _avTs > 0 && (Date.now() - _avTs < 300000); // within 5 minutes
+                            if (_avFresh) {
+                                const _appendVo = detectViewOnceMedia(m0.message);
+                                if (_appendVo) {
+                                    originalConsoleMethods.log(`🔍 [AV-APPEND] Fresh view-once (${_appendVo.type}) in append event — processing...`);
+                                    handleViewOnceDetection(sock, m0).catch(err => {
+                                        originalConsoleMethods.log(`❌ [AV-APPEND] Error: ${err.message}`);
+                                    });
+                                }
+                            }
+                        }
                         return;
                     }
                 } else {
