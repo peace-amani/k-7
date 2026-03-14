@@ -6,13 +6,72 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function parseVcardNumbers(vcard) {
+    const numbers = [];
+    const lines = vcard.split(/\r?\n/);
+    for (const line of lines) {
+        if (!line.toUpperCase().startsWith('TEL')) continue;
+        const parts = line.split(':');
+        if (parts.length < 2) continue;
+        const raw = parts[parts.length - 1].trim().replace(/[+\s()\-]/g, '');
+        if (/^\d{7,15}$/.test(raw)) numbers.push(raw);
+    }
+    return numbers;
+}
+
+function extractNumbersFromQuotedVcf(m) {
+    const msgContent = m.message || {};
+
+    // Unwrap ephemerals / view-once wrappers
+    const inner =
+        msgContent.ephemeralMessage?.message ||
+        msgContent.viewOnceMessage?.message ||
+        msgContent.documentWithCaptionMessage?.message ||
+        msgContent;
+
+    // Direct contact message (single contact shared)
+    if (inner.contactMessage?.vcard) {
+        return parseVcardNumbers(inner.contactMessage.vcard);
+    }
+
+    // Multiple contacts shared at once
+    if (inner.contactsArrayMessage?.contacts?.length) {
+        const nums = [];
+        for (const c of inner.contactsArrayMessage.contacts) {
+            if (c.vcard) nums.push(...parseVcardNumbers(c.vcard));
+        }
+        return nums;
+    }
+
+    // Reply to a contact/VCF — check contextInfo of text message
+    const ctxMsg =
+        inner.extendedTextMessage?.contextInfo?.quotedMessage ||
+        inner.imageMessage?.contextInfo?.quotedMessage ||
+        inner.videoMessage?.contextInfo?.quotedMessage;
+
+    if (ctxMsg) {
+        if (ctxMsg.contactMessage?.vcard) {
+            return parseVcardNumbers(ctxMsg.contactMessage.vcard);
+        }
+        if (ctxMsg.contactsArrayMessage?.contacts?.length) {
+            const nums = [];
+            for (const c of ctxMsg.contactsArrayMessage.contacts) {
+                if (c.vcard) nums.push(...parseVcardNumbers(c.vcard));
+            }
+            return nums;
+        }
+    }
+
+    return [];
+}
+
 export default {
   name: "creategroup",
   description: "Create WhatsApp groups automatically",
   category: "owner",
   ownerOnly: true,
   aliases: ["cg", "makegroup", "newgroup"],
-  usage: "<number(s)> <GroupName>  or  <GroupName> <number(s)>",
+  usage: "<GroupName>  (reply to VCF)  or  <number(s)> <GroupName>",
 
   async execute(sock, m, args, PREFIX, extra) {
     const jid = m.key.remoteJid;
@@ -27,9 +86,9 @@ export default {
     if (args.length === 0 || args[0].toLowerCase() === "help") {
       return reply(
         `╭─⌈ 👥 *CREATE GROUP* ⌋\n│\n` +
-        `├─⊷ *${PREFIX}creategroup 254xxx GroupName*\n│  └⊷ Create with one member\n` +
-        `├─⊷ *${PREFIX}creategroup 254xxx 254yyy GroupName*\n│  └⊷ Create with multiple members\n` +
-        `├─⊷ *${PREFIX}creategroup GroupName 254xxx*\n│  └⊷ Name first also works\n` +
+        `├─⊷ *Reply to a VCF/contact:*\n│  └⊷ ${PREFIX}creategroup GroupName\n` +
+        `├─⊷ *Manual numbers:*\n│  └⊷ ${PREFIX}creategroup 254xxx GroupName\n` +
+        `├─⊷ *Multiple numbers:*\n│  └⊷ ${PREFIX}creategroup 254xxx 254yyy GroupName\n` +
         `│\n` +
         `├─⊷ *-d "description"*\n│  └⊷ Set group description\n` +
         `├─⊷ *-a*\n│  └⊷ Announce-only mode\n` +
@@ -40,10 +99,6 @@ export default {
 
     try {
       // ====== PARSE ARGUMENTS ======
-      // Strategy: scan all args — phone numbers (8-15 digits) are participants,
-      // everything else (after stripping flags) is joined as the group name.
-      // This works regardless of order: number-first OR name-first.
-
       const phoneRegex = /^\+?[\d]{7,15}$/;
       const rawNumbers = [];
       const nameWords = [];
@@ -72,6 +127,15 @@ export default {
 
       const groupName = nameWords.join(' ').trim() || `${getBotName()} Group`;
 
+      // ====== VCF EXTRACTION ======
+      // Try to pull numbers from a quoted/attached VCF if no manual numbers given
+      const vcfNumbers = extractNumbersFromQuotedVcf(m);
+      if (vcfNumbers.length > 0) {
+        for (const n of vcfNumbers) {
+          if (!rawNumbers.includes(n)) rawNumbers.push(n);
+        }
+      }
+
       // ====== VALIDATION ======
       if (groupName.length > 25) {
         return reply(
@@ -83,23 +147,26 @@ export default {
 
       if (rawNumbers.length === 0) {
         return reply(
-          `❌ *No phone number provided!*\n\n` +
-          `Usage: \`${PREFIX}creategroup 254703397679 Wolf Group\`\n` +
-          `Include the country code (no + needed).`
+          `❌ *No phone numbers found!*\n\n` +
+          `*Option 1:* Reply to a VCF contact and run:\n` +
+          `\`${PREFIX}creategroup GroupName\`\n\n` +
+          `*Option 2:* Provide numbers manually:\n` +
+          `\`${PREFIX}creategroup 254703397679 Wolf Group\``
         );
       }
 
       // ====== PREPARE PARTICIPANTS ======
-      const processingMsg = await reply(`⏳ *Creating "${groupName}"…*`);
+      const processingMsg = await reply(
+        `⏳ *Creating "${groupName}"…*\n` +
+        (vcfNumbers.length > 0 ? `📋 Loaded ${vcfNumbers.length} number(s) from VCF` : '')
+      );
 
       const validParticipants = [];
-      const invalidParticipants = [];
 
-      // Always include the owner who sent the command
+      // Always include the owner
       const ownerJid = senderJid.includes('@') ? senderJid : senderJid + '@s.whatsapp.net';
       validParticipants.push(ownerJid);
 
-      // Process provided numbers
       for (const num of rawNumbers) {
         const participantJid = num + '@s.whatsapp.net';
         if (!validParticipants.includes(participantJid)) {
@@ -108,7 +175,6 @@ export default {
       }
 
       // ====== CREATE GROUP ======
-      // Baileys adds the bot as creator automatically — pass everyone else
       const group = await sock.groupCreate(groupName, validParticipants);
 
       if (!group || !group.gid) throw new Error("No group ID returned — creation may have failed.");
@@ -118,28 +184,23 @@ export default {
       // ====== CONFIGURE GROUP ======
       const botJid = sock.user?.id || sock.userID;
 
-      // Promote bot to admin
       try {
         if (botJid) await sock.groupParticipantsUpdate(groupJid, [botJid], "promote");
       } catch {}
 
-      // Set description
       if (description) {
         try { await sock.groupUpdateDescription(groupJid, description); } catch {}
       }
 
-      // Group settings
       try {
         await sock.groupSettingUpdate(groupJid, announcementsOnly ? 'announcement' : 'not_announcement');
         await sock.groupSettingUpdate(groupJid, restrict ? 'locked' : 'unlocked');
       } catch {}
 
-      // Welcome message in the new group
       await sock.sendMessage(groupJid, {
         text: `👋 *Welcome to ${groupName}!*\n\nCreated with ${getBotName()}.\n🤖 Prefix: ${PREFIX}`
       });
 
-      // Get invite link
       let inviteLink = "Unavailable";
       try {
         const code = await sock.groupInviteCode(groupJid);
@@ -150,21 +211,20 @@ export default {
       let successMsg =
         `╭─⌈ ✅ *GROUP CREATED* ⌋\n│\n` +
         `├─⊷ *Name:* ${groupName}\n` +
-        `├─⊷ *Members:* ${validParticipants.length + 1}\n`;
+        `├─⊷ *Members:* ${validParticipants.length}\n`;
+
+      if (vcfNumbers.length > 0) {
+        successMsg += `├─⊷ *Source:* 📋 VCF (${vcfNumbers.length} contacts)\n`;
+      }
 
       if (description) successMsg += `├─⊷ *Description:* ${description}\n`;
 
       successMsg += `├─⊷ *Members added:*\n`;
       validParticipants.forEach(p => {
         const num = p.split('@')[0];
-        const tag = p === ownerJid ? ' 👤 you' : '';
-        successMsg += `│  └⊷ ${num}${tag}\n`;
+        const tag = p === ownerJid ? ' 👤 (you)' : '';
+        successMsg += `│  └⊷ +${num}${tag}\n`;
       });
-
-      if (invalidParticipants.length > 0) {
-        successMsg += `├─⊷ *Not added (invalid):*\n`;
-        invalidParticipants.forEach(p => { successMsg += `│  └⊷ ${p}\n`; });
-      }
 
       successMsg +=
         `├─⊷ *Link:* ${inviteLink}\n│\n` +
@@ -182,7 +242,8 @@ export default {
           id: groupJid, name: groupName,
           createdBy: senderJid.split('@')[0],
           created: new Date().toISOString(),
-          members: validParticipants.length + 1,
+          members: validParticipants.length,
+          vcfSource: vcfNumbers.length > 0,
           invite: inviteLink
         });
         fs.writeFileSync(logFile, JSON.stringify(groups, null, 2));
