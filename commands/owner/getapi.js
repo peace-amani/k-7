@@ -1,4 +1,4 @@
-import { getCommandInfo, getAllApiCommands } from '../../lib/apiRegistry.js';
+import { getCommandInfo, getAllApiCommands, assembleUrl, PARAM_STYLE_LABELS } from '../../lib/apiRegistry.js';
 import { getBotName } from '../../lib/botname.js';
 import { createRequire } from 'module';
 
@@ -10,7 +10,7 @@ export default {
     name: 'getapi',
     aliases: ['apiinfo', 'checkapi'],
     category: 'owner',
-    desc: 'View the API endpoint used by a specific command',
+    desc: 'View the API endpoint, style, and live URL preview for a command',
     usage: '.getapi <command> | .getapi (list all)',
     ownerOnly: true,
 
@@ -20,6 +20,7 @@ export default {
         const BOT_NAME = extra?.BOT_NAME || getBotName() || 'WOLFBOT';
         const cmdName = (args[0] || '').toLowerCase().trim();
 
+        // ── LIST ALL ────────────────────────────────────────────────────────
         if (!cmdName) {
             const all = getAllApiCommands();
             const grouped = {};
@@ -36,11 +37,14 @@ export default {
                 text += `│\n`;
             }
             text += `├─⊷ 💡 *Usage:* ${PREFIX}getapi <command>\n`;
+            text += `├─⊷ 📡 *Test:* ${PREFIX}fetchapi <command>\n`;
+            text += `├─⊷ 🔄 *Replace:* ${PREFIX}replaceapi <command> <url> [style]\n`;
             text += `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
             await reply(text);
             return;
         }
 
+        // ── SINGLE COMMAND ──────────────────────────────────────────────────
         const info = getCommandInfo(cmdName);
         if (!info) {
             await reply(
@@ -50,10 +54,15 @@ export default {
             return;
         }
 
-        const statusTag = info.isOverridden ? '🔄 *OVERRIDDEN*' : '✅ *DEFAULT*';
+        const statusTag   = info.isOverridden ? '🔄 *OVERRIDDEN*' : '✅ *DEFAULT*';
         const overrideLine = info.isOverridden
             ? `├─⊷ 🔁 *Default:*\n│   └⊷ ${info.defaultUrl}\n│\n`
             : '';
+        const styleLabel = PARAM_STYLE_LABELS[info.paramStyle] || info.paramStyle;
+
+        // Build a live preview URL with the testQuery so the owner can see exactly
+        // what URL will be called when a user runs the command
+        const previewUrl = assembleUrl(info.currentUrl, info.paramStyle, info.testQuery || 'test_query');
 
         const text =
             `╭─⌈ 🌐 *API INFO — ${cmdName.toUpperCase()}* ⌋\n` +
@@ -62,14 +71,20 @@ export default {
             `├─⊷ 📋 *Label:* ${info.label}\n` +
             `├─⊷ 📁 *Category:* ${info.category}\n` +
             `│\n` +
-            `├─⊷ 🔗 *Current API:*\n` +
+            `├─⊷ 🔗 *Base URL:*\n` +
             `│   └⊷ ${info.currentUrl}\n` +
+            `│\n` +
+            `├─⊷ 🎨 *Param Style:* \`${info.paramStyle}\`\n` +
+            `│   └⊷ ${styleLabel}\n` +
+            `│\n` +
+            `├─⊷ 🔍 *Live URL Preview:*\n` +
+            `│   └⊷ ${previewUrl}\n` +
             `│\n` +
             `├─⊷ 📊 *Status:* ${statusTag}\n` +
             `│\n` +
             overrideLine +
             `├─⊷ 📡 *Test API:* ${PREFIX}fetchapi ${cmdName}\n` +
-            `├─⊷ 🔄 *Replace:* ${PREFIX}replaceapi ${cmdName} <newurl>\n` +
+            `├─⊷ 🔄 *Replace:* ${PREFIX}replaceapi ${cmdName} <url> [style]\n` +
             `├─⊷ ♻️ *Reset:* ${PREFIX}replaceapi ${cmdName} reset\n` +
             `│\n` +
             `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
@@ -83,7 +98,7 @@ export default {
                         {
                             name: 'quick_reply',
                             buttonParamsJson: JSON.stringify({
-                                display_text: '📡 FETCH API',
+                                display_text: '📡 TEST API',
                                 id: `${PREFIX}fetchapi ${cmdName}`
                             })
                         },
@@ -97,9 +112,9 @@ export default {
                         {
                             name: 'cta_url',
                             buttonParamsJson: JSON.stringify({
-                                display_text: '🌐 Open URL',
-                                url: info.currentUrl,
-                                merchant_url: info.currentUrl
+                                display_text: '🌐 Open Preview URL',
+                                url: previewUrl,
+                                merchant_url: previewUrl
                             })
                         }
                     ]

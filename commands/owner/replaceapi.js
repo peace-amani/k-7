@@ -1,4 +1,4 @@
-import { getCommandInfo, setCommandApi, resetCommandApi } from '../../lib/apiRegistry.js';
+import { getCommandInfo, setCommandApi, resetCommandApi, detectParamStyle, assembleUrl, PARAM_STYLE_LABELS } from '../../lib/apiRegistry.js';
 import { getBotName } from '../../lib/botname.js';
 import { createRequire } from 'module';
 
@@ -6,31 +6,46 @@ const _require = createRequire(import.meta.url);
 let _giftedBtns = null;
 try { _giftedBtns = _require('gifted-btns'); } catch {}
 
+const VALID_STYLES = ['gifted', 'yturl', 'keyword', 'raw'];
+
 export default {
     name: 'replaceapi',
     aliases: ['setapi', 'swapapi'],
     category: 'owner',
-    desc: 'Replace the API endpoint for a command instantly (no restart needed)',
-    usage: '.replaceapi <command> <newurl> | .replaceapi <command> reset',
+    desc: 'Replace the API endpoint for a command (style auto-detected or specify manually)',
+    usage: '.replaceapi <command> <newurl> [gifted|yturl|keyword|raw] | .replaceapi <command> reset',
     ownerOnly: true,
 
     async execute(sock, msg, args, PREFIX, extra) {
         const chatJid = msg.key.remoteJid;
         const reply = (text) => sock.sendMessage(chatJid, { text }, { quoted: msg });
         const BOT_NAME = extra?.BOT_NAME || getBotName() || 'WOLFBOT';
-        const cmdName = (args[0] || '').toLowerCase().trim();
-        const newUrl = (args[1] || '').trim();
+        const cmdName  = (args[0] || '').toLowerCase().trim();
+
+        // Last arg might be a style keyword
+        let styleArg = null;
+        let urlArgs  = args.slice(1);
+        if (urlArgs.length > 0 && VALID_STYLES.includes(urlArgs[urlArgs.length - 1].toLowerCase())) {
+            styleArg = urlArgs.pop().toLowerCase();
+        }
+        const newUrl = urlArgs.join(' ').trim();
 
         if (!cmdName) {
+            const styleList = VALID_STYLES.map(s => `│   • *${s}* — ${PARAM_STYLE_LABELS[s]}`).join('\n');
             await reply(
                 `╭─⌈ 🔄 *REPLACE API* ⌋\n` +
                 `│\n` +
                 `├─⊷ *Usage:*\n` +
-                `│   └⊷ ${PREFIX}replaceapi <cmd> <newurl>\n` +
+                `│   └⊷ ${PREFIX}replaceapi <cmd> <newurl> [style]\n` +
                 `│   └⊷ ${PREFIX}replaceapi <cmd> reset\n` +
                 `│\n` +
+                `├─⊷ *Styles (auto-detected if omitted):*\n` +
+                styleList + `\n` +
+                `│\n` +
                 `├─⊷ *Examples:*\n` +
-                `│   └⊷ ${PREFIX}replaceapi ytmp3 https://newapi.com/ytmp3\n` +
+                `│   └⊷ ${PREFIX}replaceapi ytmp3 https://api.giftedtech.co.ke/api/download/ytaudio gifted\n` +
+                `│   └⊷ ${PREFIX}replaceapi ytmp3 https://apiskeith.top/download/audio yturl\n` +
+                `│   └⊷ ${PREFIX}replaceapi gpt https://apis.xwolf.space/download/audio keyword\n` +
                 `│   └⊷ ${PREFIX}replaceapi gpt reset\n` +
                 `│\n` +
                 `├─⊷ 📋 List all APIs: *${PREFIX}getapi*\n` +
@@ -49,6 +64,7 @@ export default {
             return;
         }
 
+        // ── RESET ───────────────────────────────────────────────────────────
         if (newUrl.toLowerCase() === 'reset') {
             const ok = resetCommandApi(cmdName);
             await reply(
@@ -57,6 +73,7 @@ export default {
                       `│\n` +
                       `├─⊷ ✅ *Restored to default:*\n` +
                       `│   └⊷ ${info.defaultUrl}\n` +
+                      `├─⊷ 🎨 *Style:* ${info.paramStyle}\n` +
                       `│\n` +
                       `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`
                     : `❌ Failed to reset API for *${cmdName}*.`
@@ -67,9 +84,10 @@ export default {
         if (!newUrl) {
             await reply(
                 `⚠️ Please provide a new URL.\n\n` +
-                `Usage: *${PREFIX}replaceapi ${cmdName} <newurl>*\n` +
+                `Usage: *${PREFIX}replaceapi ${cmdName} <newurl> [style]*\n` +
                 `Reset: *${PREFIX}replaceapi ${cmdName} reset*\n\n` +
-                `Current API:\n${info.currentUrl}`
+                `Current API: ${info.currentUrl}\n` +
+                `Current Style: ${info.paramStyle}`
             );
             return;
         }
@@ -82,8 +100,19 @@ export default {
             return;
         }
 
-        const oldUrl = info.currentUrl;
-        const ok = setCommandApi(cmdName, newUrl);
+        // Auto-detect style if not explicitly given
+        const resolvedStyle = styleArg || detectParamStyle(newUrl) || info.paramStyle || 'raw';
+
+        // Build a preview of how the URL will be used
+        const testQuery    = info.testQuery || 'test_query';
+        const previewUrl   = assembleUrl(newUrl, resolvedStyle, testQuery);
+        const styleLabel   = PARAM_STYLE_LABELS[resolvedStyle] || resolvedStyle;
+        const autoDetected = !styleArg;
+
+        const oldUrl   = info.currentUrl;
+        const oldStyle = info.paramStyle;
+        const ok       = setCommandApi(cmdName, newUrl, resolvedStyle);
+
         if (!ok) {
             await reply(`❌ Failed to save API override for *${cmdName}*. Check disk space or file permissions.`);
             return;
@@ -96,11 +125,18 @@ export default {
             `│\n` +
             `├─⊷ ❌ *Old API:*\n` +
             `│   └⊷ ${oldUrl}\n` +
+            `├─⊷ 🎨 *Old Style:* ${oldStyle}\n` +
             `│\n` +
-            `├─⊷ ✅ *New API:*\n` +
+            `├─⊷ ✅ *New Base URL:*\n` +
             `│   └⊷ ${newUrl}\n` +
+            `├─⊷ 🎨 *New Style:* ${resolvedStyle}${autoDetected ? ' *(auto-detected)*' : ' *(manual)*'}\n` +
+            `│   └⊷ ${styleLabel}\n` +
+            `│\n` +
+            `├─⊷ 🔍 *Preview URL (with test query):*\n` +
+            `│   └⊷ ${previewUrl}\n` +
             `│\n` +
             `├─⊷ ⚡ *Live:* Change is active immediately\n` +
+            `├─⊷ 📡 *Test it:* ${PREFIX}fetchapi ${cmdName}\n` +
             `├─⊷ ♻️ *Undo:* ${PREFIX}replaceapi ${cmdName} reset\n` +
             `│\n` +
             `╰⊷ *Powered by ${BOT_NAME.toUpperCase()}*`;
@@ -114,7 +150,7 @@ export default {
                         {
                             name: 'quick_reply',
                             buttonParamsJson: JSON.stringify({
-                                display_text: '📡 FETCH API',
+                                display_text: '📡 TEST NEW API',
                                 id: `${PREFIX}fetchapi ${cmdName}`
                             })
                         },
