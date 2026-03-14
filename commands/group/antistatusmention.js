@@ -151,9 +151,6 @@ export async function handleStatusMention(sock, msg) {
         }
 
         if (mentionedGroups.length === 0) {
-            if (msg.key?.remoteJid === 'status@broadcast') {
-                console.log(`📊 [GSM-DEBUG] Status from ${userName} | Keys: ${msgKeys.join(', ')} | No group mentions`);
-            }
             return;
         }
 

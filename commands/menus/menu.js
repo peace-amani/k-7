@@ -1471,8 +1471,8 @@ case 1: {
       return {
         bar: memBar,
         percent: percent,
-        usedMB: Math.round(used * 100) / 100,
-        totalMB: Math.round(total * 100) / 100,
+        usedMB: Math.round(used),
+        totalMB: Math.round(total),
         systemPercent: systemPercent,
         systemUsedGB: Math.round(systemUsed * 100) / 100,
         systemTotalGB: Math.round(systemTotal * 100) / 100

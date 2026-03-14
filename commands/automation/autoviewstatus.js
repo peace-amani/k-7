@@ -16,15 +16,7 @@ const R = '\x1b[31m'; const B = '\x1b[1m';  const D = '\x1b[2m'; const X = '\x1b
 
 function logBox(sender, msgType, result) {
     const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    const d = new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-    console.log(`${G}${B}┌──────────────────────────────────────────────────┐${X}`);
-    console.log(`${G}${B}│  👁️  STATUS DETECTED                              │${X}`);
-    console.log(`${G}${B}├──────────────────────────────────────────────────┤${X}`);
-    console.log(`${G}│  ${C}${B}From   :${X}${G} ${sender}${X}`);
-    console.log(`${G}│  ${C}${B}Type   :${X}${G} ${msgType}${X}`);
-    console.log(`${G}│  ${C}${B}Time   :${X}${G} ${t}  ${D}(${d})${X}`);
-    console.log(`${G}│  ${C}${B}Result :${X}${G} ${result}${X}`);
-    console.log(`${G}${B}└──────────────────────────────────────────────────┘${X}`);
+    console.log(`${G}${B}👁️  STATUS${X} ${C}${sender}${X} ${D}${msgType}${X} ${G}${result}${X} ${D}${t}${X}`);
 }
 
 function getMessageType(message) {
@@ -185,6 +177,9 @@ class AutoViewManager {
     async viewStatus(sock, statusKey, message) {
         try {
             if (!statusKey || statusKey.fromMe) return false;
+
+            const msgKey = message ? Object.keys(message)[0] : null;
+            if (msgKey === 'reactionMessage' || msgKey === 'protocolMessage') return false;
 
             const sender    = statusKey.participant || statusKey.remoteJid;
             const displayId = sender.split('@')[0].split(':')[0];
