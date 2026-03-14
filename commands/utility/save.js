@@ -1,126 +1,124 @@
-import { downloadContentFromMessage, getContentType } from "@whiskeysockets/baileys";
-import fs from "fs/promises";
-import fsSync from "fs"; 
-import path from "path";
+import { downloadMediaMessage, getContentType, normalizeMessageContent } from "@whiskeysockets/baileys";
+import { getBotName } from '../../lib/botname.js';
 
-// Define extensions based on message type
-const mediaExtensions = {
-  imageMessage: ".jpg",
-  videoMessage: ".mp4",
-  documentMessage: ".bin", 
+const silentLogger = {
+    level: 'silent', trace: ()=>{}, debug: ()=>{}, info: ()=>{},
+    warn: ()=>{}, error: ()=>{}, fatal: ()=>{},
+    child: ()=>({ level:'silent', trace:()=>{}, debug:()=>{}, info:()=>{}, warn:()=>{}, error:()=>{}, fatal:()=>{}, child:()=>({}) })
 };
 
-// Helper function to send media synchronously (required for Baileys buffer)
-const sendMediaAsync = (sock, chatId, filePath, type, caption, quotedMsg) => {
-    return new Promise((resolve, reject) => {
-        try {
-            const mediaBuffer = fsSync.readFileSync(filePath); 
-            const mediaSendObject = { caption: caption };
+function getContextInfo(msg) {
+    if (!msg?.message) return null;
+    const m = msg.message;
+    return m.extendedTextMessage?.contextInfo
+        || m.imageMessage?.contextInfo
+        || m.videoMessage?.contextInfo
+        || m.audioMessage?.contextInfo
+        || m.documentMessage?.contextInfo
+        || m.stickerMessage?.contextInfo
+        || null;
+}
 
-            // Determine the key for the send message object
-            const typeKey = type.replace('Message', '');
+function getMediaKind(msgContent) {
+    if (!msgContent) return null;
+    const normalized = normalizeMessageContent(msgContent) || msgContent;
+    if (normalized.imageMessage)    return { key: 'image',    content: normalized.imageMessage,    ext: '.jpg' };
+    if (normalized.videoMessage)    return { key: 'video',    content: normalized.videoMessage,    ext: '.mp4' };
+    if (normalized.audioMessage)    return { key: 'audio',    content: normalized.audioMessage,    ext: '.ogg' };
+    if (normalized.stickerMessage)  return { key: 'sticker',  content: normalized.stickerMessage,  ext: '.webp' };
+    if (normalized.documentMessage) return { key: 'document', content: normalized.documentMessage, ext: '.bin' };
+    return null;
+}
 
-            if (typeKey === 'document') {
-                mediaSendObject.document = mediaBuffer;
-                mediaSendObject.mimetype = 'application/octet-stream'; // Default MIME
-                mediaSendObject.fileName = `saved_status${path.extname(filePath)}`;
-            } else {
-                mediaSendObject[typeKey] = mediaBuffer;
-            }
-
-            sock.sendMessage(chatId, mediaSendObject, { quoted: quotedMsg })
-                .then(resolve)
-                .catch(reject);
-        } catch (e) {
-            reject(e);
-        }
-    });
-};
-
+function getTextFromContent(msgContent) {
+    if (!msgContent) return null;
+    const n = normalizeMessageContent(msgContent) || msgContent;
+    return n.extendedTextMessage?.text || n.conversation || null;
+}
 
 export default {
     name: "save",
     alias: ["story", "status"],
-    desc: "Downloads and sends a replied-to WhatsApp Status/Post/Story.",
+    desc: "Save and send a WhatsApp status/story to this chat.",
     category: "utility",
-    usage: ".save [reply to a status/story]",
+    usage: ".save [reply to a status]",
 
-    async execute(sock, m) {
+    async execute(sock, m, args, PREFIX) {
         const chatId = m.key.remoteJid;
-        
-        // --- Quoted Message Retrieval ---
-        const contextInfo = m.message?.extendedTextMessage?.contextInfo;
-        const quotedMsg = contextInfo?.quotedMessage;
-        
+        const botName = getBotName();
+
+        const contextInfo = getContextInfo(m);
+        const quotedMsg   = contextInfo?.quotedMessage;
+
         if (!quotedMsg) {
             return await sock.sendMessage(chatId, {
-                text: "⚠️ Please reply to the **Status** you want to save.",
+                text: `╭─⌈ 💾 *SAVE STATUS* ⌋\n│\n├⊷ Reply to a status/story with *${PREFIX}save*\n│\n╰⊷ *${botName.toUpperCase()}*`
             }, { quoted: m });
         }
-        
-        // --- Status Detection ---
-        // Status messages are often wrapped in viewOnceMessage or are regular media
-        let mediaMessage = quotedMsg.viewOnceMessage?.message || quotedMsg.viewOnceMessageV2?.message || quotedMsg;
-        
-        const messageType = getContentType(mediaMessage);
-        const mediaContent = mediaMessage[messageType];
-        
-        const isMedia = messageType in mediaExtensions;
 
-        if (!isMedia) {
+        const mediaInfo = getMediaKind(quotedMsg);
+        const textContent = getTextFromContent(quotedMsg);
+
+        if (!mediaInfo && !textContent) {
             return await sock.sendMessage(chatId, {
-                text: "❌ The replied message is not a recognizable media status (Image, Video, or Document).",
+                text: `❌ Cannot read that status format.`
             }, { quoted: m });
         }
-        
-        let filePath = null;
+
+        if (textContent && !mediaInfo) {
+            return await sock.sendMessage(chatId, {
+                text: `╭─⌈ 📝 *TEXT STATUS* ⌋\n│\n├⊷ ${textContent}\n│\n╰⊷ *${botName.toUpperCase()}*`
+            }, { quoted: m });
+        }
+
+        await sock.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
 
         try {
-            const fileExtension = mediaExtensions[messageType] || ".bin";
-            filePath = path.join('/tmp', `wolfbot_save_${Date.now()}_${Math.random().toString(36).slice(2)}${fileExtension}`);
+            const senderJid  = contextInfo?.participant || contextInfo?.remoteJid || '';
+            const senderNum  = senderJid ? '+' + senderJid.split('@')[0].split(':')[0].replace(/\D/g, '') : 'Unknown';
+            const caption    = mediaInfo.content?.caption || '';
 
-            // 1. Send initial message
-            await sock.sendMessage(chatId, { text: "⏳ Downloading status, please wait..." }, { quoted: m });
-            
-            // 2. Download the media file
-    // Download the media file
-            const typeForDownload = messageType.replace("Message", "");
-            const stream = await downloadContentFromMessage(mediaContent, typeForDownload);
-            const buffer = [];
-            for await (const chunk of stream) {
-                buffer.push(chunk);
-            }
-            // THIS LINE CAN BE SLOW OR FAIL SILENTLY:
-            await fs.writeFile(filePath, Buffer.concat(buffer)); 
+            const fakeMsg = {
+                key: { remoteJid: 'status@broadcast', id: contextInfo?.stanzaId || m.key.id, participant: senderJid },
+                message: quotedMsg
+            };
 
-            // 3. Send the saved media back
-            const originalCaption = mediaMessage.caption || mediaMessage.text || '';
-            const caption = `✅ Status saved and sent!${originalCaption ? `\n\n*Original Caption:* ${originalCaption}` : ''}`;
-            
-            await sendMediaAsync(
-                sock, 
-                chatId, 
-                filePath, 
-                messageType, 
-                caption, 
-                m // reply to the original command
-            );
+            const buffer = await Promise.race([
+                downloadMediaMessage(fakeMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))
+            ]);
 
-            // --- CLEANUP ---
-            if (fsSync.existsSync(filePath)) {
-                await fs.unlink(filePath);
+            if (!buffer || buffer.length === 0) {
+                throw new Error('Empty buffer — media may have expired');
             }
 
-        } catch (error) {
-            console.error("Error in .save:", error);
-            await sock.sendMessage(chatId, {
-                text: `❌ Failed to save the status: ${error.message}`,
-            }, { quoted: m });
+            const payload = {};
+            let statusCaption = `╭─⌈ 💾 *STATUS SAVED* ⌋\n`;
+            statusCaption += `│ 👤 *From:* ${senderNum}\n`;
+            if (caption) statusCaption += `│ 💬 ${caption}\n`;
+            statusCaption += `╰⊷ *${botName.toUpperCase()}*`;
 
-            // --- CLEANUP on ERROR ---
-            if (filePath && fsSync.existsSync(filePath)) {
-                await fs.unlink(filePath);
+            if (mediaInfo.key === 'sticker') {
+                payload.sticker = buffer;
+            } else {
+                payload[mediaInfo.key] = buffer;
+                if (mediaInfo.key !== 'audio') payload.caption = statusCaption;
+                if (mediaInfo.key === 'audio') payload.mimetype = 'audio/ogg; codecs=opus';
             }
+
+            await sock.sendMessage(chatId, payload, { quoted: m });
+            if (mediaInfo.key === 'sticker' || mediaInfo.key === 'audio') {
+                await sock.sendMessage(chatId, { text: statusCaption }, { quoted: m });
+            }
+
+            await sock.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+
+        } catch (err) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } });
+            const msg = err.message === 'timeout'
+                ? '⏱️ Download timed out — status may have expired.'
+                : `❌ ${err.message}`;
+            await sock.sendMessage(chatId, { text: msg }, { quoted: m });
         }
     },
 };
