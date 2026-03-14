@@ -57,6 +57,9 @@ class AutoReactManager {
         this.config = this.loadConfig();
         this.lastReactionTime = this.config.lastReactionTime || 0;
         this.reactedStatuses = new Set(this.config.reactedStatuses || []);
+        this._queue = [];
+        this._draining = false;
+        this._saveTimer = null;
         this.cleanupOldReactedStatuses();
     }
 
@@ -81,6 +84,20 @@ class AutoReactManager {
     }
 
     saveConfig() {
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => {
+            try {
+                this.config.reactedStatuses = Array.from(this.reactedStatuses);
+                this.config.lastReactionTime = this.lastReactionTime;
+                fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
+                supabase.setConfig('autoreact_config', this.config).catch(() => {});
+            } catch {}
+            this._saveTimer = null;
+        }, 3000);
+    }
+
+    saveConfigImmediate() {
+        if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
         try {
             this.config.reactedStatuses = Array.from(this.reactedStatuses);
             this.config.lastReactionTime = this.lastReactionTime;
@@ -111,7 +128,6 @@ class AutoReactManager {
     get logs()         { return this.config.logs; }
     get totalReacted() { return this.config.totalReacted; }
 
-    // ── Exclusion helpers ─────────────────────────────────────────────────────
     _normalizeNum(input) {
         return String(input).replace(/[^0-9]/g, '');
     }
@@ -129,7 +145,7 @@ class AutoReactManager {
         if (!num) return false;
         if (!this.config.excludedContacts.includes(num)) {
             this.config.excludedContacts.push(num);
-            this.saveConfig();
+            this.saveConfigImmediate();
             return true;
         }
         return false;
@@ -140,13 +156,12 @@ class AutoReactManager {
         const idx = this.config.excludedContacts.indexOf(num);
         if (idx !== -1) {
             this.config.excludedContacts.splice(idx, 1);
-            this.saveConfig();
+            this.saveConfigImmediate();
             return true;
         }
         return false;
     }
 
-    // ── React helpers ─────────────────────────────────────────────────────────
     hasReacted(statusKey) {
         const base = `${statusKey.participant || statusKey.remoteJid}|${statusKey.id}`;
         for (const k of this.reactedStatuses) { if (k.startsWith(base)) return true; }
@@ -165,44 +180,44 @@ class AutoReactManager {
 
     toggle(forceOff = false) {
         this.config.enabled = !forceOff;
-        this.saveConfig(); return this.config.enabled;
+        this.saveConfigImmediate(); return this.config.enabled;
     }
 
     setViewMode(mode) {
         if (mode === 'view+react' || mode === 'react-only') {
-            this.config.viewMode = mode; this.saveConfig(); return true;
+            this.config.viewMode = mode; this.saveConfigImmediate(); return true;
         }
         return false;
     }
 
     setMode(mode) {
         if (mode === 'random' || mode === 'fixed') {
-            this.config.mode = mode; this.saveConfig(); return true;
+            this.config.mode = mode; this.saveConfigImmediate(); return true;
         }
         return false;
     }
 
     setFixedEmoji(emoji) {
-        if ([...emoji].length <= 2) { this.config.fixedEmoji = emoji; this.saveConfig(); return true; }
+        if ([...emoji].length <= 2) { this.config.fixedEmoji = emoji; this.saveConfigImmediate(); return true; }
         return false;
     }
 
     addReaction(emoji) {
         if (!this.config.reactions.includes(emoji) && [...emoji].length <= 2) {
-            this.config.reactions.push(emoji); this.saveConfig(); return true;
+            this.config.reactions.push(emoji); this.saveConfigImmediate(); return true;
         }
         return false;
     }
 
     removeReaction(emoji) {
         const i = this.config.reactions.indexOf(emoji);
-        if (i !== -1) { this.config.reactions.splice(i, 1); this.saveConfig(); return true; }
+        if (i !== -1) { this.config.reactions.splice(i, 1); this.saveConfigImmediate(); return true; }
         return false;
     }
 
     resetReactions() {
         this.config.reactions = ["🐺", "❤️", "👍", "🔥", "🎉", "😂", "😮", "👏", "🎯", "💯", "🌟", "✨", "⚡", "💥", "🫶"];
-        this.saveConfig();
+        this.saveConfigImmediate();
     }
 
     addLog(sender, reaction, statusId) {
@@ -221,7 +236,7 @@ class AutoReactManager {
         Object.assign(this.config, { logs: [], totalReacted: 0, lastReacted: null,
             consecutiveReactions: 0, lastSender: null });
         this.reactedStatuses.clear();
-        this.saveConfig();
+        this.saveConfigImmediate();
     }
 
     getStats() {
@@ -242,34 +257,49 @@ class AutoReactManager {
         return this.config.reactions[Math.floor(Math.random() * this.config.reactions.length)];
     }
 
-    shouldReact(statusKey) {
-        if (!this.config.enabled) return false;
-        if (this.hasReacted(statusKey)) return false;
-        if (this.isExcluded(statusKey)) return false;
-        if (Date.now() - this.lastReactionTime < this.config.settings.rateLimitDelay) return false;
-        return true;
+    enqueue(sock, statusKey) {
+        if (!this.config.enabled) return;
+        if (this.hasReacted(statusKey)) return;
+        if (this.isExcluded(statusKey)) return;
+
+        const sender = statusKey.participant || statusKey.remoteJid;
+        const displayId = sender.split('@')[0].split(':')[0];
+
+        this._queue.push({ sock, statusKey, displayId });
+        this._drain();
     }
 
-    async reactToStatus(sock, statusKey) {
-        try {
-            const sender    = statusKey.participant || statusKey.remoteJid;
-            const displayId = sender.split('@')[0].split(':')[0];
+    _drain() {
+        if (this._draining) return;
+        this._draining = true;
+        this._processNext().catch(() => { this._draining = false; });
+    }
 
-            if (!this.shouldReact(statusKey)) return false;
+    async _processNext() {
+        while (this._queue.length > 0) {
+            const { sock, statusKey, displayId } = this._queue.shift();
+
+            if (this.hasReacted(statusKey)) continue;
 
             const wait = this.config.settings.rateLimitDelay - (Date.now() - this.lastReactionTime);
             if (wait > 0) await new Promise(r => setTimeout(r, wait));
 
+            await this._sendReaction(sock, statusKey, displayId);
+        }
+        this._draining = false;
+    }
+
+    async _sendReaction(sock, statusKey, displayId) {
+        try {
             if (this.config.viewMode === 'view+react') {
                 try {
                     const participantToUse = statusKey.remoteJidAlt || statusKey.participantPn || statusKey.participant || statusKey.remoteJid;
-                    const readKey = {
+                    await sock.readMessages([{
                         remoteJid: statusKey.remoteJid,
                         id: statusKey.id,
                         fromMe: false,
                         participant: participantToUse
-                    };
-                    await sock.readMessages([readKey]);
+                    }]);
                 } catch (_) {}
             }
 
@@ -297,17 +327,18 @@ class AutoReactManager {
             this.lastReactionTime = Date.now();
             this.markReacted(statusKey);
             this.addLog(displayId, emoji, statusKey.id);
-            return true;
+            console.log(`\x1b[32m\x1b[1m✅ REACTED\x1b[0m\x1b[32m ${emoji} → ${displayId}\x1b[0m`);
 
         } catch (error) {
             if (error.message?.includes('rate-overlimit') || error.message?.includes('rate limit')) {
                 this.config.settings.rateLimitDelay = Math.min(this.config.settings.rateLimitDelay * 2, 10000);
                 this.saveConfig();
+                console.log(`\x1b[33m⚠️ Rate limit hit — delay bumped to ${this.config.settings.rateLimitDelay}ms\x1b[0m`);
             }
             if (error.message?.includes('not found') || error.message?.includes('message deleted')) {
                 this.markReacted(statusKey);
             }
-            return false;
+            console.log(`\x1b[31m\x1b[1m❌ REACT FAILED for ${displayId}: ${error.message}\x1b[0m`);
         }
     }
 }
@@ -315,7 +346,7 @@ class AutoReactManager {
 const autoReactManager = new AutoReactManager();
 
 export async function handleAutoReact(sock, statusKey) {
-    return await autoReactManager.reactToStatus(sock, statusKey);
+    autoReactManager.enqueue(sock, statusKey);
 }
 
 export { autoReactManager };
@@ -454,6 +485,7 @@ export default {
                     text += `📝 Tracked     : ${s.reactedStatusesCount}\n`;
                     text += `🔄 Consecutive : ${s.consecutiveReactions}\n`;
                     text += `🚫 Excluded    : ${s.excludedCount}\n`;
+                    text += `⏱️ Queue       : ${autoReactManager._queue.length} pending\n`;
                     if (s.lastReacted) {
                         const ago = Math.floor((Date.now() - s.lastReacted.timestamp) / 60000);
                         text += `\n🕒 Last: ${s.lastReacted.sender} ${s.lastReacted.reaction} (${ago < 1 ? 'just now' : ago + ' min ago'})`;

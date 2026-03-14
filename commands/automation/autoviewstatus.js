@@ -71,6 +71,7 @@ class AutoViewManager {
         this.lastViewTime = 0;
         this.queue = [];
         this._draining = false;
+        this._saveTimer = null;
     }
 
     loadConfig() {
@@ -88,6 +89,18 @@ class AutoViewManager {
     }
 
     saveConfig() {
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => {
+            try {
+                fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
+                supabase.setConfig('autoview_config', this.config).catch(() => {});
+            } catch {}
+            this._saveTimer = null;
+        }, 3000);
+    }
+
+    saveConfigImmediate() {
+        if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
         try {
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
             supabase.setConfig('autoview_config', this.config).catch(() => {});
@@ -120,7 +133,7 @@ class AutoViewManager {
         if (!num) return false;
         if (!this.config.excludedContacts.includes(num)) {
             this.config.excludedContacts.push(num);
-            this.saveConfig();
+            this.saveConfigImmediate();
             return true;
         }
         return false;
@@ -131,7 +144,7 @@ class AutoViewManager {
         const idx = this.config.excludedContacts.indexOf(num);
         if (idx !== -1) {
             this.config.excludedContacts.splice(idx, 1);
-            this.saveConfig();
+            this.saveConfigImmediate();
             return true;
         }
         return false;
@@ -139,7 +152,7 @@ class AutoViewManager {
 
     toggle(forceOff = false) {
         this.config.enabled = !forceOff;
-        this.saveConfig(); return this.config.enabled;
+        this.saveConfigImmediate(); return this.config.enabled;
     }
 
     addLog(sender) {
@@ -157,7 +170,7 @@ class AutoViewManager {
     clearLogs() {
         Object.assign(this.config, { logs: [], totalViewed: 0, lastViewed: null,
             consecutiveViews: 0, lastSender: null });
-        this.saveConfig();
+        this.saveConfigImmediate();
     }
 
     getStats() {
@@ -234,7 +247,7 @@ class AutoViewManager {
 
     updateSetting(setting, value) {
         if (Object.prototype.hasOwnProperty.call(this.config.settings, setting)) {
-            this.config.settings[setting] = value; this.saveConfig(); return true;
+            this.config.settings[setting] = value; this.saveConfigImmediate(); return true;
         }
         return false;
     }
