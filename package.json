@@ -103,8 +103,6 @@
     "qs": "^6.15.0",
     "replicate": "^1.4.0",
     "ruhend-scraper": "^9.0.8",
-    "silent-wolf-bot": "file:",
-    "sql.js": "^1.14.1",
     "systeminformation": "^5.31.4",
     "translate-google": "^1.5.0",
     "ws": "^8.19.0"
@@ -115,7 +113,6 @@
     "@vitalets/google-translate-api": "^9.2.1",
     "awesome-phonenumber": "^7.8.0",
     "canvas": "^3.2.1",
-    "chatgpt": "^5.2.5",
     "cheerio": "^1.2.0",
     "formdata-node": "^6.0.3",
     "gifencoder": "^2.0.1",
