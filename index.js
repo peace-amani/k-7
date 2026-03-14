@@ -4523,6 +4523,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             mobile: false,
             shouldSyncHistoryMessage: () => false,
             syncFullHistory: false,
+            experimentalStore: true,
             fireInitQueries: !isConflictRecovery,
             msgRetryCounterCache,
             getMessage: async (key) => {

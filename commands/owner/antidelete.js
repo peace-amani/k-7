@@ -10,7 +10,7 @@ let giftedBtns;
 try { giftedBtns = _require('gifted-btns'); } catch (e) {}
 
 const CACHE_CLEAN_INTERVAL = 2 * 60 * 60 * 1000;
-const MAX_MESSAGE_CACHE = 500;
+const MAX_MESSAGE_CACHE = 200;
 const MAX_CONCURRENT_DOWNLOADS = 3;
 let _activeDownloads = 0;
 
@@ -424,6 +424,23 @@ export async function antideleteStoreMessage(message) {
             chatName = getRealWhatsAppNumber(chatJid);
         }
         
+        // Store a slim raw reference for on-demand download at delete time.
+        // Strip jpegThumbnail to avoid storing large base64 blobs in SQLite.
+        let rawMessage = null;
+        if (hasMedia && mediaInfo?.message) {
+            try {
+                const msgCopy = JSON.parse(JSON.stringify(mediaInfo.message));
+                const inner = msgCopy?.message;
+                if (inner) {
+                    for (const k of Object.keys(inner)) {
+                        if (inner[k]?.jpegThumbnail) delete inner[k].jpegThumbnail;
+                        if (inner[k]?.thumbnail) delete inner[k].thumbnail;
+                    }
+                }
+                rawMessage = msgCopy;
+            } catch {}
+        }
+
         const messageData = {
             id: msgId,
             chatJid,
@@ -437,7 +454,8 @@ export async function antideleteStoreMessage(message) {
             hasMedia,
             mimetype,
             isGroup: chatJid.includes('@g.us'),
-            isStatus
+            isStatus,
+            rawMessage
         };
         
         antideleteState.messageCache.set(msgId, messageData);
@@ -451,19 +469,7 @@ export async function antideleteStoreMessage(message) {
             for (let i = 0; i < excess; i++) {
                 const key = iter.next().value;
                 antideleteState.messageCache.delete(key);
-                antideleteState.mediaCache.delete(key);
             }
-        }
-        
-        if (hasMedia && mediaInfo) {
-            const delayMs = Math.random() * 2000 + 1000;
-            setTimeout(async () => {
-                try {
-                    await downloadAndSaveMedia(msgId, mediaInfo.message, type, mediaInfo.mimetype);
-                } catch (error) {
-                    console.error('❌ Antidelete: Async media download failed:', error.message);
-                }
-            }, delayMs);
         }
         
         return messageData;
@@ -616,27 +622,55 @@ async function retrySend(sendFn, maxRetries = 5) {
 }
 
 async function getMediaBuffer(messageData) {
-    const mediaCache = antideleteState.mediaCache.get(messageData.id);
-    
-    if (mediaCache && mediaCache.base64) {
-        return { buffer: Buffer.from(mediaCache.base64, 'base64'), mimetype: mediaCache.mimetype };
-    }
-    
+    // Download live from WhatsApp CDN at the moment of deletion.
+    // No disk writes, no pre-caching — buffer is used once then released.
+    const rawMessage = messageData.rawMessage;
+    if (!rawMessage) return null;
+
+    const type = messageData.type === 'voice' ? 'audio' : messageData.type;
+    const silentLogger = {
+        level: 'silent', trace: () => {}, debug: () => {}, info: () => {},
+        warn: () => {}, error: () => {}, fatal: () => {}, child: () => silentLogger
+    };
+
     try {
-        if (mediaCache?.dbPath) {
-            const dbBuffer = await db.downloadMedia(mediaCache.dbPath);
-            if (dbBuffer && dbBuffer.length > 0) {
-                return { buffer: dbBuffer, mimetype: mediaCache.mimetype || messageData.mimetype };
-            }
-        }
-        const ext = (messageData.mimetype || 'application/octet-stream').split('/')[1]?.split(';')[0] || 'bin';
-        const storagePath = `messages/${messageData.id}.${ext}`;
-        const dbBuffer = await db.downloadMedia(storagePath);
-        if (dbBuffer && dbBuffer.length > 0) {
-            return { buffer: dbBuffer, mimetype: mediaCache?.mimetype || messageData.mimetype };
+        const buffer = await Promise.race([
+            downloadMediaMessage(
+                rawMessage,
+                'buffer',
+                {},
+                { logger: silentLogger, reuploadRequest: antideleteState.sock?.updateMediaMessage }
+            ),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 20000))
+        ]);
+        if (buffer && buffer.length > 0) {
+            return { buffer, mimetype: messageData.mimetype };
         }
     } catch {}
-    
+
+    // Fallback: try downloadContentFromMessage stream
+    try {
+        const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
+        const inner = rawMessage?.message;
+        if (!inner) return null;
+        const mediaKey = `${type}Message`;
+        const mediaObj = inner[mediaKey];
+        if (!mediaObj) return null;
+        const stream = await Promise.race([
+            downloadContentFromMessage(mediaObj, type),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 20000))
+        ]);
+        const chunks = [];
+        let totalSize = 0;
+        for await (const chunk of stream) {
+            chunks.push(chunk);
+            totalSize += chunk.length;
+            if (totalSize > 15 * 1024 * 1024) break; // 15MB cap
+        }
+        const buffer = Buffer.concat(chunks);
+        if (buffer.length > 0) return { buffer, mimetype: messageData.mimetype };
+    } catch {}
+
     return null;
 }
 
