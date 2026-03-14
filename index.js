@@ -6402,50 +6402,30 @@ function detectViewOnceMedia(rawMessage) {
 
 async function handleViewOnceDetection(sock, msg) {
     try {
-        const _dbgId = (msg.key?.id || '?').substring(0, 8);
-        originalConsoleMethods.log(`🔍 [AV-HVD] ENTER id=${_dbgId} fromMe=${msg.key?.fromMe} remoteJid=${(msg.key?.remoteJid||'?').split('@')[0]}`);
-
-        if (msg.key?.fromMe) {
-            originalConsoleMethods.log(`🔍 [AV-HVD] R1-fromMe — skipping (message is from bot itself)`);
-            return;
-        }
+        if (msg.key?.fromMe) return;
 
         const config = loadAntiViewOnceConfig();
-        originalConsoleMethods.log(`🔍 [AV-HVD] config.mode=${config.mode} config.ownerJid=${config.ownerJid||'none'}`);
-
-        if (config.mode === 'off' || (!config.mode && !config.enabled)) {
-            originalConsoleMethods.log(`🔍 [AV-HVD] R2-disabled — mode=${config.mode}`);
-            return;
-        }
+        if (config.mode === 'off' || (!config.mode && !config.enabled)) return;
 
         // Resolve ownerJid: prefer phone-number JID over LID (LIDs can't be used for sendMessage target)
         let ownerJid = config.ownerJid || '';
         if (!ownerJid || ownerJid.includes('@lid')) {
             ownerJid = OWNER_CLEAN_JID || '';
         }
-        if (!ownerJid && config.mode === 'private') {
-            originalConsoleMethods.log(`🔍 [AV-HVD] R3-noOwnerJid — private mode but no owner JID`);
-            return;
-        }
+        if (!ownerJid && config.mode === 'private') return;
 
         const rawMessage = msg.message;
-        if (!rawMessage) {
-            originalConsoleMethods.log(`🔍 [AV-HVD] R4-noMessage`);
-            return;
-        }
+        if (!rawMessage) return;
 
         const viewOnce = detectViewOnceMedia(rawMessage);
-        if (!viewOnce) {
-            originalConsoleMethods.log(`🔍 [AV-HVD] R5-notViewOnce — keys: ${Object.keys(rawMessage).join(',')}`);
-            return;
-        }
+        if (!viewOnce) return;
 
         const { type, media, caption } = viewOnce;
         const chatId = msg.key.remoteJid;
         const sender = msg.key.participant || msg.key.remoteJid;
         const senderShort = sender.split('@')[0].split(':')[0];
 
-        originalConsoleMethods.log(`🔐 [AV] Detected ${type} viewOnce from ${senderShort}, downloading...`);
+        UltraCleanLogger.antiviewonce(`🔐 View-Once detected: ${type} from ${senderShort}`);
 
         const cleanMedia = { ...media };
         delete cleanMedia.viewOnce;
@@ -6470,7 +6450,6 @@ async function handleViewOnceDetection(sock, msg) {
                 new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
             ]);
         } catch (dlErr1) {
-            originalConsoleMethods.log(`⚠️ [AV] DL method 1 failed (${dlErr1.message}), trying fallback 2...`);
             try {
                 const stream = await Promise.race([
                     downloadContentFromMessage(cleanMedia, type),
@@ -6483,7 +6462,6 @@ async function handleViewOnceDetection(sock, msg) {
                 }
                 buffer = Buffer.concat(chunks);
             } catch (dlErr2) {
-                originalConsoleMethods.log(`⚠️ [AV] DL method 2 failed (${dlErr2.message}), trying fallback 3...`);
                 try {
                     const stream2 = await Promise.race([
                         downloadContentFromMessage(media, type),
@@ -6496,17 +6474,13 @@ async function handleViewOnceDetection(sock, msg) {
                     }
                     buffer = Buffer.concat(chunks2);
                 } catch (dlErr3) {
-                    originalConsoleMethods.log(`❌ [AV] All 3 download methods failed: ${dlErr3.message}`);
+                    UltraCleanLogger.warning(`Anti-ViewOnce: All download methods failed — ${dlErr3.message}`);
                     return;
                 }
             }
         }
 
-        if (!buffer || buffer.length === 0) {
-            originalConsoleMethods.log(`❌ [AV] Download returned empty buffer`);
-            return;
-        }
-        originalConsoleMethods.log(`✅ [AV] Downloaded ${type} (${Math.round(buffer.length / 1024)}KB), sending to owner...`);
+        if (!buffer || buffer.length === 0) return;
 
         const sizeKB = Math.round(buffer.length / 1024);
         const timestamp = Date.now();
@@ -6548,7 +6522,7 @@ async function handleViewOnceDetection(sock, msg) {
         } catch {}
 
     } catch (error) {
-        originalConsoleMethods.log('❌ Anti-viewonce error:', error.message, error.stack);
+        UltraCleanLogger.warning(`Anti-ViewOnce error: ${error.message}`);
     }
 }
 
