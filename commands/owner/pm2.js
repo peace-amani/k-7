@@ -75,14 +75,10 @@ export default {
 
         if (!action) {
             const help = `╭─⌈ ⚙️ *PM2 MANAGER* ⌋\n│\n`
-                + `├─⊷ *${PREFIX}pm2 status* — List all processes\n`
-                + `├─⊷ *${PREFIX}pm2 restart* — Restart all apps\n`
-                + `├─⊷ *${PREFIX}pm2 restart <app>* — Restart specific app\n`
-                + `├─⊷ *${PREFIX}pm2 logs* — Last 40 log lines\n`
-                + `├─⊷ *${PREFIX}pm2 logs <app>* — Logs for specific app\n`
-                + `├─⊷ *${PREFIX}pm2 stop <app>* — Stop an app\n`
-                + `├─⊷ *${PREFIX}pm2 start <app>* — Start an app\n`
-                + `│\n╰───────────────\n> *${ownerName.toUpperCase()} TECH*`;
+                + `├─⊷ status  │ restart [app]\n`
+                + `├─⊷ logs [app]\n`
+                + `├─⊷ stop [app] │ start [app]\n`
+                + `│\n╰─⊷ *${PREFIX}pm2 <action> [app]*`;
             return await sock.sendMessage(chatId, { text: help }, { quoted: msg });
         }
 
