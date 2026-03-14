@@ -5208,13 +5208,14 @@ async function startBot(loginMode = 'auto', loginData = null) {
         });
 
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            // TRACE: log view-once arrivals regardless of upsert type so we can see what type they use
+            // TRACE: log ALL view-once arrivals (no fromMe filter) to show exact delivery type
             try {
                 const _t0 = messages?.[0];
-                if (_t0?.message && !_t0?.key?.fromMe) {
+                if (_t0?.message) {
                     const _tVo = detectViewOnceMedia(_t0.message);
                     if (_tVo) {
-                        originalConsoleMethods.log(`🔍 [AV-TRACE] upsert type="${type}" fromMe=${_t0?.key?.fromMe} — ${_tVo.type} view-once detected`);
+                        const _tSender = (_t0.key?.participant || _t0.key?.remoteJid || '?').split('@')[0].split(':')[0];
+                        originalConsoleMethods.log(`🔍 [AV-TRACE] type="${type}" fromMe=${_t0?.key?.fromMe} sender=${_tSender} mediaType=${_tVo.type}`);
                     }
                 }
             } catch {}
@@ -6342,24 +6343,43 @@ function detectViewOnceMedia(rawMessage) {
 
 async function handleViewOnceDetection(sock, msg) {
     try {
-        if (msg.key?.fromMe) return;
+        const _dbgId = (msg.key?.id || '?').substring(0, 8);
+        originalConsoleMethods.log(`🔍 [AV-HVD] ENTER id=${_dbgId} fromMe=${msg.key?.fromMe} remoteJid=${(msg.key?.remoteJid||'?').split('@')[0]}`);
+
+        if (msg.key?.fromMe) {
+            originalConsoleMethods.log(`🔍 [AV-HVD] R1-fromMe — skipping (message is from bot itself)`);
+            return;
+        }
 
         const config = loadAntiViewOnceConfig();
+        originalConsoleMethods.log(`🔍 [AV-HVD] config.mode=${config.mode} config.ownerJid=${config.ownerJid||'none'}`);
 
-        if (config.mode === 'off' || (!config.mode && !config.enabled)) return;
+        if (config.mode === 'off' || (!config.mode && !config.enabled)) {
+            originalConsoleMethods.log(`🔍 [AV-HVD] R2-disabled — mode=${config.mode}`);
+            return;
+        }
 
         // Resolve ownerJid: prefer phone-number JID over LID (LIDs can't be used for sendMessage target)
         let ownerJid = config.ownerJid || '';
         if (!ownerJid || ownerJid.includes('@lid')) {
             ownerJid = OWNER_CLEAN_JID || '';
         }
-        if (!ownerJid && config.mode === 'private') return;
+        if (!ownerJid && config.mode === 'private') {
+            originalConsoleMethods.log(`🔍 [AV-HVD] R3-noOwnerJid — private mode but no owner JID`);
+            return;
+        }
 
         const rawMessage = msg.message;
-        if (!rawMessage) return;
+        if (!rawMessage) {
+            originalConsoleMethods.log(`🔍 [AV-HVD] R4-noMessage`);
+            return;
+        }
 
         const viewOnce = detectViewOnceMedia(rawMessage);
-        if (!viewOnce) return;
+        if (!viewOnce) {
+            originalConsoleMethods.log(`🔍 [AV-HVD] R5-notViewOnce — keys: ${Object.keys(rawMessage).join(',')}`);
+            return;
+        }
 
         const { type, media, caption } = viewOnce;
         const chatId = msg.key.remoteJid;
