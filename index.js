@@ -5217,8 +5217,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const c0 = m0.message;
                         const hasBtn = !!(c0?.interactiveResponseMessage || c0?.buttonsResponseMessage ||
                                           c0?.listResponseMessage || c0?.templateButtonReplyMessage);
-                        if (!hasBtn) return;
-                        // fall through — let the button response be processed as a command
+                        const hasReaction = !!(c0?.reactionMessage);
+                        if (!hasBtn && !hasReaction) return;
+                        // fall through — let button responses and reactions be processed
                     } else {
                         return;
                     }
