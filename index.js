@@ -6306,16 +6306,6 @@ function detectViewOnceMedia(rawMessage) {
         }
     }
 
-    // Debug: log raw keys so we can trace missed formats
-    const rawKeys = Object.keys(rawMessage);
-    const interesting = rawKeys.filter(k =>
-        k.includes('image') || k.includes('video') || k.includes('audio') ||
-        k.includes('iew') || k.includes('nce') || k.includes('Once') || k.includes('ephemeral')
-    );
-    if (interesting.length > 0) {
-        originalConsoleMethods.log(`🔍 [AV-MISS] detectViewOnceMedia got no match — rawKeys: [${rawKeys.join(', ')}]`);
-    }
-
     return null;
 }
 
@@ -6336,8 +6326,6 @@ async function handleViewOnceDetection(sock, msg) {
 
         const rawMessage = msg.message;
         if (!rawMessage) return;
-
-        originalConsoleMethods.log(`🔍 [AV-TRACE] handleViewOnceDetection called, mode=${config.mode}, ownerJid=${ownerJid}, msgKeys=[${Object.keys(rawMessage).join(', ')}]`);
 
         const viewOnce = detectViewOnceMedia(rawMessage);
         if (!viewOnce) return;
