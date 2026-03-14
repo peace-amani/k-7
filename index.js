@@ -5012,7 +5012,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
 ║ 🔑 Code   : ${chalk.yellow.bold(formattedCode.padEnd(39))}║
 ║ 📏 Length : ${chalk.cyan('8 characters'.padEnd(38))}║
 ║ ⏰ Expires : ${chalk.red('10 minutes'.padEnd(38))}║
-║ 🔗 Group   : ${chalk.blue(GROUP_NAME.substring(0, 38).padEnd(38))}║
+║ 🤖 Bot     : ${chalk.blue(getCurrentBotName().substring(0, 38).padEnd(38))}║
 ║ 👥 Member Detector: ✅ ENABLED
 ║ 🔐 Anti-ViewOnce: ✅ ENABLED
 ╚══════════════════════════════════════════════════════════════════════╝
