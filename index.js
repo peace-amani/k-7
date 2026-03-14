@@ -6215,6 +6215,18 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
 
 // ====== VIEW-ONCE DETECTION HANDLER ======
 function loadAntiViewOnceConfig() {
+    // Priority 1: local JSON file written by the .antiviewonce command
+    try {
+        const localFile = './data/antiviewonce/config.json';
+        if (fs.existsSync(localFile)) {
+            const parsed = JSON.parse(fs.readFileSync(localFile, 'utf8'));
+            if (parsed && typeof parsed === 'object' && parsed.mode) {
+                const base = _cache_antiviewonce_config || {};
+                return { ...base, ...parsed };
+            }
+        }
+    } catch {}
+    // Priority 2: DB/Supabase cache
     try {
         if (_cache_antiviewonce_config) {
             return _cache_antiviewonce_config;
@@ -6282,22 +6294,50 @@ function detectViewOnceMedia(rawMessage) {
         }
     }
 
+    // Method 5: normalizeMessageContent unwraps viewOnceV2 but drops the viewOnce flag —
+    // if the original message HAD a viewOnce wrapper and the normalized result has media, treat it as view-once
+    const hasVoWrapper = !!(rawMessage.viewOnceMessage || rawMessage.viewOnceMessageV2 || rawMessage.viewOnceMessageV2Extension);
+    if (hasVoWrapper && normalized) {
+        for (const mt of mediaTypes) {
+            if (normalized[mt]) {
+                originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce via wrapper+normalize fallback on ${mt}`);
+                return { type: typeMap[mt], media: normalized[mt], caption: normalized[mt].caption || '' };
+            }
+        }
+    }
+
+    // Debug: log raw keys so we can trace missed formats
+    const rawKeys = Object.keys(rawMessage);
+    const interesting = rawKeys.filter(k =>
+        k.includes('image') || k.includes('video') || k.includes('audio') ||
+        k.includes('iew') || k.includes('nce') || k.includes('Once') || k.includes('ephemeral')
+    );
+    if (interesting.length > 0) {
+        originalConsoleMethods.log(`🔍 [AV-MISS] detectViewOnceMedia got no match — rawKeys: [${rawKeys.join(', ')}]`);
+    }
+
     return null;
 }
 
 async function handleViewOnceDetection(sock, msg) {
     try {
         if (msg.key?.fromMe) return;
-        
+
         const config = loadAntiViewOnceConfig();
 
         if (config.mode === 'off' || (!config.mode && !config.enabled)) return;
 
-        const ownerJid = config.ownerJid || OWNER_CLEAN_JID || '';
+        // Resolve ownerJid: prefer phone-number JID over LID (LIDs can't be used for sendMessage target)
+        let ownerJid = config.ownerJid || '';
+        if (!ownerJid || ownerJid.includes('@lid')) {
+            ownerJid = OWNER_CLEAN_JID || '';
+        }
         if (!ownerJid && config.mode === 'private') return;
 
         const rawMessage = msg.message;
         if (!rawMessage) return;
+
+        originalConsoleMethods.log(`🔍 [AV-TRACE] handleViewOnceDetection called, mode=${config.mode}, ownerJid=${ownerJid}, msgKeys=[${Object.keys(rawMessage).join(', ')}]`);
 
         const viewOnce = detectViewOnceMedia(rawMessage);
         if (!viewOnce) return;
