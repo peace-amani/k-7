@@ -282,7 +282,13 @@ function getExtensionFromMime(mimetype) {
     return mimeToExt[mimetype] || '.bin';
 }
 
+const STARTUP_GRACE_MS = 90 * 1000; // block media downloads for 90s after connect
+
 async function downloadAndSaveMedia(msgId, message, messageType, mimetype) {
+    // Block ALL media downloads during startup flood window
+    const _connectedAt = globalThis._botConnectionOpenTime || 0;
+    if (_connectedAt > 0 && Date.now() - _connectedAt < STARTUP_GRACE_MS) return null;
+
     if (_activeDownloads >= MAX_CONCURRENT_DOWNLOADS) return null;
     _activeDownloads++;
     try {

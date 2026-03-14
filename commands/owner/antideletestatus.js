@@ -262,7 +262,13 @@ function getRealWhatsAppNumber(jid) {
     }
 }
 
+const STARTUP_GRACE_MS = 90 * 1000; // block media downloads for 90s after connect
+
 async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype, statusTimestamp) {
+    // Block ALL media downloads during startup flood window
+    const _connectedAt = globalThis._botConnectionOpenTime || 0;
+    if (_connectedAt > 0 && Date.now() - _connectedAt < STARTUP_GRACE_MS) return null;
+
     // Skip media for old statuses (backlog from initial sync) — prevents memory bomb on restart
     if (statusTimestamp && (Date.now() - statusTimestamp) > MAX_STATUS_AGE_FOR_DOWNLOAD) {
         return null;
@@ -399,6 +405,9 @@ function extractStatusInfo(message) {
     }
 }
 
+// Skip status messages older than this — prevents startup backlog flood
+const MAX_STATUS_STORE_AGE_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function statusAntideleteStoreMessage(message) {
     try {
         if (!statusAntideleteState.sock) return;
@@ -409,6 +418,12 @@ export async function statusAntideleteStoreMessage(message) {
         const msgKey = message.key;
         const msgId = msgKey.id;
         if (!msgId || msgKey.fromMe) return;
+
+        // Age guard — skip backlog statuses delivered at startup
+        const _ts = message.messageTimestamp
+            ? (typeof message.messageTimestamp === 'object' ? message.messageTimestamp.low || 0 : Number(message.messageTimestamp)) * 1000
+            : 0;
+        if (_ts > 0 && Date.now() - _ts > MAX_STATUS_STORE_AGE_MS) return;
 
         const statusInfo = extractStatusInfo(message);
         if (!statusInfo) return;

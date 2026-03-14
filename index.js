@@ -2892,17 +2892,19 @@ const memoryMonitor = {
         this._trimInterval = setInterval(() => {
             try { this.trimCaches(false); } catch {}
         }, 3 * 60 * 1000);
-        // Emergency GC every 20 seconds when memory is critically high
+        // Emergency GC every 10 seconds when memory is high
         this._emergencyInterval = setInterval(() => {
             try {
                 const memMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-                if (memMB > 700) {
+                if (memMB > 450) {
                     if (global.gc) { global.gc(); global.gc(); }
                     setImmediate(() => this.trimCaches(true));
-                    UltraCleanLogger.warning(`Emergency GC: ${memMB}MB - forcing collection`);
+                    if (memMB > 700) {
+                        UltraCleanLogger.warning(`Emergency GC: ${memMB}MB - forcing collection`);
+                    }
                 }
             } catch {}
-        }, 20 * 1000);
+        }, 10 * 1000);
     },
     stop() {
         if (this._interval) { clearInterval(this._interval); this._interval = null; }
@@ -2953,8 +2955,12 @@ const memoryMonitor = {
             }
             if (global.gc) { global.gc(); }
             if (aggressive) {
-                const memAfter = Math.round(process.memoryUsage().rss / 1024 / 1024);
-                UltraCleanLogger.info(`Aggressive trim: ${memAfter}MB`);
+                const mu = process.memoryUsage();
+                const rss   = Math.round(mu.rss / 1024 / 1024);
+                const heap  = Math.round(mu.heapUsed / 1024 / 1024);
+                const ext   = Math.round(mu.external / 1024 / 1024);
+                const abuf  = Math.round(mu.arrayBuffers / 1024 / 1024);
+                UltraCleanLogger.info(`Aggressive trim: ${rss}MB (heap:${heap} ext:${ext} abuf:${abuf})`);
             }
         } catch {}
     }
@@ -4427,6 +4433,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         }
 
         connectionOpenTime = 0;
+        globalThis._botConnectionOpenTime = 0;
 
         UltraCleanLogger.info('🚀 Initializing WhatsApp connection...');
         
@@ -4747,6 +4754,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (connection === 'open') {
                 isConnected = true;
                 connectionOpenTime = Date.now();
+                globalThis._botConnectionOpenTime = connectionOpenTime;
                 updateWebStatus({ connected: true, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown' });
                 if (connectionStableTimer) clearTimeout(connectionStableTimer);
                 connectionStableTimer = setTimeout(() => {
@@ -5739,14 +5747,23 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     messageTimestamp: msg.messageTimestamp,
                     ...(resolvedParticipantPn ? { participantPn: resolvedParticipantPn } : {})
                 };
-                handleAutoView(sock, statusKeyWithTs, resolvedMessage).catch(() => {});
-                handleAutoReact(sock, statusKeyWithTs).catch(() => {});
-                if (statusDetector) {
-                    statusDetector.detectStatusUpdate(msg).catch(() => {});
+
+                // Age guard — skip backlog statuses delivered at startup (older than 5 min)
+                const _statusTs = msg.messageTimestamp
+                    ? (typeof msg.messageTimestamp === 'object' ? msg.messageTimestamp.low || 0 : Number(msg.messageTimestamp)) * 1000
+                    : 0;
+                const _statusIsBacklog = _statusTs > 0 && (Date.now() - _statusTs) > 5 * 60 * 1000;
+
+                if (!_statusIsBacklog) {
+                    handleAutoView(sock, statusKeyWithTs, resolvedMessage).catch(() => {});
+                    handleAutoReact(sock, statusKeyWithTs).catch(() => {});
+                    if (statusDetector) {
+                        statusDetector.detectStatusUpdate(msg).catch(() => {});
+                    }
+                    try {
+                        statusMentionHandler(sock, msg).catch(() => {});
+                    } catch {}
                 }
-                try {
-                    statusMentionHandler(sock, msg).catch(() => {});
-                } catch {}
                 const normalizedContent = normalizeMessageContent(msg.message) || msg.message;
                 const protoMsg = normalizedContent?.protocolMessage;
                 if (protoMsg && (protoMsg.type === 0 || protoMsg.type === 4)) {
@@ -5758,7 +5775,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         }).catch(() => {});
                     }
                 } else {
-                    statusAntideleteStoreMessage(msg).catch(() => {});
+                    // Skip status antidelete writes during startup flood window (first 60s after connect)
+                    const _sadStartupSkip = connectionOpenTime > 0 && (Date.now() - connectionOpenTime < 60000);
+                    if (!_sadStartupSkip) {
+                        statusAntideleteStoreMessage(msg).catch(() => {});
+                    }
                 }
                 return;
             }
@@ -5767,7 +5788,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 handleChannelReact(sock, msg).catch(() => {});
             }
 
-            antideleteStoreMessage(msg).catch(() => {});
+            // Skip antidelete writes during startup flood window (first 60s after connect)
+            // to avoid thousands of concurrent SQLite writes + setTimeout closures spiking heap
+            const _adStartupSkip = connectionOpenTime > 0 && (Date.now() - connectionOpenTime < 60000);
+            if (!_adStartupSkip) {
+                antideleteStoreMessage(msg).catch(() => {});
+            }
         });
         
         sock.ev.on('messages.reaction', async (reactions) => {
