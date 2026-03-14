@@ -7656,12 +7656,28 @@ async function main() {
             !process.stdin.isTTY;
 
         if (isCloudEnv) {
-            UltraCleanLogger.warning('⚠️  No session found — bot is waiting for you to link a device.');
-            UltraCleanLogger.info('💡 To pair:   Set PHONE_NUMBER=<your number> in Secrets and restart.');
-            UltraCleanLogger.info('💡 To restore: Set SESSION_ID=WOLF-BOT:xxx in Secrets and restart.');
+            console.log(chalk.yellowBright(`
+╔══════════════════════════════════════════════════════════════════════╗
+║              🔐  NO SESSION — CHOOSE A LOGIN METHOD              ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  OPTION 1 — Pairing Code (pair a new number)                        ║
+║  ─────────────────────────────────────────────                       ║
+║  1. Go to Replit Secrets                                             ║
+║  2. Add:  PHONE_NUMBER = 254712345678  (your number, no +)           ║
+║  3. Restart the bot → pairing code will appear here                  ║
+║                                                                      ║
+║  OPTION 2 — Session ID (restore existing session)                    ║
+║  ─────────────────────────────────────────────────                   ║
+║  1. Go to Replit Secrets                                             ║
+║  2. Add:  SESSION_ID = WOLF-BOT:eyJ...  (your session string)        ║
+║  3. Restart the bot → connects instantly                             ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝`));
+            // Remind once every 10 minutes — not every minute
             setInterval(() => {
-                UltraCleanLogger.warning('⏳ Still waiting — set PHONE_NUMBER or SESSION_ID in Secrets and restart.');
-            }, 60000);
+                UltraCleanLogger.warning('⏳ Still waiting for PHONE_NUMBER or SESSION_ID in Secrets — then restart.');
+            }, 600000);
             return;
         }
 
