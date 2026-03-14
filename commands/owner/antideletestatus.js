@@ -1,5 +1,5 @@
 import { createRequire } from 'module';
-import { downloadMediaMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
+import { downloadMediaMessage, downloadContentFromMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import { getBotName } from '../../lib/botname.js';
 import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
@@ -12,7 +12,7 @@ try { giftedBtnsAds = _requireAds('gifted-btns'); } catch (e) {}
 
 const CACHE_CLEAN_INTERVAL = 1 * 60 * 60 * 1000;
 const MAX_CACHE_AGE = 3 * 60 * 60 * 1000;
-const MAX_STATUS_AGE_FOR_DOWNLOAD = 120 * 1000; // skip media older than 2 min (backlog)
+const MAX_STATUS_AGE_FOR_DOWNLOAD = 30 * 60 * 1000; // skip media older than 30 min (backlog)
 const MAX_CONCURRENT_DOWNLOADS = 2;
 let _activeDownloads = 0;
 
@@ -276,8 +276,9 @@ async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype,
     // Concurrency cap — never download more than MAX_CONCURRENT_DOWNLOADS at once
     if (_activeDownloads >= MAX_CONCURRENT_DOWNLOADS) return null;
     _activeDownloads++;
+    let buffer = null;
     try {
-        const buffer = await downloadMediaMessage(
+        buffer = await downloadMediaMessage(
             message,
             'buffer',
             {},
@@ -286,7 +287,40 @@ async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype,
                 reuploadRequest: statusAntideleteState.sock?.updateMediaMessage
             }
         );
+    } catch (dlErr) {
+        const isKeyErr = dlErr.message?.toLowerCase().includes('media key') ||
+                         dlErr.message?.toLowerCase().includes('empty') ||
+                         dlErr.message?.toLowerCase().includes('decrypt');
+        if (isKeyErr) {
+            try {
+                const msgContent = normalizeMessageContent(message.message) || message.message;
+                let contentMsg = null;
+                let contentType = null;
+                if (msgContent?.imageMessage) { contentMsg = msgContent.imageMessage; contentType = 'image'; }
+                else if (msgContent?.videoMessage) { contentMsg = msgContent.videoMessage; contentType = 'video'; }
+                else if (msgContent?.audioMessage) { contentMsg = msgContent.audioMessage; contentType = 'audio'; }
+                if (contentMsg && contentType) {
+                    if (statusAntideleteState.sock?.updateMediaMessage) {
+                        const reuploaded = await statusAntideleteState.sock.updateMediaMessage(message);
+                        const reMsgContent = normalizeMessageContent(reuploaded.message) || reuploaded.message;
+                        contentMsg = reMsgContent?.[`${contentType}Message`] || contentMsg;
+                    }
+                    const stream = await downloadContentFromMessage(contentMsg, contentType);
+                    const chunks = [];
+                    for await (const chunk of stream) chunks.push(chunk);
+                    buffer = Buffer.concat(chunks);
+                }
+            } catch (fallbackErr) {
+                console.error('❌ Status Antidelete: Fallback download failed:', fallbackErr.message);
+                return null;
+            }
+        } else {
+            console.error('❌ Status Antidelete: Media download error:', dlErr.message);
+            return null;
+        }
+    }
 
+    try {
         if (!buffer || buffer.length === 0) return null;
 
         const maxSize = 2 * 1024 * 1024; // 2MB cap per status (was 5MB)

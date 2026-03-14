@@ -359,6 +359,7 @@ export async function antideleteStoreMessage(message) {
         if (timestamp > 0 && Date.now() - timestamp > MAX_ANTIDELETE_AGE_MS) return;
         
         if (chatJid?.endsWith('@lid') && !chatJid?.endsWith('@g.us')) return;
+        if (chatJid?.endsWith('@newsletter')) return;
         
         const isStatus = chatJid === 'status@broadcast';
         
