@@ -6293,14 +6293,11 @@ async function handleViewOnceDetection(sock, msg) {
 
         if (config.mode === 'off' || (!config.mode && !config.enabled)) return;
 
-        const ownerJid = config.ownerJid;
+        const ownerJid = config.ownerJid || OWNER_CLEAN_JID || '';
         if (!ownerJid && config.mode === 'private') return;
 
-        let rawMessage = msg.message;
+        const rawMessage = msg.message;
         if (!rawMessage) return;
-
-        const normalized = normalizeMessageContent(rawMessage);
-        if (normalized) rawMessage = normalized;
 
         const viewOnce = detectViewOnceMedia(rawMessage);
         if (!viewOnce) return;
