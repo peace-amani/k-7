@@ -67,7 +67,7 @@ export default {
     if (giftedBtns?.sendInteractiveMessage) {
       try {
         await giftedBtns.sendInteractiveMessage(sock, chatJid, {
-          text: `*JID*\n${jid}\n\n_Powered by ${getOwnerName().toUpperCase()} TECH_`,
+          text: `*JID*\n${jid}\n\n*Powered by ${getOwnerName().toUpperCase()} TECH*`,
           interactiveButtons: [
             {
               name: 'cta_copy',
@@ -82,7 +82,7 @@ export default {
       } catch {}
     }
 
-    await sock.sendMessage(chatJid, { text: `*JID*\n\`${jid}\`\n\n_Powered by ${getOwnerName().toUpperCase()} TECH_` }, { quoted: m });
+    await sock.sendMessage(chatJid, { text: `*JID*\n\`${jid}\`\n\n*Powered by ${getOwnerName().toUpperCase()} TECH*` }, { quoted: m });
   },
 
   async resolveJid(sock, inputJid) {
