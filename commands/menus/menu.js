@@ -1014,19 +1014,6 @@ case 1: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  // ========== SIMPLE LOADING MESSAGE ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  // Send loading message quoted by fake contact
-  await sock.sendMessage(jid, { 
-    text: loadingMessage 
-  }, { 
-    quoted: fkontak 
-  });
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
   // ========== REST OF YOUR EXISTING CODE ==========
   // 🖼️ Full info + image + commands (with individual toggles)
   let finalCaption = "";
@@ -2448,40 +2435,6 @@ case 3: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  // ========== LOADING MESSAGE (INTERACTIVE) ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  try {
-    let loadingInteractiveMsg = generateWAMessageFromContent(jid, {
-      viewOnceMessage: {
-        message: {
-          interactiveMessage: {
-            body: {
-              text: null,
-            },
-            footer: {
-              text: loadingMessage,
-            },
-            nativeFlowMessage: {
-              buttons: [{ text: null }],
-            },
-          },
-        },
-      },
-    }, {
-      quoted: fkontak,
-      userJid: sock.user?.id || jid
-    });
-    await sock.relayMessage(jid, loadingInteractiveMsg.message, {
-      messageId: loadingInteractiveMsg.key.id
-    });
-  } catch (e) {
-    await sock.sendMessage(jid, { text: loadingMessage }, { quoted: fkontak });
-  }
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
   // ========== REST OF YOUR EXISTING CODE ==========
   // 🖼️ Full info + commands (with individual toggles)
   let finalCaption = "";
@@ -3412,19 +3365,6 @@ case 4: {
   
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
-  
-  // ========== SIMPLE LOADING MESSAGE ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  // Send loading message with fake contact
-  await sock.sendMessage(jid, { 
-    text: loadingMessage 
-  }, { 
-    quoted: m 
-  });
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
   
   // ========== REST OF YOUR EXISTING CODE ==========
   // 📝 Full info + commands (with individual toggles)
@@ -5071,19 +5011,6 @@ case 5: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  // ========== SIMPLE LOADING MESSAGE ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  // Send loading message with fake contact
-  await sock.sendMessage(jid, { 
-    text: loadingMessage 
-  }, { 
-    quoted: m 
-  });
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
   // ========== REST OF YOUR EXISTING CODE ==========
   // 📝 Full info + commands (with individual toggles)
   let finalText = "";
@@ -6154,15 +6081,6 @@ case 5: {
 
 case 6: {
   const currentBotName = _getBotName();
-  
-  // ========== LOADING MESSAGE ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  // Send loading message
-  await sock.sendMessage(jid, { text: loadingMessage }, { quoted: m });
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
   
   // ========== REST OF YOUR EXISTING CODE ==========
   // 🖼️ Full info + image + commands (with individual toggles)
@@ -7944,15 +7862,6 @@ case 6: {
 
 case 7: {
   const currentBotName = _getBotName();
-  
-  // ========== LOADING MESSAGE ==========
-  const loadingMessage = `⚡ ${currentBotName} menu loading...`;
-  
-  // Send loading message
-  await sock.sendMessage(jid, { text: loadingMessage }, { quoted: m });
-  
-  // Add a small delay
-  await new Promise(resolve => setTimeout(resolve, 800));
   
   // ========== REST OF YOUR EXISTING CODE ==========
   // 🖼️ Full info + image + commands (with individual toggles)
