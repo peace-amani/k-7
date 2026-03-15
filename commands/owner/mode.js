@@ -295,6 +295,6 @@ export default {
             console.error('Error reading bot mode:', error);
         }
         
-        return 'public';
+        return 'default';
     }
 };
