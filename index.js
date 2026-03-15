@@ -6349,9 +6349,9 @@ function loadAntiViewOnceConfig() {
         const localFile = './data/antiviewonce/config.json';
         if (fs.existsSync(localFile)) {
             const parsed = JSON.parse(fs.readFileSync(localFile, 'utf8'));
-            if (parsed && typeof parsed === 'object' && parsed.mode) {
-                const base = _cache_antiviewonce_config || {};
-                return { ...base, ...parsed };
+            // Accept both legacy { mode } and new { gc, pm } formats
+            if (parsed && typeof parsed === 'object' && (parsed.mode || parsed.gc || parsed.pm)) {
+                return parsed;
             }
         }
     } catch {}
