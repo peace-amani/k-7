@@ -80,7 +80,7 @@ export default {
 
         if (!args[0]) {
             await sock.sendMessage(chatId, {
-                text: `*Usage:* ${prefix}getcmd <command>\n*Example:* ${prefix}getcmd song\n\n*Powered by WOLF TECH*`
+                text: `╭─⌈ 🔍 *GETCMD* ⌋\n│\n├─⊷ *${prefix}getcmd <command>*\n│  └⊷ Get source code of a command\n├─⊷ *Example:* ${prefix}getcmd song\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
             return;
         }
