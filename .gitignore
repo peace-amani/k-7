@@ -13,6 +13,10 @@ bot_restart.log
 owner.json
 bot_mode.json
 bot_settings.json
+bot_button_mode.json
+bot_channel_mode.json
+bot_owner_contact.json
+session_migrated_backup/
 bot_name.json
 prefix_config.json
 lid_mappings.json
