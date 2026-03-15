@@ -47,34 +47,16 @@ export default {
                 throw new Error('Failed to update prefix');
             }
             
-            if (isNone) {
-                // Prefixless mode enabled
-                await sock.sendMessage(chatId, {
-                    text: `✅ *PREFIXLESS MODE ENABLED*\n\nOld prefix: "${oldIsPrefixless ? 'none' : oldPrefix}"\nNew mode: No prefix required!\n`
-                }, { quoted: msg });
-            } else {
-                // Regular prefix change
-                await sock.sendMessage(chatId, {
-                    text: `✅ *PREFIX UPDATED*\nOld prefix: "${oldIsPrefixless ? 'none (prefixless)' : oldPrefix}"\nNew prefix: "*${newPrefix}"*\n`
-                }, { quoted: msg });
-            }
-            
-            // Send test message
-            setTimeout(async () => {
-                try {
-                    if (isNone) {
-                        await sock.sendMessage(chatId, {
-                            text: `🔧 *Test Prefixless Mode*\n\nTry: \`ping\` (no prefix needed!)`
-                        });
-                    } else {
-                        await sock.sendMessage(chatId, {
-                            text: `🔧 *Test New Prefix*\n\nTry: \`${newPrefix}ping\``
-                        });
-                    }
-                } catch {
-                    // Silent fail
-                }
-            }, 1000);
+            const oldLabel = oldIsPrefixless ? 'none' : `"${oldPrefix}"`;
+            const newLabel = isNone ? 'none (prefixless)' : `"${newPrefix}"`;
+            const tryCmd = isNone ? '`ping`' : `\`${newPrefix}ping\``;
+
+            await sock.sendMessage(chatId, {
+                text: `✅ *PREFIX UPDATED*\n\n` +
+                      `Old Prefix: ${oldLabel}\n` +
+                      `New Prefix: ${newLabel}\n\n` +
+                      `Try ${tryCmd}`
+            }, { quoted: msg });
             
         } catch (error) {
             await sock.sendMessage(chatId, {
