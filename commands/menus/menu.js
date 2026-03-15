@@ -1014,7 +1014,7 @@ case 1: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -2177,7 +2177,7 @@ case 2: {
   
   // Load bot name and mode
   const botName = _getBotName();
-  await sock.sendMessage(jid, { text: `⚡ ${botName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${botName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
   const botMode = getBotMode();
   
@@ -2440,7 +2440,7 @@ case 3: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -3374,7 +3374,7 @@ case 4: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -5022,7 +5022,7 @@ case 5: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
   
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -6095,7 +6095,7 @@ case 5: {
 
 case 6: {
   const currentBotName = _getBotName();
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -7878,7 +7878,7 @@ case 6: {
 
 case 7: {
   const currentBotName = _getBotName();
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
@@ -8851,7 +8851,7 @@ case 9: {
   
   const fkontak9 = createFakeContact9(m);
   
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...` }, { quoted: m });
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   let finalText9 = "";

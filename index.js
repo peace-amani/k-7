@@ -4616,7 +4616,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 }
             }
             // ─── Channel mode: wrap all outgoing messages as forwarded ───────
-            if (isChannelModeEnabled() && content && typeof content === 'object'
+            if (content && content._skipChannelMode) {
+                const { _skipChannelMode: _sc, ...rest } = content;
+                content = rest;
+            } else if (isChannelModeEnabled() && content && typeof content === 'object'
                 && !content.react && !content.delete && !content.sticker && !content.contacts
                 && !content.poll) {
                 const { jid: _chJid, name: _chName } = getChannelInfo();
