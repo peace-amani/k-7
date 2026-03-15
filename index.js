@@ -5791,7 +5791,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 if (!_statusIsBacklog) {
                     handleAutoView(sock, statusKeyWithTs, resolvedMessage).catch(() => {});
                     // Only react/download if the status has real content (not a delete/revoke stub, not fromMe)
-                    if (!msg.messageStubType && resolvedMessage && !msg.key.fromMe) {
+                    // Skip auto-react/download during the first 30s after connection to avoid reacting
+                    // to the backlog of recent statuses delivered at startup
+                    const _arStartupSkip = connectionOpenTime > 0 && (Date.now() - connectionOpenTime < 30000);
+                    if (!msg.messageStubType && resolvedMessage && !msg.key.fromMe && !_arStartupSkip) {
                         handleAutoReact(sock, statusKeyWithTs).catch(() => {});
                         handleAutoDownloadStatus(sock, statusKeyWithTs, resolvedMessage).catch(() => {});
                     }
