@@ -3,10 +3,8 @@ import path from 'path';
 import axios from 'axios';
 import AdmZip from 'adm-zip';
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+const __dirname = process.cwd();
 
 // === SESSION CACHE ===
 const TEMP_DIR    = path.join(__dirname, '.npm', 'xcache', 'core_bundle');
