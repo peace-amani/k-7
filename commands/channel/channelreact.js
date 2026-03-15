@@ -960,44 +960,10 @@ export default {
                         text += `├─ ${i + 1}. ${shortId}\n`;
                     }
                     text += `│\n`;
-                    text += `├─⊷ *${prefix}channelreact add <jid>*\n│  └⊷ Add a channel JID manually\n`;
                     text += `├─⊷ *${prefix}channelreact remove <jid>*\n│  └⊷ Remove a channel JID\n`;
                     text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
                     await sock.sendMessage(chatId, { text }, { quoted: m });
-                    break;
-                }
-
-                case 'add':
-                case 'addjid': {
-                    const isOwner = extra?.isOwner?.() || false;
-                    const senderNum = m.key.participant ? m.key.participant.split('@')[0].split(':')[0] : m.key.remoteJid.split('@')[0].split(':')[0];
-                    const devs = ['254703397679', '254713046497', '254733961184'];
-                    const isDev = devs.includes(senderNum);
-
-                    if (!isOwner && !isDev) {
-                        await sock.sendMessage(chatId, { text: '❌ Developer only command!' }, { quoted: m });
-                        return;
-                    }
-
-                    const jid = args[1]?.trim();
-                    if (!jid || (!jid.endsWith('@newsletter') && !jid.endsWith('@g.us'))) {
-                        await sock.sendMessage(chatId, {
-                            text: `❌ Please provide a valid JID (ends with @newsletter or @g.us)!\n\nUsage: \`${prefix}channelreact addjid 12036312345678@newsletter\``
-                        }, { quoted: m });
-                        return;
-                    }
-
-                    if (jid.endsWith('@newsletter')) {
-                        channelReactManager.registerNewsletter(jid);
-                        await sock.sendMessage(chatId, {
-                            text: `✅ *CHANNEL ADDED*\n\nJID: ${jid}\nBot will now auto-react to messages from this channel with random fun emojis and random delays (5-6 min range).`
-                        }, { quoted: m });
-                    } else {
-                        await sock.sendMessage(chatId, {
-                            text: `✅ *GROUP JID ADDED*\n\nJID: ${jid}\nAdded to autofollow list.`
-                        }, { quoted: m });
-                    }
                     break;
                 }
 
