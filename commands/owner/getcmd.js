@@ -80,7 +80,7 @@ export default {
 
         if (!args[0]) {
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔍 *GETCMD* ⌋\n│\n│ Retrieve source code of any command\n│\n├─⊷ *Usage:* ${prefix}getcmd <command>\n├─⊷ *Example:* ${prefix}getcmd song\n│\n│ 📁 Long code is sent as a .js file\n│ 🔒 Some commands are protected\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `*Usage:* ${prefix}getcmd <command>\n*Example:* ${prefix}getcmd song\n\n*Powered by WOLF TECH*`
             }, { quoted: m });
             return;
         }
