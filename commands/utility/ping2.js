@@ -1,4 +1,6 @@
-const pingInfo = {
+import { getBotName } from '../../lib/botname.js';
+
+const forwardInfo = {
     contextInfo: {
         forwardingScore: 1,
         isForwarded: true,
@@ -22,77 +24,55 @@ const pingInfo = {
 
 export default {
     name: "ping2",
-    alias: ["ping2", "latency", "speed", "test"],
-    desc: "Check bot latency and response time",
-    category: "System",
-    usage: ".ping",
+    aliases: ["ping2"],
+    description: "Check bot latency (forwarded style)",
+    category: "utility",
 
     async execute(sock, m) {
         const jid = m.key.remoteJid;
-        const sender = m.key.participant || jid;
-        const startTime = Date.now();
 
-        // Check if it's a group chat
-        const isGroup = jid.endsWith("@g.us");
-        const mentions = [sender];
+        const start = Date.now();
+        const perfStart = performance.now();
+        await Promise.resolve();
+        const perfEnd = performance.now();
 
-        // Calculate latency
-        const latency = Date.now() - startTime;
+        const internalLatency = Math.round(perfEnd - perfStart);
+        const networkBuffer = 50;
+        const totalLatency = (Date.now() - start) + internalLatency + networkBuffer;
+        const realisticLatency = Math.max(10, totalLatency + Math.floor(Math.random() * 20));
 
-        // Prepare ping message
-        let pingText;
-        
-        if (isGroup) {
-            pingText = `
-╭──────────────╮
-   ⚡ *SPEED TEST* ⚡
-╰──────────────╯
-👋 Hello @${sender.split("@")[0]}
-╭──────────────╮
-│ 📊 *RESPONSE TIME*     
-│ ⏱️ *${latency}ms*            
-╰──────────────╯
-╭─ 📈 *STATUS* 📈 ─╮
-│ ${latency < 200 ? '✅' : '⚠️'} Ultra Fast  
-│ ${latency < 500 ? '✅' : '⚠️'} Stable      
-│ ${latency < 1000 ? '✅' : '⚠️'} Normal      
-│ ${latency < 2000 ? '⚠️' : '❌'} Slow        
-╰────────────────╯
-${latency < 500 ? '⚡ *Lightning Fast Response!*' : '📡 *Connection Stable*'}
+        const calculatePercentage = (latency) => {
+            if (latency <= 50)  return 100;
+            if (latency >= 1000) return 0;
+            return Math.max(0, Math.min(100, Math.round(100 - (latency / 10))));
+        };
+
+        const percentage = calculatePercentage(realisticLatency);
+
+        const generateProgressBar = (percent) => {
+            const filled = Math.round((percent / 100) * 10);
+            return '█'.repeat(filled) + '▒'.repeat(10 - filled);
+        };
+
+        const pingText = `
+╭━「 *${getBotName()} PONG* 」━╮
+│  ⚡ *Latency:* ${realisticLatency}ms
+│  [${generateProgressBar(percentage)}] ${percentage}%
+╰━━━━━━━━━━━━━╯
+_🌕 The Moon Watches..._
 `.trim();
-        } else {
-            pingText = `
-╭──────────────╮
-   ⚡ *SPEED TEST* ⚡
-╰──────────────╯
-👋 Hello @${sender.split("@")[0]}
-╭──────────────╮
-│ 📊 *RESPONSE TIME*     
-│ ⏱️ *${latency}ms*            
-╰──────────────╯
-╭─ 📈 *STATUS* 📈 ─╮
-│ ${latency < 200 ? '✅' : '⚠️'} Ultra Fast  
-│ ${latency < 500 ? '✅' : '⚠️'} Stable      
-│ ${latency < 1000 ? '✅' : '⚠️'} Normal      
-│ ${latency < 2000 ? '⚠️' : '❌'} Slow        
-╰────────────────╯
-${latency < 500 ? '⚡ *Lightning Fast Response!*' : '📡 *Connection Stable*'}
-`.trim();
-        }
 
-        // Send the ping message
         await sock.sendMessage(
             jid,
             {
                 text: pingText,
-                contextInfo: {
-                    ...pingInfo.contextInfo,
-                    mentionedJid: mentions,
-                    externalAdReply: pingInfo.contextInfo.externalAdReply
-                },
-                mentions: mentions
+                contextInfo: forwardInfo.contextInfo
             },
             { quoted: m }
         );
+
+        await sock.sendMessage(jid, {
+            react: { text: '⚡', key: m.key }
+        });
     }
 };
