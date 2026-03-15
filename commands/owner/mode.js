@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { isButtonModeEnabled, setButtonMode } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 import { isChannelModeEnabled, setChannelMode, getChannelInfo } from '../../lib/channelMode.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -131,7 +131,7 @@ export default {
                     `├─⊷ *Current:* ${currentLabel}${buttonsActive ? ' + 🔘 Buttons' : ''}${channelActive ? ' + 📡 Channel' : ''}\n` +
                     (channelActive ? `├─⊷ *Channel:* ${channelInfo.name}\n` : '') +
                     `│\n` +
-                    `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: msg });
         }
         
@@ -181,7 +181,7 @@ export default {
                     }
                 } else {
                     await sock.sendMessage(chatId, {
-                        text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ Interactive button responses enabled\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                        text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ Interactive button responses enabled\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                     }, { quoted: msg });
                 }
                 
@@ -201,7 +201,7 @@ export default {
                         `├─⊷ *Channel:* ${chInfo.name}\n` +
                         `├─⊷ Change channel with:\n` +
                         `│  └⊷ ${PREFIX}setchannel <JID> <Name>\n` +
-                        `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 }, { quoted: msg });
                 console.log(`✅ Channel mode ENABLED by ${cleaned.cleanNumber}`);
                 return;
@@ -212,7 +212,7 @@ export default {
                 setChannelMode(false, cleaned.cleanNumber || 'Unknown');
                 
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n│  └⊷ Buttons & channel mode disabled\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n│  └⊷ Buttons & channel mode disabled\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 }, { quoted: msg });
                 
                 console.log(`✅ Default mode set (buttons + channel OFF) by ${cleaned.cleanNumber}`);
@@ -259,7 +259,7 @@ export default {
                 }
             } else {
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 }, { quoted: msg });
             }
             
