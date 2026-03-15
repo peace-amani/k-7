@@ -5,6 +5,7 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
+import { queryKeithVideo } from '../../lib/keithApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -124,7 +125,8 @@ export default {
         }
       }
 
-      const result = await queryAPI(videoUrl, VIDEO_ENDPOINTS);
+      let result = await queryAPI(videoUrl, VIDEO_ENDPOINTS);
+      if (!result.success) result = await queryKeithVideo(videoUrl);
       if (!result.success) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Video download failed. All services unavailable. Try again later.` }, { quoted: m });

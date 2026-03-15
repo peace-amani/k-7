@@ -6,6 +6,7 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { queryXWolfAudio } from '../../lib/xwolfApi.js';
+import { queryKeithAudio } from '../../lib/keithApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -150,6 +151,7 @@ export default {
 
       let result = await queryAPI(videoUrl, AUDIO_ENDPOINTS);
       if (!result.success) result = await queryXWolfAudio(videoUrl);
+      if (!result.success) result = await queryKeithAudio(videoUrl);
       if (!result.success) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ All download services are currently unavailable. Please try again later.` }, { quoted: m });
