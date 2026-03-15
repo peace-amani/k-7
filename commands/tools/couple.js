@@ -5,7 +5,7 @@
 //   name: 'couple',
 //   description: 'Combine two people\'s profile pictures into a couple picture',
 //   category: 'fun',
-//   aliases: ['couplepic', 'lovematch', 'pair'],
+//   aliases: ['couplepic', 'lovematch'],
 //   usage: 'couple @tag1 @tag2',
   
 //   async execute(sock, m, args, PREFIX, extra) {
@@ -498,7 +498,7 @@ export default {
   name: 'couple',
   description: 'Combine two people\'s profile pictures into a couple picture',
   category: 'fun',
-  aliases: ['couplepic', 'lovematch', 'pair'],
+  aliases: ['couplepic', 'lovematch'],
   usage: 'couple @tag1 @tag2',
   
   async execute(sock, m, args, PREFIX, extra) {
