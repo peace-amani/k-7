@@ -6375,62 +6375,67 @@ function saveAntiViewOnceConfig(config) {
 
 function detectViewOnceMedia(rawMessage) {
     if (!rawMessage) return null;
+    const m = rawMessage;
 
-    const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage'];
-    const typeMap = { imageMessage: 'image', videoMessage: 'video', audioMessage: 'audio' };
+    // V2 wrapper (newest format)
+    const v2 = m.viewOnceMessageV2?.message || m.viewOnceMessageV2Extension?.message;
+    if (v2) {
+        if (v2.imageMessage) return { type: 'image', media: v2.imageMessage, caption: v2.imageMessage.caption || '' };
+        if (v2.videoMessage) return { type: 'video', media: v2.videoMessage, caption: v2.videoMessage.caption || '' };
+        if (v2.audioMessage) return { type: 'audio', media: v2.audioMessage, caption: '' };
+    }
 
-    // Method 1: Direct viewOnce property on media (WhatsApp current format)
-    for (const mt of mediaTypes) {
-        if (rawMessage[mt]?.viewOnce) {
-            originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce via direct property on ${mt}`);
-            return { type: typeMap[mt], media: rawMessage[mt], caption: rawMessage[mt].caption || '' };
+    // Old viewOnceMessage wrapper
+    const vom = m.viewOnceMessage?.message;
+    if (vom) {
+        if (vom.imageMessage) return { type: 'image', media: vom.imageMessage, caption: vom.imageMessage.caption || '' };
+        if (vom.videoMessage) return { type: 'video', media: vom.videoMessage, caption: vom.videoMessage.caption || '' };
+        if (vom.audioMessage) return { type: 'audio', media: vom.audioMessage, caption: '' };
+    }
+
+    // Ephemeral-wrapped viewonce (disappearing message groups)
+    const eph = m.ephemeralMessage?.message;
+    if (eph) {
+        const ev2 = eph.viewOnceMessageV2?.message || eph.viewOnceMessageV2Extension?.message;
+        if (ev2) {
+            if (ev2.imageMessage) return { type: 'image', media: ev2.imageMessage, caption: ev2.imageMessage.caption || '' };
+            if (ev2.videoMessage) return { type: 'video', media: ev2.videoMessage, caption: ev2.videoMessage.caption || '' };
+            if (ev2.audioMessage) return { type: 'audio', media: ev2.audioMessage, caption: '' };
+        }
+        const evm = eph.viewOnceMessage?.message;
+        if (evm) {
+            if (evm.imageMessage) return { type: 'image', media: evm.imageMessage, caption: evm.imageMessage.caption || '' };
+            if (evm.videoMessage) return { type: 'video', media: evm.videoMessage, caption: evm.videoMessage.caption || '' };
+            if (evm.audioMessage) return { type: 'audio', media: evm.audioMessage, caption: '' };
         }
     }
 
-    // Method 2: viewOnceMessage wrapper (legacy format)
-    const voMsg = rawMessage.viewOnceMessage?.message
-        || rawMessage.viewOnceMessageV2?.message
-        || rawMessage.viewOnceMessageV2Extension?.message;
-    if (voMsg) {
-        for (const mt of mediaTypes) {
-            if (voMsg[mt]) {
-                originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce via wrapper on ${mt}`);
-                return { type: typeMap[mt], media: voMsg[mt], caption: voMsg[mt].caption || '' };
+    // Direct imageMessage/videoMessage/audioMessage with viewOnce flag
+    if (m.imageMessage?.viewOnce) return { type: 'image', media: m.imageMessage, caption: m.imageMessage.caption || '' };
+    if (m.videoMessage?.viewOnce) return { type: 'video', media: m.videoMessage, caption: m.videoMessage.caption || '' };
+    if (m.audioMessage?.viewOnce) return { type: 'audio', media: m.audioMessage, caption: '' };
+
+    // normalizeMessageContent fallback
+    try {
+        const norm = normalizeMessageContent(m);
+        if (norm) {
+            const ntype = getContentType(norm);
+            if (ntype) {
+                const nMsg = norm[ntype];
+                if (nMsg?.viewOnce) {
+                    const t = ntype.replace('Message', '');
+                    return { type: t, media: nMsg, caption: nMsg.caption || '' };
+                }
             }
         }
-    }
+    } catch {}
 
-    // Method 3: ephemeralMessage wrapping viewOnce (disappearing messages chat)
-    const ephMsg = rawMessage.ephemeralMessage?.message;
-    if (ephMsg) {
-        const ephResult = detectViewOnceMedia(ephMsg);
-        if (ephResult) {
-            originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce inside ephemeralMessage`);
-            return ephResult;
-        }
-    }
-
-    // Method 4: Use normalizeMessageContent as fallback
-    const normalized = normalizeMessageContent(rawMessage);
-    if (normalized && normalized !== rawMessage) {
-        for (const mt of mediaTypes) {
-            if (normalized[mt]?.viewOnce) {
-                originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce via normalizeMessageContent on ${mt}`);
-                return { type: typeMap[mt], media: normalized[mt], caption: normalized[mt].caption || '' };
-            }
-        }
-    }
-
-    // Method 5: normalizeMessageContent unwraps viewOnceV2 but drops the viewOnce flag —
-    // if the original message HAD a viewOnce wrapper and the normalized result has media, treat it as view-once
-    const hasVoWrapper = !!(rawMessage.viewOnceMessage || rawMessage.viewOnceMessageV2 || rawMessage.viewOnceMessageV2Extension);
-    if (hasVoWrapper && normalized) {
-        for (const mt of mediaTypes) {
-            if (normalized[mt]) {
-                originalConsoleMethods.log(`🔍 [AV-DETECT] Found viewOnce via wrapper+normalize fallback on ${mt}`);
-                return { type: typeMap[mt], media: normalized[mt], caption: normalized[mt].caption || '' };
-            }
-        }
+    // Wrapper-only detection: wrapper present but inner message is null — use downloadMediaMessage
+    const hasVoWrapper = !!(m.viewOnceMessageV2 || m.viewOnceMessageV2Extension || m.viewOnceMessage ||
+        m.ephemeralMessage?.message?.viewOnceMessageV2 || m.ephemeralMessage?.message?.viewOnceMessage);
+    if (hasVoWrapper) {
+        const guessVideo = !!(m.viewOnceMessage?.message?.videoMessage || m.viewOnceMessageV2?.message?.videoMessage);
+        return { type: guessVideo ? 'video' : 'image', media: null, caption: '', useMessageDownload: true };
     }
 
     return null;
@@ -6440,77 +6445,80 @@ async function handleViewOnceDetection(sock, msg) {
     try {
         if (msg.key?.fromMe) return;
 
-        const config = loadAntiViewOnceConfig();
-        if (config.mode === 'off' || (!config.mode && !config.enabled)) return;
-
-        // Resolve ownerJid: prefer phone-number JID over LID (LIDs can't be used for sendMessage target)
-        let ownerJid = config.ownerJid || '';
-        if (!ownerJid || ownerJid.includes('@lid')) {
-            ownerJid = OWNER_CLEAN_JID || '';
-        }
-        if (!ownerJid && config.mode === 'private') return;
-
         const rawMessage = msg.message;
         if (!rawMessage) return;
+
+        // Quick pre-check: skip obvious non-viewonce messages
+        const voKeys = ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension',
+            'imageMessage', 'videoMessage', 'audioMessage', 'ephemeralMessage'];
+        if (!Object.keys(rawMessage).some(k => voKeys.includes(k))) return;
+
+        const config = loadAntiViewOnceConfig();
+        const chatId = msg.key.remoteJid;
+        const isGroup = chatId?.endsWith('@g.us');
+
+        // Determine effective enabled/mode from gc/pm config
+        let enabled, deliveryMode;
+        if (config.gc && config.pm) {
+            const scope = isGroup ? config.gc : config.pm;
+            enabled = scope.enabled;
+            deliveryMode = scope.mode || 'private';
+        } else {
+            // Legacy flat config
+            enabled = config.mode !== 'off' && (config.mode || config.enabled);
+            deliveryMode = config.mode === 'public' ? 'chat' : 'private';
+        }
+        if (!enabled) return;
 
         const viewOnce = detectViewOnceMedia(rawMessage);
         if (!viewOnce) return;
 
-        const { type, media, caption } = viewOnce;
-        const chatId = msg.key.remoteJid;
+        const { type, media, useMessageDownload } = viewOnce;
         const sender = msg.key.participant || msg.key.remoteJid;
         const senderShort = sender.split('@')[0].split(':')[0];
 
         UltraCleanLogger.antiviewonce(`🔐 View-Once detected: ${type} from ${senderShort}`);
 
-        const cleanMedia = { ...media };
-        delete cleanMedia.viewOnce;
-
-        let buffer;
         const DL_TIMEOUT = 15000;
-        try {
-            const dlMsg = {
-                key: msg.key,
-                message: { [`${type}Message`]: cleanMedia }
-            };
-            buffer = await Promise.race([
-                downloadMediaMessage(
-                    dlMsg,
-                    'buffer',
-                    {},
-                    {
-                        logger: { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) },
-                        reuploadRequest: sock.updateMediaMessage
-                    }
-                ),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
-            ]);
-        } catch (dlErr1) {
+        let buffer;
+
+        if (useMessageDownload) {
+            // Wrapper-only: inner message was null, use downloadMediaMessage on the whole msg
             try {
-                const stream = await Promise.race([
-                    downloadContentFromMessage(cleanMedia, type),
+                buffer = await Promise.race([
+                    downloadMediaMessage(msg, 'buffer', {}),
                     new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
                 ]);
-                const chunks = [];
-                for await (const chunk of stream) {
-                    chunks.push(chunk);
-                    if (chunks.length > 500) break;
-                }
-                buffer = Buffer.concat(chunks);
-            } catch (dlErr2) {
+            } catch (err) {
+                UltraCleanLogger.warning(`Anti-ViewOnce: downloadMediaMessage fallback failed — ${err.message}`);
+                return;
+            }
+        } else {
+            const cleanMedia = { ...media };
+            delete cleanMedia.viewOnce;
+            try {
+                const dlMsg = {
+                    key: msg.key,
+                    message: { [`${type}Message`]: cleanMedia }
+                };
+                buffer = await Promise.race([
+                    downloadMediaMessage(dlMsg, 'buffer', {}, {
+                        logger: { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) },
+                        reuploadRequest: sock.updateMediaMessage
+                    }),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
+                ]);
+            } catch {
                 try {
-                    const stream2 = await Promise.race([
-                        downloadContentFromMessage(media, type),
+                    const stream = await Promise.race([
+                        downloadContentFromMessage(cleanMedia, type),
                         new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
                     ]);
-                    const chunks2 = [];
-                    for await (const chunk of stream2) {
-                        chunks2.push(chunk);
-                        if (chunks2.length > 500) break;
-                    }
-                    buffer = Buffer.concat(chunks2);
-                } catch (dlErr3) {
-                    UltraCleanLogger.warning(`Anti-ViewOnce: All download methods failed — ${dlErr3.message}`);
+                    const chunks = [];
+                    for await (const chunk of stream) { chunks.push(chunk); if (chunks.length > 500) break; }
+                    buffer = Buffer.concat(chunks);
+                } catch (dlErr2) {
+                    UltraCleanLogger.warning(`Anti-ViewOnce: All download methods failed — ${dlErr2.message}`);
                     return;
                 }
             }
@@ -6518,22 +6526,12 @@ async function handleViewOnceDetection(sock, msg) {
 
         if (!buffer || buffer.length === 0) return;
 
-        const sizeKB = Math.round(buffer.length / 1024);
         const timestamp = Date.now();
         const ext = type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'mp3';
         const filename = `viewonce_${type}_${senderShort}_${timestamp}.${ext}`;
 
         const retrievalCaption = await generateRetrievalCaption(sender, 'auto-detect', chatId, null, sock);
-
-        let localConfig = config;
-        try {
-            const localFile = './data/antiviewonce/config.json';
-            if (fs.existsSync(localFile)) {
-                const parsed = JSON.parse(fs.readFileSync(localFile, 'utf8'));
-                if (parsed && typeof parsed === 'object') localConfig = { ...config, ...parsed };
-            }
-        } catch {}
-        const sendAsSticker = localConfig.sendAsSticker === true && type === 'image';
+        const sendAsSticker = config.sendAsSticker === true && type === 'image';
 
         const mediaPayload = {};
         if (sendAsSticker) {
@@ -6544,11 +6542,27 @@ async function handleViewOnceDetection(sock, msg) {
             mediaPayload.fileName = filename;
         }
 
-        if (config.mode === 'public') {
-            await sock.sendMessage(chatId, mediaPayload);
-        } else {
-            const normalizedOwner = jidNormalizedUser(ownerJid);
-            await sock.sendMessage(normalizedOwner, mediaPayload);
+        // Resolve owner JID
+        let ownerJid = config.ownerJid || '';
+        if (!ownerJid || ownerJid.includes('@lid')) ownerJid = OWNER_CLEAN_JID || '';
+
+        // Determine target(s): private → DM only, chat → same chat, both → both
+        const targets = [];
+        if (deliveryMode === 'private' || deliveryMode === 'both') {
+            if (ownerJid) targets.push(jidNormalizedUser(ownerJid));
+        }
+        if ((deliveryMode === 'chat' || deliveryMode === 'both') && chatId !== ownerJid) {
+            targets.push(chatId);
+        }
+        if (targets.length === 0 && ownerJid) targets.push(jidNormalizedUser(ownerJid));
+
+        for (const target of targets) {
+            try {
+                await sock.sendMessage(target, mediaPayload);
+                UltraCleanLogger.antiviewonce(`🔐 View-Once sent to ${target}`);
+            } catch (sendErr) {
+                UltraCleanLogger.warning(`Anti-ViewOnce send failed to ${target}: ${sendErr.message}`);
+            }
         }
 
         try {
