@@ -314,6 +314,8 @@ class AutoReactManager {
 
             const emoji = this.getReaction();
 
+            const botJid = sock.user?.id || sock.user?.jid || '';
+
             await sock.sendMessage(
                 'status@broadcast',
                 {
@@ -327,7 +329,7 @@ class AutoReactManager {
                         }
                     }
                 },
-                { statusJidList: [resolvedJid] }
+                { statusJidList: [resolvedJid, ...(botJid ? [botJid] : [])] }
             );
 
             this.lastReactionTime = Date.now();
