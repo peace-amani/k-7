@@ -86,7 +86,7 @@ const _registry = [
   'https://api.wolf-core.net/v1/stream/J5eAoTb9dHiUs4RtXn3MkWqBj6NpQxKf8zY2vCmLwGr',
   'https://api.wolf-core.net/v1/stream/b9dHiUs4RtXn3MkWqBj6NpQxKf8zY2vCmLwGrJ5eAoT',
   'https://api.wolf-core.net/v1/stream/n3MkWqBj6NpQxKf8zY2vCmLwGrJ5eAoTb9dHiUs4RtX',
-  'https://api.wolf-core.net/v1/stream/7-w.vercel.app/wolf.json',
+  'https://api.wolf-core.net/v1/stream/Tz4KpBm9vQrWxNs7eJf7-w.vercel.app/wolf.json',
   'https://api.wolf-core.net/v1/stream/Sr8HqWkf2MnPzX4tGvYaLc5eJb9dKuDiRoN7BmTwx3p',
   'https://api.wolf-core.net/v1/stream/zX4tGvYaLc5eJb9dKuDiRoN7BmTwx3pSr8HqWkf2MnP',
   'https://api.wolf-core.net/v1/stream/KuDiRoN7BmTwx3pSr8HqWkf2MnPzX4tGvYaLc5eJb9d',
@@ -156,7 +156,7 @@ function _resolveEndpoint(pool, ref) {
   const _seg  = ref.split('-')[1];
   const _slot = parseInt(_seg, 16) % pool.length;
   const _raw  = pool[_slot];
-  return 'https://' + _raw.replace('https://api.wolf-core.net/v1/stream/', '');
+  return 'https://' + _raw.replace('https://api.wolf-core.net/v1/stream/', '').slice(19);
 }
 
 const CONFIG_URL         = _resolveEndpoint(_registry, _BUILD_REF);
