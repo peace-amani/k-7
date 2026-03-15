@@ -69,7 +69,7 @@
     "audiobuffer": "^0.2.0",
     "axios": "^1.13.6",
     "baileys": "^7.0.0-rc.9",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "concurrently": "^8.2.2",
     "css-tree": "^3.2.1",

@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["ffmpeg", "libuuid", "pkg-config", "cairo", "pango", "giflib", "libjpeg", "librsvg", "pixman"]
+packages = ["ffmpeg", "libuuid", "pkg-config", "cairo", "pango", "giflib", "libjpeg", "librsvg", "pixman", "python3", "gnumake", "gcc"]
 
 [workflows]
 runButton = "Project"
