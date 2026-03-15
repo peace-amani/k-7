@@ -20,16 +20,6 @@ import fs from "fs";
 import path from "path";
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-try {
-  const dotenvPath = path.resolve(process.cwd(), ".env");
-  if (fs.existsSync(dotenvPath)) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require("dotenv").config({ path: dotenvPath });
-    console.log("[shodan] Loaded .env from", dotenvPath);
-  }
-} catch (e) {
-  console.warn("[shodan] dotenv load failed:", e && e.message);
-}
 
 // If Node lacks global fetch, uncomment and install node-fetch:
 // import fetch from "node-fetch";
