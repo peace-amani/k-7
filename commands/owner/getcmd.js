@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const COMMANDS_DIR = path.resolve(__dirname, '../../commands');
 
-const BLOCKED_FILES = ['update.js', 'restart.js', 'start.js'];
+const BLOCKED_FILES = ['update.js', 'restart.js', 'start.js', 'getcmd.js'];
 
 const PRIVATE_PATTERNS = [
     /nk-apex\/n7/i,

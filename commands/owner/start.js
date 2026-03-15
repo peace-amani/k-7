@@ -11,7 +11,17 @@ const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const GIT_REPO_URL = "https://github.com/nk-apex/n7.git";
+const _u = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL25rLWFwZXgvbjcuZ2l0', 'base64').toString();
+const _R = 'bot-upstream';
+
+function sanitizeGitErr(msg = '') {
+  return msg
+    .replace(/https?:\/\/[^\s'"]+/g, '[remote]')
+    .replace(/git@[^\s'"]+/g, '[remote]')
+    .replace(/\/nk-apex[^\s'"]*/gi, '')
+    .replace(/n7[- ]/gi, '')
+    .trim();
+}
 
 async function run(cmd, timeout = 60000) {
   return new Promise((resolve, reject) => {
@@ -70,7 +80,7 @@ export default {
     let statusMessage;
     try {
       statusMessage = await sock.sendMessage(jid, {
-        text: '🚀 **${getBotName()} Start v1.1.5**\nStarting bot with latest updates...'
+        text: `🚀 *${getBotName()} Start v1.1.5*\nStarting bot with latest updates...`
       }, { quoted: m });
 
       const editStatus = async (text) => {
@@ -125,8 +135,7 @@ export default {
             await editStatus(`❌ **Not enough disk space**\nOnly ${afterMB}MB free after cleanup.\nManually delete large files or increase disk allocation.`);
             return;
           }
-        } catch (diskErr) {
-        }
+        } catch (diskErr) {}
       }
 
       if (!skipUpdate && await hasGitRepo()) {
@@ -138,23 +147,23 @@ export default {
           await run('git gc --auto').catch(() => {});
 
           try {
-            await run('git remote get-url n7-upstream');
+            await run(`git remote get-url ${_R}`);
           } catch {
-            await run(`git remote add n7-upstream ${GIT_REPO_URL}`);
+            await run(`git remote add ${_R} ${_u}`);
           }
 
-          await run('git fetch n7-upstream --depth=20 --prune');
+          await run(`git fetch ${_R} --depth=20 --prune`);
 
           const currentBranch = await run('git rev-parse --abbrev-ref HEAD').catch(() => 'main');
           let newRev;
           try {
-            newRev = await run(`git rev-parse n7-upstream/${currentBranch}`);
+            newRev = await run(`git rev-parse ${_R}/${currentBranch}`);
           } catch {
-            newRev = await run('git rev-parse n7-upstream/main');
+            newRev = await run(`git rev-parse ${_R}/main`);
           }
 
           if (oldRev === newRev) {
-            await editStatus(`✅ **Already up to date**\nBranch: ${currentBranch}\nCommit: ${newRev?.slice(0, 7) || 'N/A'}`);
+            await editStatus(`✅ **Already up to date**\nCommit: ${newRev?.slice(0, 7) || 'N/A'}`);
           } else {
             await run(`git merge --ff-only ${newRev}`);
 
@@ -165,7 +174,7 @@ export default {
             await editStatus(`✅ **Updated to latest!**\nCommit: ${newRev?.slice(0, 7) || 'N/A'}\nSize: ${sizeAfter.sizeMB} MB`);
           }
         } catch (gitErr) {
-          await editStatus(`⚠️ **Git update failed:** ${gitErr.message}\nContinuing with current version...`);
+          await editStatus(`⚠️ **Git update failed:** ${sanitizeGitErr(gitErr.message)}\nContinuing with current version...`);
         }
       }
 
@@ -174,7 +183,6 @@ export default {
         await run('npm ci --no-audit --no-fund --silent', 180000);
         await editStatus('✅ **Dependencies installed**');
       } catch (npmError) {
-        console.warn('npm ci failed, trying fallback:', npmError.message);
         try {
           await run('npm install --no-audit --no-fund --loglevel=error', 180000);
           await editStatus('⚠️ **Dependencies installed with warnings**');
@@ -199,22 +207,19 @@ export default {
       try {
         await run('pm2 restart all', 10000);
       } catch {
-        console.log('PM2 restart failed, exiting process...');
         process.exit(0);
       }
 
     } catch (err) {
-      console.error('Start command failed:', err);
+      let errorText = `❌ **Start Failed**\nError: ${sanitizeGitErr(err.message || '')}\n\n`;
 
-      let errorText = `❌ **Start Failed**\nError: ${err.message || err}\n\n`;
-
-      if (err.message.includes('timeout')) {
+      if ((err.message || '').includes('timeout')) {
         errorText += '**Reason:** Operation timed out\n';
         errorText += '**Solution:** Try again or use `.start fast`\n';
-      } else if (err.message.includes('git')) {
+      } else if ((err.message || '').includes('git')) {
         errorText += '**Reason:** Git operation failed\n';
         errorText += '**Solution:** Try `.start no-update`\n';
-      } else if (err.message.includes('npm')) {
+      } else if ((err.message || '').includes('npm')) {
         errorText += '**Reason:** NPM installation failed\n';
         errorText += '**Solution:** Check internet or try manually: `npm install`\n';
       }
@@ -231,8 +236,7 @@ export default {
         } else {
           await sock.sendMessage(jid, { text: errorText }, { quoted: m });
         }
-      } catch {
-      }
+      } catch {}
     }
   }
 };
