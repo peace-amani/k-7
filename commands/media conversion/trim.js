@@ -26,8 +26,8 @@ function formatTime(secs) {
 
 export default {
     name: 'trim',
-    alias: ['trimaudio', 'trims', 'audiotrim', 'cuttrim', 'cut'],
-    description: 'Trim an audio file between two timestamps',
+    alias: ['trimaudio', 'trimvideo', 'audiotrim', 'videotrim', 'cut'],
+    description: 'Trim an audio or video between two timestamps',
     category: 'media conversion',
 
     async execute(sock, msg, args, PREFIX) {
@@ -36,10 +36,10 @@ export default {
 
         if (!args[0]) {
             return reply(
-                `╭─⌈ ✂️ *AUDIO TRIM* ⌋\n│\n` +
-                `├─⊷ *Reply to an audio, then:*\n│\n` +
-                `├─⊷ *${PREFIX}trim 1,2*\n│  └⊷ Trim from min 1 to min 2\n` +
-                `├─⊷ *${PREFIX}trim 1:30,2:45*\n│  └⊷ Trim from 1:30 to 2:45\n` +
+                `╭─⌈ ✂️ *TRIM* ⌋\n│\n` +
+                `├─⊷ *Reply to an audio or video, then:*\n│\n` +
+                `├─⊷ *${PREFIX}trim 1,2*\n│  └⊷ Trim min 1 to min 2\n` +
+                `├─⊷ *${PREFIX}trim 1:30,2:45*\n│  └⊷ Trim 1:30 to 2:45\n` +
                 `├─⊷ *${PREFIX}trim 0,0:30*\n│  └⊷ First 30 seconds\n│\n` +
                 `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             );
@@ -48,7 +48,7 @@ export default {
         const input = args[0];
         const parts = input.split(',');
         if (parts.length !== 2) {
-            return reply(`❌ Invalid format. Use: \`${PREFIX}trim start,end\`\nExample: \`${PREFIX}trim 1,2\` or \`${PREFIX}trim 1:30,2:45\``);
+            return reply(`❌ Use: \`${PREFIX}trim start,end\` — e.g. \`${PREFIX}trim 1,2\` or \`${PREFIX}trim 1:30,2:45\``);
         }
 
         const startSec = parseTime(parts[0]);
@@ -59,47 +59,67 @@ export default {
         if (endSec - startSec > 600) return reply('❌ Max trim length is 10 minutes.');
 
         const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
-                       || msg.message?.audioMessage?.contextInfo?.quotedMessage;
+                       || msg.message?.audioMessage?.contextInfo?.quotedMessage
+                       || msg.message?.videoMessage?.contextInfo?.quotedMessage
+                       || msg.message?.documentMessage?.contextInfo?.quotedMessage;
 
-        if (!quotedMsg) return reply(`❌ Reply to an audio message with \`${PREFIX}trim ${input}\``);
+        if (!quotedMsg) return reply(`❌ Reply to an audio or video with \`${PREFIX}trim ${input}\``);
 
-        const msgType    = getContentType(quotedMsg);
+        const msgType      = getContentType(quotedMsg);
         const mediaContent = quotedMsg[msgType];
+        const mime         = mediaContent?.mimetype || '';
 
         const isAudio = msgType === 'audioMessage'
-                     || (msgType === 'documentMessage' && mediaContent?.mimetype?.includes('audio'));
+                     || (msgType === 'documentMessage' && mime.includes('audio'));
+        const isVideo = msgType === 'videoMessage'
+                     || (msgType === 'documentMessage' && mime.includes('video'));
 
-        if (!isAudio) return reply('❌ Replied message must be an audio file or voice note.');
+        if (!isAudio && !isVideo) return reply('❌ Replied message must be an audio or video file.');
 
         await sock.sendMessage(chatId, { react: { text: '✂️', key: msg.key } });
-        await reply(`⏳ Trimming from *${formatTime(startSec)}* to *${formatTime(endSec)}*...`);
 
         const tmpDir  = path.join(process.cwd(), 'tmp');
         await fs.mkdir(tmpDir, { recursive: true });
 
-        const id       = msg.key.id || Date.now();
-        const rawPath  = path.join(tmpDir, `trim_raw_${id}`);
-        const outPath  = path.join(tmpDir, `trim_out_${id}.mp3`);
+        const id      = msg.key.id || Date.now();
+        const rawPath = path.join(tmpDir, `trim_raw_${id}`);
+        const ext     = isVideo ? 'mp4' : 'mp3';
+        const outPath = path.join(tmpDir, `trim_out_${id}.${ext}`);
 
         try {
-            const stream = await downloadContentFromMessage(mediaContent, msgType.replace('Message', ''));
-            const chunks = [];
+            const mediaType = msgType.replace('Message', '');
+            const stream    = await downloadContentFromMessage(mediaContent, mediaType);
+            const chunks    = [];
             for await (const chunk of stream) chunks.push(chunk);
             await fs.writeFile(rawPath, Buffer.concat(chunks));
 
             const duration = endSec - startSec;
-            await execAsync(
-                `ffmpeg -y -i "${rawPath}" -ss ${startSec} -t ${duration} -vn -acodec libmp3lame -q:a 2 "${outPath}"`,
-                { timeout: 60000 }
-            );
 
-            const audioBuffer = fsSync.readFileSync(outPath);
+            let ffmpegCmd;
+            if (isVideo) {
+                ffmpegCmd = `ffmpeg -y -i "${rawPath}" -ss ${startSec} -t ${duration} -c:v libx264 -c:a aac -preset fast "${outPath}"`;
+            } else {
+                ffmpegCmd = `ffmpeg -y -i "${rawPath}" -ss ${startSec} -t ${duration} -vn -acodec libmp3lame -q:a 2 "${outPath}"`;
+            }
 
-            await sock.sendMessage(chatId, {
-                audio:    audioBuffer,
-                mimetype: 'audio/mp4',
-                fileName: `trimmed_${formatTime(startSec)}-${formatTime(endSec)}.mp3`
-            }, { quoted: msg });
+            await execAsync(ffmpegCmd, { timeout: 120000 });
+
+            const fileBuffer = fsSync.readFileSync(outPath);
+            const fileName   = `trimmed_${formatTime(startSec)}-${formatTime(endSec)}.${ext}`;
+
+            if (isVideo) {
+                await sock.sendMessage(chatId, {
+                    video:    fileBuffer,
+                    mimetype: 'video/mp4',
+                    fileName
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(chatId, {
+                    audio:    fileBuffer,
+                    mimetype: 'audio/mp4',
+                    fileName
+                }, { quoted: msg });
+            }
 
             await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
