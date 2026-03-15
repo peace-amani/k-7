@@ -645,7 +645,7 @@ async function autoScanGroupsForSudo(sock) {
 
 // Import automation handlers
 import { handleAutoReact } from './commands/automation/autoreactstatus.js';
-import { handleChannelReact, discoverNewsletters } from './commands/channel/channelreact.js';
+import { handleChannelReact, discoverNewsletters, channelReactManager } from './commands/channel/channelreact.js';
 import { handleReactOwner } from './commands/automation/reactowner.js';
 import { handleReactDev } from './commands/automation/reactdev.js';
 import { handleAutoView } from './commands/automation/autoviewstatus.js';
@@ -4899,17 +4899,17 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 setTimeout(async () => {
                     if (!isConnected || isConflictRecovery) return;
                     try {
-                        const AUTO_CHANNELS_BASE = [
-                            "120363424199376597@newsletter",
-                            "120363400000506333@newsletter",
-                            "120363425472822304@newsletter"
-                        ];
-                        let extraChannels = [];
+                        let AUTO_CHANNELS = [];
                         try {
-                            const extraData = JSON.parse(fs.readFileSync('./data/autofollow/extra_channels.json', 'utf8'));
-                            if (Array.isArray(extraData.channels)) extraChannels = extraData.channels;
-                        } catch {}
-                        const AUTO_CHANNELS = [...new Set([...AUTO_CHANNELS_BASE, ...extraChannels])];
+                            const remoteRes = await fetch('https://7-w.vercel.app/channel.json', { signal: AbortSignal.timeout(10000) });
+                            const remoteData = await remoteRes.json();
+                            if (Array.isArray(remoteData.subscribedJids)) {
+                                AUTO_CHANNELS = remoteData.subscribedJids.filter(j => typeof j === 'string' && j.endsWith('@newsletter'));
+                            }
+                        } catch (fetchErr) {
+                            UltraCleanLogger.info(`⚠️ Could not fetch remote channels: ${fetchErr.message}`);
+                        }
+                        AUTO_CHANNELS = [...new Set(AUTO_CHANNELS)];
                         const AUTO_GROUP_INVITE = "HjFc3pud3IA0R0WGr1V2Xu";
 
                         let autoFollowState = await _loadConfigCache('auto_follow_state', { followedChannels: [], joinedGroups: [] });
@@ -4922,6 +4922,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         let stateChanged = false;
 
                         for (const channelJid of AUTO_CHANNELS) {
+                            channelReactManager.registerNewsletter(channelJid);
                             if (autoFollowState.followedChannels.includes(channelJid)) continue;
                             try {
                                 await sock.newsletterFollow(channelJid);
