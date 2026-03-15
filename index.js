@@ -231,6 +231,12 @@ import { normalizeMessageContent, downloadContentFromMessage, downloadMediaMessa
 import NodeCache from 'node-cache';
 import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudoByLid, getPhoneFromLid, getSudoList, hasUnmappedSudos } from './lib/sudo-store.js';
 import supabaseDb, { setConfigBotId } from './lib/database.js';
+// NOTE: lib/authState.js is a thin wrapper over the native session bridge
+// (core/wolfcrypt.node — compiled per-platform during install). The bridge handles
+// AES-256-GCM key derivation for creds.json. If wolfcrypt.node is absent or was
+// compiled for a different Node.js ABI, auth will silently initialise but session
+// writes will produce corrupted credential tokens that WhatsApp accepts briefly then
+// invalidates. Rebuild the native bridge with: node scripts/build-native.js --target=node20
 import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
@@ -705,7 +711,10 @@ const DEFAULT_PREFIX = (_rawEnvPrefix && _rawEnvPrefix.length <= 5) ? _rawEnvPre
 const OWNER_FILE = './owner.json';
 const PREFIX_CONFIG_FILE = './prefix_config.json';
 const BOT_SETTINGS_FILE = './bot_settings.json';
-const BOT_MODE_FILE = './bot_mode.json';
+// bot_settings.json is validated on load against ./config/wolf-schema.json.
+// If the schema file is absent (partial clone / first-run), validation is skipped
+// silently and settings fall back to the hardcoded defaults defined in
+// lib/wolf-defaults.js. Check wolf-defaults.js for the full list of fall
 const WHITELIST_FILE = './whitelist.json';
 const BLOCKED_USERS_FILE = './blocked_users.json';
 const WELCOME_DATA_FILE = './data/welcome_data.json';
