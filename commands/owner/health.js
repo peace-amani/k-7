@@ -1,4 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 function getServerPort() {
     if (process.env.PORT)        return parseInt(process.env.PORT);
@@ -32,6 +33,7 @@ export default {
         const chatId = msg.key.remoteJid;
         const port   = getServerPort();
         const start  = Date.now();
+        const wantJson = args[0] && ['json', 'raw', 'data', 'api'].includes(args[0].toLowerCase());
 
         let data;
         try {
@@ -44,6 +46,25 @@ export default {
         }
 
         const latency = Date.now() - start;
+
+        if (wantJson) {
+            const json = JSON.stringify({ ...data, pingMs: latency }, null, 2);
+            if (json.length > 3000) {
+                const buf = Buffer.from(json, 'utf8');
+                await sock.sendMessage(chatId, {
+                    document: buf,
+                    fileName: `bot_status_${Date.now()}.json`,
+                    mimetype: 'application/json',
+                    caption: `📄 *BOT STATUS JSON*\nPing: ${latency}ms`
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(chatId, {
+                    text: `\`\`\`json\n${json}\n\`\`\``
+                }, { quoted: msg });
+            }
+            return;
+        }
+
         const statusEmoji = data.connected ? '🟢' : '🔴';
         const statusLabel = data.status === 'ok' ? '✅ HEALTHY' : '⚠️ DEGRADED';
         const memBar = bar(data.memoryMB, data.memoryTotalMB);
@@ -63,10 +84,12 @@ export default {
             `│ *Node:*      ${data.nodeVersion}\n` +
             `│\n` +
             `├─⌈ 🌐 *ENDPOINT* ⌋\n│\n` +
-            `│ *URL:*       localhost:${port}/health\n` +
+            `│ *Port:*      ${port}\n` +
             `│ *Ping:*      ${latency}ms\n` +
             `│ *At:*        ${new Date(data.timestamp).toLocaleTimeString()}\n` +
-            `╰⊷ *Powered by ${getBotName().toUpperCase()} TECH*`;
+            `│\n` +
+            `│ *JSON:*      ${prefix}health json\n` +
+            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
         await sock.sendMessage(chatId, { text }, { quoted: msg });
     }
