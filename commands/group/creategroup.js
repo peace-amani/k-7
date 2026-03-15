@@ -2,6 +2,7 @@ import fs from "fs";
 import { getBotName } from '../../lib/botname.js';
 import path from "path";
 import { fileURLToPath } from "url";
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +20,33 @@ function parseVcardNumbers(vcard) {
     return numbers;
 }
 
-function extractNumbersFromQuotedVcf(m) {
+function isVcfDocument(docMsg) {
+    if (!docMsg) return false;
+    const mime = (docMsg.mimetype || '').toLowerCase();
+    const name = (docMsg.fileName || '').toLowerCase();
+    return mime.includes('vcard') || mime.includes('x-vcard') || name.endsWith('.vcf');
+}
+
+async function downloadVcfBuffer(sock, msgObj) {
+    try {
+        const silentLogger = {
+            info: () => {}, error: () => {}, warn: () => {},
+            debug: () => {}, trace: () => {},
+            child: () => silentLogger
+        };
+        const buffer = await downloadMediaMessage(
+            msgObj,
+            'buffer',
+            {},
+            { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }
+        );
+        return buffer ? buffer.toString('utf8') : null;
+    } catch {
+        return null;
+    }
+}
+
+async function extractNumbersFromQuotedVcf(sock, m) {
     const msgContent = m.message || {};
 
     const inner =
@@ -28,10 +55,12 @@ function extractNumbersFromQuotedVcf(m) {
         msgContent.documentWithCaptionMessage?.message ||
         msgContent;
 
+    // Handle WhatsApp contact shares (contactMessage)
     if (inner.contactMessage?.vcard) {
         return parseVcardNumbers(inner.contactMessage.vcard);
     }
 
+    // Handle multiple WhatsApp contact shares
     if (inner.contactsArrayMessage?.contacts?.length) {
         const nums = [];
         for (const c of inner.contactsArrayMessage.contacts) {
@@ -40,21 +69,67 @@ function extractNumbersFromQuotedVcf(m) {
         return nums;
     }
 
-    const ctxMsg =
-        inner.extendedTextMessage?.contextInfo?.quotedMessage ||
-        inner.imageMessage?.contextInfo?.quotedMessage ||
-        inner.videoMessage?.contextInfo?.quotedMessage;
+    // Handle VCF document sent directly (not as a reply)
+    if (inner.documentMessage && isVcfDocument(inner.documentMessage)) {
+        const vcfText = await downloadVcfBuffer(sock, {
+            key: m.key,
+            message: { documentMessage: inner.documentMessage }
+        });
+        if (vcfText) return parseVcardNumbers(vcfText);
+    }
+
+    // Get quoted message context (when user replies to a message)
+    const ctxInfo =
+        inner.extendedTextMessage?.contextInfo ||
+        inner.imageMessage?.contextInfo ||
+        inner.videoMessage?.contextInfo ||
+        inner.documentMessage?.contextInfo ||
+        inner.audioMessage?.contextInfo ||
+        inner.stickerMessage?.contextInfo ||
+        inner.buttonsResponseMessage?.contextInfo;
+
+    const ctxMsg = ctxInfo?.quotedMessage;
 
     if (ctxMsg) {
+        // Quoted WhatsApp contact share
         if (ctxMsg.contactMessage?.vcard) {
             return parseVcardNumbers(ctxMsg.contactMessage.vcard);
         }
+
+        // Quoted multiple WhatsApp contact shares
         if (ctxMsg.contactsArrayMessage?.contacts?.length) {
             const nums = [];
             for (const c of ctxMsg.contactsArrayMessage.contacts) {
                 if (c.vcard) nums.push(...parseVcardNumbers(c.vcard));
             }
             return nums;
+        }
+
+        // Quoted VCF document file — download and parse
+        const quotedDoc =
+            ctxMsg.documentMessage ||
+            ctxMsg.documentWithCaptionMessage?.message?.documentMessage;
+
+        if (quotedDoc && isVcfDocument(quotedDoc)) {
+            const stanzaId = ctxInfo.stanzaId;
+            const remoteJid = m.key.remoteJid;
+            const participant = ctxInfo.participant || remoteJid;
+
+            const quotedMsgObj = {
+                key: {
+                    remoteJid,
+                    fromMe: false,
+                    id: stanzaId,
+                    participant: remoteJid.endsWith('@g.us') ? participant : undefined
+                },
+                message: { documentMessage: quotedDoc }
+            };
+
+            const vcfText = await downloadVcfBuffer(sock, quotedMsgObj);
+            if (vcfText) {
+                const nums = parseVcardNumbers(vcfText);
+                if (nums.length > 0) return nums;
+            }
         }
     }
 
@@ -126,7 +201,7 @@ export default {
       return reply(
         `╭─⌈ 👥 *CREATE GROUP* ⌋\n│\n` +
         `├─⊷ *Name only (just you):*\n│  └⊷ \`${PREFIX}creategroup WOLF\`\n` +
-        `├─⊷ *Reply to VCF contact:*\n│  └⊷ \`${PREFIX}creategroup GroupName\`\n` +
+        `├─⊷ *Reply to VCF file:*\n│  └⊷ \`${PREFIX}creategroup GroupName\`\n` +
         `├─⊷ *Manual numbers:*\n│  └⊷ \`${PREFIX}creategroup 254xxx GroupName\`\n` +
         `├─⊷ *Multiple numbers:*\n│  └⊷ \`${PREFIX}creategroup 254xxx 254yyy GroupName\`\n` +
         `│\n` +
@@ -167,10 +242,15 @@ export default {
 
       const groupName = nameWords.join(' ').trim() || `${getBotName()} Group`;
 
-      // ====== VCF EXTRACTION (merges with any manual numbers) ======
-      const vcfNumbers = extractNumbersFromQuotedVcf(m);
+      // ====== VCF EXTRACTION (downloads VCF docs + handles contact shares) ======
+      await react(sock, m, '⏳');
+      const vcfNumbers = await extractNumbersFromQuotedVcf(sock, m);
       for (const n of vcfNumbers) {
         if (!rawNumbers.includes(n)) rawNumbers.push(n);
+      }
+
+      if (vcfNumbers.length > 0) {
+        await reply(`📋 Extracted *${vcfNumbers.length}* number(s) from VCF. Creating group...`);
       }
 
       // ====== VALIDATION ======
