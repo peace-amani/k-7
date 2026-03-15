@@ -5,7 +5,7 @@
   "keywords": ["whatsapp", "bot", "wolfbot", "baileys", "session"],
   "repository": "https://github.com/7silent-wolf/silentwolf.git",
   "scripts": {
-    "start": "node --no-warnings --expose-gc --max-old-space-size=460 --experimental-global-webcrypto index.js"
+    "start": "node --no-warnings --expose-gc --max-old-space-size=460 --max-semi-space-size=16 --experimental-global-webcrypto index.js"
   },
   "env": {
     "SESSION_ID": {

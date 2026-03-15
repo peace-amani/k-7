@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node --no-warnings --expose-gc --max-old-space-size=1024 --experimental-global-webcrypto index.js",
+    "startCommand": "node --no-warnings --expose-gc --max-old-space-size=1024 --max-semi-space-size=64 --experimental-global-webcrypto index.js",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5
