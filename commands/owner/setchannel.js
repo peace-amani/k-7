@@ -1,5 +1,5 @@
 import { getChannelInfo, setChannelInfo, isChannelModeEnabled } from '../../lib/channelMode.js';
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 export default {
     name: 'setchannel',
@@ -32,7 +32,7 @@ export default {
                     `├─⊷ *Example:*\n` +
                     `│  └⊷ ${PREFIX}setchannel 120363424199376597@newsletter WolfTech\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: msg });
         }
 
@@ -66,7 +66,7 @@ export default {
                 `├─⊷ Channel mode is currently: ${isChannelModeEnabled() ? '✅ ON' : '❌ OFF'}\n` +
                 `│  Use *${PREFIX}mode channel* to enable it\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
         }, { quoted: msg });
     }
 };
