@@ -788,7 +788,7 @@ export function getStatusAntideleteInfo() {
 
 export default {
     name: 'antideletestatus',
-    alias: ['statusantidelete', 'sad', 'ads'],
+    alias: ['statusantidelete', 'sad'],
     description: 'Status antidelete system - always on, captures deleted statuses',
     category: 'owner',
     ownerOnly: true,

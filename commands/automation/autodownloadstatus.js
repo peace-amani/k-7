@@ -301,7 +301,7 @@ export async function handleAutoDownloadStatus(sock, statusKey, resolvedMessage)
 // ── WhatsApp command ───────────────────────────────────────────────────────
 export default {
     name:      'autodownloadstatus',
-    alias:     ['autosave', 'autostatussave', 'autodlstatus', 'ads'],
+    alias:     ['autosave', 'autostatussave', 'autodlstatus'],
     desc:      'Auto-download statuses to private DM or a public chat',
     category:  'automation',
     ownerOnly: true,
