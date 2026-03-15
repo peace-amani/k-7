@@ -1,4 +1,5 @@
 import { createRequire } from 'module';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -66,7 +67,7 @@ export default {
     if (giftedBtns?.sendInteractiveMessage) {
       try {
         await giftedBtns.sendInteractiveMessage(sock, chatJid, {
-          text: `*JID*\n${jid}`,
+          text: `*JID*\n${jid}\n\n_Powered by ${getOwnerName().toUpperCase()} TECH_`,
           interactiveButtons: [
             {
               name: 'cta_copy',
@@ -81,7 +82,7 @@ export default {
       } catch {}
     }
 
-    await sock.sendMessage(chatJid, { text: `*JID*\n\`${jid}\`` }, { quoted: m });
+    await sock.sendMessage(chatJid, { text: `*JID*\n\`${jid}\`\n\n_Powered by ${getOwnerName().toUpperCase()} TECH_` }, { quoted: m });
   },
 
   async resolveJid(sock, inputJid) {
