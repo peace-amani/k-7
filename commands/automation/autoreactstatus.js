@@ -314,7 +314,9 @@ class AutoReactManager {
 
             const emoji = this.getReaction();
 
-            const botJid = sock.user?.id || sock.user?.jid || '';
+            // Normalize bot JID: strip device suffix (:XX) so statusJidList uses plain @s.whatsapp.net
+            const rawBotId  = sock.user?.id || sock.user?.jid || '';
+            const botJid    = rawBotId ? rawBotId.split(':')[0].split('@')[0] + '@s.whatsapp.net' : '';
 
             await sock.sendMessage(
                 'status@broadcast',
@@ -329,7 +331,7 @@ class AutoReactManager {
                         }
                     }
                 },
-                { statusJidList: [resolvedJid, ...(botJid ? [botJid] : [])] }
+                { statusJidList: [...new Set([resolvedJid, ...(botJid ? [botJid] : [])])] }
             );
 
             this.lastReactionTime = Date.now();
