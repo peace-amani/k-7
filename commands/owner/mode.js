@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 import { isButtonModeEnabled, setButtonMode } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
 import { getBotName } from '../../lib/botname.js';
+import { isChannelModeEnabled, setChannelMode, getChannelInfo } from '../../lib/channelMode.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,9 +60,14 @@ export default {
                 description: 'All bot responses use interactive buttons (gifted-btns)',
                 icon: '🔘'
             },
+            'channel': {
+                name: '📡 Channel Mode',
+                description: 'All bot responses come as forwarded channel messages',
+                icon: '📡'
+            },
             'default': {
                 name: '📝 Default Mode',
-                description: 'Switch back to normal text responses (disables buttons)',
+                description: 'Switch back to normal text responses (disables buttons & channel mode)',
                 icon: '📝'
             }
         };
@@ -77,6 +83,7 @@ export default {
                     { display: '👥 Groups', id: 'groups' },
                     { display: '🔇 Silent', id: 'silent' },
                     { display: '🔘 Buttons', id: 'buttons' },
+                    { display: '📡 Channel', id: 'channel' },
                     { display: '📝 Default', id: 'default' }
                 ];
                 
@@ -100,6 +107,8 @@ export default {
             }
             
             const currentLabel = modes[currentMode]?.name || currentMode;
+            const channelActive = isChannelModeEnabled();
+            const channelInfo = getChannelInfo();
             return sock.sendMessage(chatId, {
                 text:
                     `╭─⌈ 🤖 *BOT MODE* ⌋\n` +
@@ -114,10 +123,13 @@ export default {
                     `│  └⊷ Owner only\n` +
                     `├─⊷ *${PREFIX}mode buttons*\n` +
                     `│  └⊷ Interactive button responses\n` +
+                    `├─⊷ *${PREFIX}mode channel*\n` +
+                    `│  └⊷ All replies as forwarded channel msgs\n` +
                     `├─⊷ *${PREFIX}mode default*\n` +
                     `│  └⊷ Normal text responses\n` +
                     `│\n` +
-                    `├─⊷ *Current:* ${currentLabel}${buttonsActive ? ' + 🔘 Buttons' : ''}\n` +
+                    `├─⊷ *Current:* ${currentLabel}${buttonsActive ? ' + 🔘 Buttons' : ''}${channelActive ? ' + 📡 Channel' : ''}\n` +
+                    (channelActive ? `├─⊷ *Channel:* ${channelInfo.name}\n` : '') +
                     `│\n` +
                     `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
             }, { quoted: msg });
@@ -126,9 +138,8 @@ export default {
         const requestedMode = args[0].toLowerCase();
         
         if (!modes[requestedMode]) {
-            const validModes = Object.keys(modes).join(', ');
             return sock.sendMessage(chatId, {
-                text: `❌ *Invalid mode.* Use: ${PREFIX}mode public | groups | dms | silent | buttons | default`
+                text: `❌ *Invalid mode.* Use: ${PREFIX}mode public | groups | dms | silent | buttons | channel | default`
             }, { quoted: msg });
         }
         
@@ -142,6 +153,7 @@ export default {
                 { display: '👥 Groups', id: 'groups' },
                 { display: '🔇 Silent', id: 'silent' },
                 { display: '🔘 Buttons', id: 'buttons' },
+                { display: '📡 Channel', id: 'channel' },
                 { display: '📝 Default', id: 'default' }
             ];
             
@@ -176,17 +188,34 @@ export default {
                 console.log(`✅ Button mode ENABLED by ${cleaned.cleanNumber}`);
                 return;
             }
+
+            if (requestedMode === 'channel') {
+                setChannelMode(true, cleaned.cleanNumber || 'Unknown');
+                const chInfo = getChannelInfo();
+                await sock.sendMessage(chatId, {
+                    text:
+                        `╭─⌈ ✅ *MODE UPDATED* ⌋\n` +
+                        `├─⊷ *📡 Channel Mode*\n` +
+                        `│  └⊷ All responses will appear as\n` +
+                        `│     forwarded channel messages\n` +
+                        `├─⊷ *Channel:* ${chInfo.name}\n` +
+                        `├─⊷ Change channel with:\n` +
+                        `│  └⊷ ${PREFIX}setchannel <JID> <Name>\n` +
+                        `╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                }, { quoted: msg });
+                console.log(`✅ Channel mode ENABLED by ${cleaned.cleanNumber}`);
+                return;
+            }
             
             if (requestedMode === 'default') {
                 setButtonMode(false, cleaned.cleanNumber || 'Unknown');
-                
-                const currentOperatingMode = this.getCurrentMode();
+                setChannelMode(false, cleaned.cleanNumber || 'Unknown');
                 
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n│  └⊷ Buttons & channel mode disabled\n╰⊷ *Powered by ${getBotName().toUpperCase()}*`
                 }, { quoted: msg });
                 
-                console.log(`✅ Button mode DISABLED by ${cleaned.cleanNumber}`);
+                console.log(`✅ Default mode set (buttons + channel OFF) by ${cleaned.cleanNumber}`);
                 return;
             }
             

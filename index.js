@@ -235,6 +235,7 @@ import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';
+import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
 import { setActiveCommand, clearActiveCommand, getActiveCommand, buildCommandButtons } from './lib/commandButtons.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
 import { migrateWarningsToSupabase } from './lib/warnings-store.js';
@@ -4613,6 +4614,26 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 if (typeof content.caption === 'string' && content.caption.length > 0) {
                     content = { ...content, caption: _applyFont(content.caption, _activeFont) };
                 }
+            }
+            // ─── Channel mode: wrap all outgoing messages as forwarded ───────
+            if (isChannelModeEnabled() && content && typeof content === 'object'
+                && !content.react && !content.delete && !content.sticker && !content.contacts
+                && !content.poll) {
+                const { jid: _chJid, name: _chName } = getChannelInfo();
+                const _existingCtx = content.contextInfo || {};
+                content = {
+                    ...content,
+                    contextInfo: {
+                        ..._existingCtx,
+                        forwardingScore: 1,
+                        isForwarded: true,
+                        forwardedNewsletterMessageInfo: {
+                            newsletterJid: _chJid,
+                            newsletterName: _chName,
+                            serverMessageId: Math.floor(Math.random() * 9000) + 1
+                        }
+                    }
+                };
             }
             // ────────────────────────────────────────────────────────────────
             const _storeResult = async (r) => {
