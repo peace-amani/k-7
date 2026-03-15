@@ -4528,11 +4528,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             fireInitQueries: !isConflictRecovery,
             msgRetryCounterCache,
             shouldIgnoreJid: (jid) => {
-                // Drop newsletter JIDs and the status broadcast — they generate
-                // events constantly but WolfBot has no use for them at socket level.
-                // Returning true tells Baileys to skip all processing for that JID.
                 if (!jid) return false;
-                if (jid.endsWith('@newsletter')) return true;
                 if (jid === 'status@broadcast') return false; // handled by autoviewstatus
                 return false;
             },
