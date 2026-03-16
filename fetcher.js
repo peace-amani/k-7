@@ -203,7 +203,7 @@ const ENV_FILE           = path.join(__dirname, '.env');
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const C  = '\x1b[36m';
+const C  = '\x1b[32m';
 const R  = '\x1b[0m';
 const RD = '\x1b[31m';
 const YL = '\x1b[33m';
@@ -212,10 +212,12 @@ function log(msg)  { console.log(`${C}${msg}${R}`); }
 function err(msg)  { console.error(`${RD}${msg}${R}`); }
 function warn(msg) { console.log(`${YL}${msg}${R}`); }
 
-log(`
-╔══════════════════════════════════════════════════════════╗
-║     🐺 SILENT WOLF LOADER - WOLFBOT v1.1.5               ║
-╚══════════════════════════════════════════════════════════╝`);
+process.stdout.write(`${C}
+┌──────────────────────────────────┐
+│   🐺 WOLFBOT v1.1.5              │
+│   Loader  : initializing...      │
+└──────────────────────────────────┘
+${R}`);
 
 // === RUNTIME PROFILE BOOTSTRAP ===
 function loadEnvFile() {
@@ -263,10 +265,8 @@ async function downloadAndExtract() {
     .some(f => fs.existsSync(path.join(EXTRACT_DIR, f)));
 
   if (fs.existsSync(EXTRACT_DIR) && _entryExists) {
-    log('✅ Core already extracted, skipping download.');
     if (!fs.existsSync(path.join(EXTRACT_DIR, 'node_modules'))) {
-      log('📦 Installing missing dependencies...');
-      spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'inherit' });
+      spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
     }
     return;
   }
@@ -279,10 +279,8 @@ async function downloadAndExtract() {
 
   const zipPath = path.join(TEMP_DIR, 'bundle.zip');
 
-  log('⚡ Fetching config from remote...');
   const _primary = await resolveSourceManifest();
   const repoUrl  = _primary || await fetchRepoUrl();
-  log('📦 Downloading bundle...');
 
   const response = await axios({
     url: repoUrl,
@@ -306,7 +304,6 @@ async function downloadAndExtract() {
     throw new Error(`Download too small (${stat.size}B) — possibly a 404 or auth wall:\n${preview}`);
   }
 
-  log('📂 Extracting...');
   try {
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(TEMP_DIR, true);
@@ -325,9 +322,7 @@ async function downloadAndExtract() {
     throw new Error('Extraction completed but core directory was not found.');
   }
 
-  log('✅ Core extracted successfully!');
-  log('📦 Installing dependencies...');
-  spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'inherit' });
+  spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
 }
 
 async function applyLocalSettings() {
