@@ -353,18 +353,39 @@ async function downloadAndExtract() {
 }
 
 function patchDotenv(dir) {
-  const dotenvDir = path.join(dir, 'node_modules', 'dotenv');
-  if (!fs.existsSync(dotenvDir)) return;
-  const idx  = path.join(dotenvDir, 'index.js');
-  const main = path.join(dotenvDir, 'lib', 'main.js');
-  if (fs.existsSync(idx)) return;
-  if (!fs.existsSync(main)) {
-    fs.rmSync(path.join(dir, 'node_modules'), { recursive: true, force: true });
+  const nm = path.join(dir, 'node_modules');
+  if (!fs.existsSync(nm)) {
     spawnSync('npm', ['install', '--no-audit'], { cwd: dir, stdio: 'ignore' });
   }
-  if (fs.existsSync(main) && !fs.existsSync(idx)) {
-    fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
-  }
+  const dotenvDir = path.join(nm, 'dotenv');
+  const idx = path.join(dotenvDir, 'index.js');
+  if (fs.existsSync(idx)) return;
+  fs.mkdirSync(dotenvDir, { recursive: true });
+  fs.writeFileSync(path.join(dotenvDir, 'package.json'), '{"name":"dotenv","version":"16.0.0","main":"index.js"}');
+  fs.writeFileSync(idx, [
+    "'use strict';",
+    "const _fs=require('fs'),_p=require('path');",
+    "function config(o){",
+    "  try{",
+    "    const f=(o&&o.path)||_p.join(process.cwd(),'.env');",
+    "    if(!_fs.existsSync(f))return{parsed:{}};",
+    "    const parsed={};",
+    "    const lines=_fs.readFileSync(f,'utf8').split('\\n');",
+    "    for(const l of lines){",
+    "      const m=l.match(/^\\s*([^#=\\s][^=]*)\\s*=\\s*([\\s\\S]*)$/);",
+    "      if(m){",
+    "        const k=m[1].trim();",
+    "        const v=m[2].trim().replace(/^['\"]|['\"]$/g,'');",
+    "        parsed[k]=v;",
+    "        if(!process.env[k])process.env[k]=v;",
+    "      }",
+    "    }",
+    "    return{parsed};",
+    "  }catch(e){return{parsed:{}};}",
+    "}",
+    "module.exports={config};",
+    "module.exports.default=module.exports;"
+  ].join('\n'));
 }
 
 async function applyLocalSettings() {
