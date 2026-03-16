@@ -6186,37 +6186,53 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
         connectionMethod = 'PAIR CODE';
     }
     
-// Remove auto-join from the connection success display:
-console.log(chalk.greenBright(`
-╔══════════════════════════════════════════════════════════════════════╗
-║                    🐺 ${chalk.bold(getCurrentBotName() + ' ONLINE')} - v${VERSION} (PREFIXLESS & MEMBER DETECTION) ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  ✅ ${isAutoReconnect ? 'Auto-reconnected' : 'Connected'} successfully!                            
-║  👑 Owner : +${ownerInfo.ownerNumber}
-║  🔧 Clean JID : ${ownerInfo.ownerJid}
-║  🔗 LID : ${ownerInfo.ownerLid || 'Not set'}
-║  📱 Device : ${chalk.cyan(`${getCurrentBotName()} - Chrome`)}       
-║  🕒 Time   : ${chalk.yellow(currentTime)}                 
-║  🔥 Status : ${chalk.redBright('24/7 Ready!')}         
-║  💬 Prefix : ${prefixDisplay}
-║  🎛️ Mode   : ${BOT_MODE}
-║  🔐 Method : ${chalk.cyan(connectionMethod)}  
-║  📊 Commands: ${commands.size} commands loaded
-║  🔧 AUTO ULTIMATE FIX : ✅ ENABLED
-║  👁️ STATUS DETECTOR  : ✅ ACTIVE
-║  👥 MEMBER DETECTOR  : ✅ ACTIVE
-║  🔐 ANTI-VIEWONCE    : ✅ ACTIVE
-║  🗑️ ANTIDELETE       : ✅ ALWAYS ACTIVE
-║  🛡️ RATE LIMIT PROTECTION : ✅ ACTIVE
-║  🔗 AUTO-CONNECT ON LINK: ${AUTO_CONNECT_ON_LINK ? '✅' : '❌'}
-║  🔄 AUTO-CONNECT ON START: ${AUTO_CONNECT_ON_START ? '✅' : '❌'}
-║  🔐 AUTO-RECONNECT : ✅ ENABLED
-║  🏗️ Platform : ${detectPlatform()}
-║  🔊 CONSOLE FILTER : ✅ ULTRA CLEAN ACTIVE
-║  ⚡ RESPONSE SPEED : ✅ OPTIMIZED
-║  🎯 BACKGROUND AUTH : ✅ ENABLED
-╚══════════════════════════════════════════════════════════════════════╝
-`));
+{
+    const _G  = '\x1b[38;2;0;255;65m';
+    const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
+    const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
+    const _R  = '\x1b[0m';
+    const W   = 38;
+    const bar = '─'.repeat(W + 2);
+    const vlen = s => { let n=0; for (const ch of[...s]){const cp=ch.codePointAt(0);n+=(cp>0xFFFF||(cp>=0x1F000&&cp<=0x1FFFF))?2:1;} return n; };
+    const pad  = s => { const v=vlen(s); return s+(v<W?' '.repeat(W-v):''); };
+    const row  = (text, bold) => {
+        const t = bold ? `${_GB}${pad(text)}${_R}` : `${_G}${pad(text)}${_R}`;
+        return `${_G}│${_R} ${t} ${_G}│${_R}`;
+    };
+    const sep  = `${_G}├${bar}┤${_R}`;
+    const lines = [
+        `${_G}╭${bar}╮${_R}`,
+        row(`🐺 ${getCurrentBotName()} ONLINE  v${VERSION}`, true),
+        sep,
+        row(`✅ ${isAutoReconnect ? 'Auto-reconnected' : 'Connected'} successfully!`),
+        row(`👑 Owner  : +${ownerInfo.ownerNumber}`),
+        row(`🔗 LID    : ${ownerInfo.ownerLid || 'Not set'}`),
+        row(`📱 Device : ${getCurrentBotName()} - Chrome`),
+        row(`🕒 Time   : ${currentTime}`),
+        row(`🔥 Status : 24/7 Ready!`),
+        row(`💬 Prefix : ${prefixDisplay}`),
+        row(`🎛️  Mode   : ${BOT_MODE}`),
+        row(`🔐 Method : ${connectionMethod}`),
+        row(`📊 Cmds   : ${commands.size} loaded`),
+        sep,
+        row(`🔧 ULTIMATE FIX       : ✅`),
+        row(`👁️  STATUS DETECTOR    : ✅`),
+        row(`👥 MEMBER DETECTOR    : ✅`),
+        row(`🔐 ANTI-VIEWONCE      : ✅`),
+        row(`🗑️  ANTIDELETE         : ✅`),
+        row(`🛡️  RATE LIMIT PROTECT : ✅`),
+        row(`🔗 AUTO-CONNECT LINK  : ${AUTO_CONNECT_ON_LINK  ? '✅' : '❌'}`),
+        row(`🔄 AUTO-CONNECT START : ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`),
+        row(`🔐 AUTO-RECONNECT     : ✅`),
+        sep,
+        row(`🏗️  Platform : ${detectPlatform()}`),
+        row(`🔊 CONSOLE  : ✅ ULTRA CLEAN`),
+        row(`⚡ SPEED    : ✅ OPTIMIZED`),
+        row(`🎯 BG AUTH  : ✅ ENABLED`),
+        `${_G}╰${bar}╯${_R}`,
+    ];
+    process.stdout.write('\n' + lines.join('\n') + '\n\n');
+}
     
     // Only send welcome message if not auto-reconnecting
     if (!isAutoReconnect && isFirstConnection && !hasSentWelcomeMessage) {
