@@ -69,7 +69,7 @@ function isDuplicate(groupId, action, participants) {
 }
 
 const DEFAULT_CONFIG = {
-    enabled: true,
+    enabled: false,
     action: 'warn',
     exemptSuperAdmins: true,
     warnings: {}
