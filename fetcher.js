@@ -410,17 +410,35 @@ function patchChalk(nm) {
   if (!fs.existsSync(chalkDir)) return;
   const pkgPath   = path.join(chalkDir, 'package.json');
   const indexPath = path.join(chalkDir, 'index.js');
-  if (fs.existsSync(indexPath)) return;
-  const srcPath = path.join(chalkDir, 'source', 'index.js');
-  if (!fs.existsSync(srcPath)) return;
+  if (fs.existsSync(indexPath)) {
+    const content = fs.readFileSync(indexPath, 'utf8');
+    if (content.includes('export default') && content.includes('createChalk')) return;
+    fs.unlinkSync(indexPath);
+  }
+  const shim = [
+    "const C={reset:[0,0],bold:[1,22],dim:[2,22],italic:[3,23],underline:[4,24],",
+    "strikethrough:[9,29],black:[30,39],red:[31,39],green:[32,39],yellow:[33,39],",
+    "blue:[34,39],magenta:[35,39],cyan:[36,39],white:[37,39],gray:[90,39],grey:[90,39],",
+    "bgBlack:[40,49],bgRed:[41,49],bgGreen:[42,49],bgYellow:[43,49],",
+    "bgBlue:[44,49],bgMagenta:[45,49],bgCyan:[46,49],bgWhite:[47,49]};",
+    "const w=(o,c,s)=>`\\x1b[${o}m${s}\\x1b[${c}m`;",
+    "const createChalk=(stack=[])=>{",
+    "  const fn=(...a)=>{let s=a.join(' ');for(const[o,c]of stack)s=w(o,c,s);return s;};",
+    "  fn.level=3;",
+    "  return new Proxy(fn,{get(_,p){if(p==='level')return 3;if(p in C)return createChalk([...stack,C[p]]);return undefined;}});",
+    "};",
+    "const chalk=createChalk();",
+    "export default chalk;",
+    "export {createChalk as Chalk};",
+  ].join('\n');
   try {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    pkg.main = 'source/index.js';
     pkg.type = 'module';
-    pkg.exports = { '.': { import: './source/index.js', default: './source/index.js' } };
+    pkg.main = 'index.js';
+    pkg.exports = { '.': { import: './index.js', default: './index.js' } };
     fs.writeFileSync(pkgPath, JSON.stringify(pkg));
   } catch {}
-  fs.writeFileSync(indexPath, "export { default } from './source/index.js';\nexport * from './source/index.js';\n");
+  fs.writeFileSync(indexPath, shim);
 }
 
 function patchDotenv(dir) {
