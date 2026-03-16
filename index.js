@@ -691,7 +691,6 @@ try {
         const _bnData = JSON.parse(fs.readFileSync(_bnFile, 'utf8'));
         if (_bnData.botName && _bnData.botName.trim()) {
             global.BOT_NAME = _bnData.botName.trim();
-            console.log(`Bot name: ${_bnData.botName.trim()}`);
         }
     }
 } catch {}
@@ -4308,17 +4307,28 @@ class LoginManager {
 
 // ====== TERMINAL HEADER UPDATE ======
 function updateTerminalHeader() {
-    const currentPrefix = getCurrentPrefix();
-    const prefixDisplay = isPrefixless ? 'none' : `"${currentPrefix}"`;
-
     console.clear();
-    console.log(chalk.greenBright(
-`┌─────────────────────────────────┐
-│  🐺 ${BOT_NAME.toUpperCase()} ${VERSION}                   │
-│  Prefix  : ${prefixDisplay.padEnd(22)}│
-│  Mode    : ${(isPrefixless ? 'Prefixless' : 'Prefix').padEnd(22)}│
-└─────────────────────────────────┘`
-    ));
+}
+
+let _dbInitReady = false;
+
+function printStartupBox() {
+    const prefixDisplay = isPrefixless ? 'none' : `"${getCurrentPrefix()}"`;
+    const modeDisplay   = isPrefixless ? 'Prefixless' : 'Prefix';
+    const dbDisplay     = _dbInitReady  ? 'ready'      : 'JSON fallback';
+    const inner = 32;
+    const row = (s) => `│ ${s}${' '.repeat(Math.max(0, inner - s.length))} │`;
+    const bar = `┌${'─'.repeat(inner + 2)}┐`;
+    const end = `└${'─'.repeat(inner + 2)}┘`;
+    const box = [
+        bar,
+        row(`  🐺 ${getCurrentBotName()} v${VERSION}`),
+        row(`  Prefix : ${prefixDisplay}   Mode: ${modeDisplay}`),
+        row(`  SQLite : ${dbDisplay}`),
+        row(`  Status : all systems ready ✓`),
+        end
+    ].join('\n');
+    process.stdout.write('\n' + chalk.greenBright(box) + '\n\n');
 }
 
 // Initialize with loaded prefix
@@ -4329,10 +4339,9 @@ updateTerminalHeader();
 // ====== DATABASE INIT ======
 async function initDatabase() {
     try {
-        UltraCleanLogger.info('SQLite: setting up...');
         const ready = await supabaseDb.initTables();
         if (ready && supabaseDb.isAvailable()) {
-            UltraCleanLogger.success('SQLite: ready');
+            _dbInitReady = true;
             try {
                 const { loadBotName } = await import('./lib/botname.js');
                 const name = loadBotName();
@@ -4344,18 +4353,17 @@ async function initDatabase() {
             await runDataMigrations();
             return true;
         } else {
-            UltraCleanLogger.info('SQLite: unavailable, using JSON fallback');
+            _dbInitReady = false;
             return false;
         }
     } catch (err) {
-        UltraCleanLogger.error(`SQLite: init error — ${err.message}`);
+        _dbInitReady = false;
         return false;
     }
 }
 
 async function runDataMigrations() {
     try {
-        UltraCleanLogger.info('Migrations: running...');
         await initSudo();
         await migrateSudoToSupabase();
         await migrateWarningsToSupabase();
@@ -4396,13 +4404,12 @@ async function runDataMigrations() {
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;
 
-        UltraCleanLogger.success('Migrations: done');
     } catch (err) {
         UltraCleanLogger.error(`💾 Database: Migration error - ${err.message}`);
     }
 }
 
-initDatabase().catch(() => {});
+const _dbInitPromise = initDatabase().catch(() => {});
 
 // ====== MAIN BOT FUNCTION ======
 async function startBot(loginMode = 'auto', loginData = null) {
@@ -7566,11 +7573,7 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 // ====== MAIN APPLICATION ======
 async function main() {
     try {
-        UltraCleanLogger.success(`Bot starting — ${getCurrentBotName()} v${VERSION}`);
-        
         // ====== HEROKU INITIALIZATION ======
-        UltraCleanLogger.info(`🌐 Environment: ${process.env.NODE_ENV || 'production'}`);
-        UltraCleanLogger.info(`🔧 Platform: ${detectPlatform()}`);
         
         // Initialize web status server (universal — all platforms)
         setupWebServer();
@@ -7607,13 +7610,8 @@ async function main() {
             }
         }
         
-        // Show bot features
-        UltraCleanLogger.success(`Prefix: ${isPrefixless ? 'none (prefixless)' : getCurrentPrefix()}`);
-        UltraCleanLogger.success(`Auto-connect: ${AUTO_CONNECT_ON_LINK ? 'on' : 'off'}`);
-        UltraCleanLogger.success(`Rate limit: ${RATE_LIMIT_ENABLED ? 'on' : 'off'}`);
-        UltraCleanLogger.success('Member detection: on');
-        UltraCleanLogger.success('Anti-ViewOnce: on');
-        UltraCleanLogger.success('All systems ready');
+        await _dbInitPromise;
+        printStartupBox();
         DiskManager.start();
         
         // ====== AUTO-RECONNECT LOGIC ======
