@@ -998,17 +998,19 @@ class UltraCleanLogger {
     static success(...args) {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
-        const ts = `${_GB}[${_getTime()}]${_R}`;
-        const msg = args.map(a => `${_G}${a}${_R}`).join(' ');
-        originalConsoleMethods.log(`${ts} ${_G}✅${_R} ${msg}`);
+        const time = _getTime();
+        originalConsoleMethods.log(`${_GB}╭─⌈ ✅  OK ⌋─── ${_GD}${time}${_R}`);
+        originalConsoleMethods.log(`${_G}├─⊷ ${text}${_R}`);
+        originalConsoleMethods.log(`${_G}╰───${_R}`);
     }
     
     static info(...args) {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
-        const ts = `${_BLB}[${_getTime()}]${_R}`;
-        const msg = args.map(a => `${_CYAN}${a}${_R}`).join(' ');
-        originalConsoleMethods.log(`${ts} ${_BL}ℹ️${_R} ${msg}`);
+        const time = _getTime();
+        originalConsoleMethods.log(`${_BLB}╭─⌈ ℹ️  INFO ⌋─── ${_BL}${time}${_R}`);
+        originalConsoleMethods.log(`${_BL}├─⊷ ${_CYAN}${text}${_R}`);
+        originalConsoleMethods.log(`${_BL}╰───${_R}`);
     }
     
     static warning(...args) {
