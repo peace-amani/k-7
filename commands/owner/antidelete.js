@@ -15,7 +15,7 @@ const MAX_CONCURRENT_DOWNLOADS = 3;
 let _activeDownloads = 0;
 
 let antideleteState = {
-    enabled: true,
+    enabled: false,
     mode: 'private',
     ownerJid: null,
     sock: null,
@@ -344,7 +344,7 @@ const MAX_ANTIDELETE_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function antideleteStoreMessage(message) {
     try {
-        if (!antideleteState.enabled || !antideleteState.sock) return;
+        if (!antideleteState.settings.initialized || !antideleteState.enabled || !antideleteState.sock) return;
         
         const msgKey = message.key;
         if (!msgKey || !msgKey.id || msgKey.fromMe) return;
@@ -487,7 +487,7 @@ const _groupAdminCache = new Map(); // cache bot admin status per group (5 min T
 
 export async function antideleteHandleUpdate(update) {
     try {
-        if (!antideleteState.enabled || !antideleteState.sock) return;
+        if (!antideleteState.settings.initialized || !antideleteState.enabled || !antideleteState.sock) return;
         
         const msgKey = update.key;
         if (!msgKey || !msgKey.id) return;
