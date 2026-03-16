@@ -4373,7 +4373,7 @@ function printConnectionBox(botName) {
         }
         return n;
     };
-    const W_INNER = 44;
+    const W_INNER = 28;
     const bar = '─'.repeat(W_INNER + 2);
     const pad = (s) => s + ' '.repeat(Math.max(0, W_INNER - vlen(s)));
     const G = '\x1b[38;2;0;255;65m';
@@ -4390,15 +4390,15 @@ function printConnectionBox(botName) {
         `${c()}╭${bar}╮${R}`,
         row(`🐺 ${name} — CONNECTED`, true),
         `${c()}├${bar}┤${R}`,
-        row(`✅ WhatsApp connection established`),
-        row(`✅ Sudo system initialized`),
-        row(`✅ Auto-connect on start triggered`),
-        row(`✅ Restart auto-fix dispatched`),
+        row(`✅ WhatsApp connected`),
+        row(`✅ Sudo initialized`),
+        row(`✅ Auto-connect triggered`),
+        row(`✅ Auto-fix dispatched`),
         row(`✅ Ultimate Fix applied`),
         row(`✅ Read receipts enabled`),
-        row(`✅ Connection message sent to owner`),
+        row(`✅ Owner notified`),
         row(`✅ Memory monitor active`),
-        row(`✅ Anti-delete systems ready`),
+        row(`✅ Anti-delete ready`),
         `${c()}╰${bar}╯${R}`,
     ];
     process.stdout.write('\n' + lines.join('\n') + '\n\n');
@@ -6191,7 +6191,7 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
     const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
     const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
     const _R  = '\x1b[0m';
-    const W   = 38;
+    const W   = 28;
     const bar = '─'.repeat(W + 2);
     const vlen = s => { let n=0; for (const ch of[...s]){const cp=ch.codePointAt(0);n+=(cp>0xFFFF||(cp>=0x1F000&&cp<=0x1FFFF))?2:1;} return n; };
     const pad  = s => { const v=vlen(s); return s+(v<W?' '.repeat(W-v):''); };
@@ -6202,33 +6202,33 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
     const sep  = `${_G}├${bar}┤${_R}`;
     const lines = [
         `${_G}╭${bar}╮${_R}`,
-        row(`🐺 ${getCurrentBotName()} ONLINE  v${VERSION}`, true),
+        row(`🐺 ${getCurrentBotName()} ONLINE v${VERSION}`, true),
         sep,
-        row(`✅ ${isAutoReconnect ? 'Auto-reconnected' : 'Connected'} successfully!`),
-        row(`👑 Owner  : +${ownerInfo.ownerNumber}`),
-        row(`🔗 LID    : ${ownerInfo.ownerLid || 'Not set'}`),
-        row(`📱 Device : ${getCurrentBotName()} - Chrome`),
-        row(`🕒 Time   : ${currentTime}`),
-        row(`🔥 Status : 24/7 Ready!`),
-        row(`💬 Prefix : ${prefixDisplay}`),
-        row(`🎛️  Mode   : ${BOT_MODE}`),
-        row(`🔐 Method : ${connectionMethod}`),
-        row(`📊 Cmds   : ${commands.size} loaded`),
+        row(`✅ ${isAutoReconnect ? 'Reconnected!' : 'Connected!'}`),
+        row(`👑 Owner: +${ownerInfo.ownerNumber}`),
+        row(`🔗 LID: ${ownerInfo.ownerLid || 'Not set'}`),
+        row(`📱 Device: ${getCurrentBotName()}`),
+        row(`🕒 Time: ${currentTime}`),
+        row(`🔥 Status: 24/7 Ready!`),
+        row(`💬 Prefix: ${prefixDisplay}`),
+        row(`🎛️  Mode: ${BOT_MODE}`),
+        row(`🔐 Method: ${connectionMethod}`),
+        row(`📊 Cmds: ${commands.size} loaded`),
         sep,
-        row(`🔧 ULTIMATE FIX       : ✅`),
-        row(`👁️  STATUS DETECTOR    : ✅`),
-        row(`👥 MEMBER DETECTOR    : ✅`),
-        row(`🔐 ANTI-VIEWONCE      : ✅`),
-        row(`🗑️  ANTIDELETE         : ✅`),
-        row(`🛡️  RATE LIMIT PROTECT : ✅`),
-        row(`🔗 AUTO-CONNECT LINK  : ${AUTO_CONNECT_ON_LINK  ? '✅' : '❌'}`),
-        row(`🔄 AUTO-CONNECT START : ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`),
-        row(`🔐 AUTO-RECONNECT     : ✅`),
+        row(`🔧 ULTIMATE FIX   : ✅`),
+        row(`👁️  STATUS DETECT  : ✅`),
+        row(`👥 MEMBER DETECT  : ✅`),
+        row(`🔐 ANTI-VIEWONCE  : ✅`),
+        row(`🗑️  ANTIDELETE     : ✅`),
+        row(`🛡️  RATE LIMIT     : ✅`),
+        row(`🔗 LINK CONNECT   : ${AUTO_CONNECT_ON_LINK  ? '✅' : '❌'}`),
+        row(`🔄 START CONNECT  : ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`),
+        row(`🔐 AUTO-RECONNECT : ✅`),
         sep,
-        row(`🏗️  Platform : ${detectPlatform()}`),
-        row(`🔊 CONSOLE  : ✅ ULTRA CLEAN`),
-        row(`⚡ SPEED    : ✅ OPTIMIZED`),
-        row(`🎯 BG AUTH  : ✅ ENABLED`),
+        row(`🏗️  Platform: ${detectPlatform()}`),
+        row(`🔊 CONSOLE: ULTRA CLEAN`),
+        row(`⚡ SPEED: OPTIMIZED`),
+        row(`🎯 BG AUTH: ENABLED`),
         `${_G}╰${bar}╯${_R}`,
     ];
     process.stdout.write('\n' + lines.join('\n') + '\n\n');
