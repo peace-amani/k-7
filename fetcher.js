@@ -442,12 +442,15 @@ function patchChalk(nm) {
 }
 
 function patchAxios(nm) {
-  const axiosDir  = path.join(nm, 'axios');
+  const axiosDir = path.join(nm, 'axios');
   if (!fs.existsSync(axiosDir)) return;
-  const cjsShim = path.join(axiosDir, 'index.cjs');
-  const mjsShim = path.join(axiosDir, 'index.mjs');
-  if (fs.existsSync(cjsShim) && fs.existsSync(mjsShim)) return;
-  const cjs = [
+  const indexJs  = path.join(axiosDir, 'index.js');
+  const indexMjs = path.join(axiosDir, 'index.mjs');
+  if (fs.existsSync(indexJs)) {
+    try { if (fs.readFileSync(indexJs, 'utf8').includes('doReq')) return; } catch {}
+    try { fs.unlinkSync(indexJs); } catch {}
+  }
+  const cjsImpl = [
     "'use strict';",
     "const https=require('https'),http=require('http'),zlib=require('zlib');",
     "function doReq(cfg,rd){rd=rd||0;return new Promise((res,rej)=>{",
@@ -496,19 +499,16 @@ function patchAxios(nm) {
     "axios.CancelToken={source:()=>({token:null,cancel:()=>{}})};",
     "module.exports=axios;module.exports.default=axios;",
   ].join('\n');
-  const mjs = [
-    "import _a from './index.cjs';",
-    "export default _a;",
-    "export const {create,get,post,put,patch,isAxiosError,defaults,interceptors,CanceledError,CancelToken}=_a;",
-  ].join('\n');
-  fs.writeFileSync(cjsShim, cjs);
-  fs.writeFileSync(mjsShim, mjs);
+  try { fs.writeFileSync(indexJs, cjsImpl); } catch {}
+  try {
+    fs.writeFileSync(indexMjs, "import _a from './index.js';\nexport default _a;\nexport const {create,get,post,put,patch,isAxiosError,defaults,interceptors,CanceledError,CancelToken}=_a;\n");
+  } catch {}
   try {
     const pkgPath = path.join(axiosDir, 'package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    pkg.main = './index.cjs';
-    pkg.exports = { '.': { import: './index.mjs', require: './index.cjs', default: './index.cjs' } };
     delete pkg.type;
+    pkg.main = 'index.js';
+    pkg.exports = { '.': { import: './index.mjs', require: './index.js', default: './index.js' } };
     fs.writeFileSync(pkgPath, JSON.stringify(pkg));
   } catch {}
 }
