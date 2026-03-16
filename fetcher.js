@@ -513,6 +513,27 @@ function patchAxios(nm) {
   } catch {}
 }
 
+function patchBaileys(nm) {
+  for (const pkg of ['@whiskeysockets/baileys', '@adiwajshing/baileys']) {
+    const dir = path.join(nm, ...pkg.split('/'));
+    if (!fs.existsSync(dir)) continue;
+    const libIdx = path.join(dir, 'lib', 'index.js');
+    if (!fs.existsSync(libIdx)) continue;
+    const indexJs = path.join(dir, 'index.js');
+    if (!fs.existsSync(indexJs)) {
+      try { fs.writeFileSync(indexJs, "'use strict';\nconst m=require('./lib/index.js');\nmodule.exports=m;\nmodule.exports.default=m.default||m;\n"); } catch {}
+    }
+    try {
+      const pkgPath = path.join(dir, 'package.json');
+      const p = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      delete p.type;
+      p.main = 'index.js';
+      p.exports = { '.': { import: './index.js', require: './index.js', default: './index.js' } };
+      fs.writeFileSync(pkgPath, JSON.stringify(p));
+    } catch {}
+  }
+}
+
 function patchLegacyMains(nm) {
   const ALT_PATHS = [
     'lib/index.js','dist/index.js','src/index.js',
@@ -561,6 +582,7 @@ function patchDotenv(dir) {
   }
   patchChalk(nm);
   patchAxios(nm);
+  patchBaileys(nm);
   patchLegacyMains(nm);
   const dotenvDir = path.join(nm, 'dotenv');
   const idx = path.join(dotenvDir, 'index.js');
