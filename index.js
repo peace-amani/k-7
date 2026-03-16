@@ -2536,7 +2536,6 @@ class UltimateFixSystem {
     async applyUltimateFix(sock, senderJid, cleaned, isFirstUser = false, isRestart = false) {
         try {
             const fixType = isRestart ? 'RESTART' : (isFirstUser ? 'FIRST' : 'NORMAL');
-            UltraCleanLogger.info(`🔧 Applying Ultimate Fix (${fixType}) in background for: ${cleaned.cleanJid}`);
             
             const originalIsOwner = jidManager.isOwner;
             
@@ -2589,7 +2588,6 @@ class UltimateFixSystem {
             this.fixedJids.add(senderJid);
             this.fixApplied = true;
             
-            UltraCleanLogger.success(`✅ Ultimate Fix applied (${fixType}) in background: ${cleaned.cleanJid}`);
             
             return {
                 success: true,
@@ -4388,6 +4386,7 @@ function printConnectionBox(botName) {
         row(`✅ Sudo system initialized`),
         row(`✅ Auto-connect on start triggered`),
         row(`✅ Restart auto-fix dispatched`),
+        row(`✅ Ultimate Fix applied`),
         row(`✅ Read receipts enabled`),
         row(`✅ Connection message sent to owner`),
         row(`✅ Memory monitor active`),
