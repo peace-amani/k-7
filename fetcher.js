@@ -513,6 +513,47 @@ function patchAxios(nm) {
   } catch {}
 }
 
+function patchLegacyMains(nm) {
+  const ALT_PATHS = [
+    'lib/index.js','dist/index.js','src/index.js',
+    'dist/node/index.js','lib/src/index.js','build/index.js',
+  ];
+  let dirs = [];
+  try {
+    for (const e of fs.readdirSync(nm)) {
+      if (e.startsWith('@')) {
+        try { for (const s of fs.readdirSync(path.join(nm, e))) dirs.push(path.join(nm, e, s)); } catch {}
+      } else {
+        dirs.push(path.join(nm, e));
+      }
+    }
+  } catch {}
+  for (const d of dirs) {
+    try {
+      const pkgPath = path.join(d, 'package.json');
+      if (!fs.existsSync(pkgPath)) continue;
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const mainVal = pkg.main || 'index.js';
+      if (!/index\.(js|cjs)$/.test(mainVal)) continue;
+      const mainAbs = path.join(d, mainVal);
+      if (fs.existsSync(mainAbs)) continue;
+      for (const alt of ALT_PATHS) {
+        const altAbs = path.join(d, alt);
+        if (fs.existsSync(altAbs)) {
+          try {
+            fs.writeFileSync(mainAbs, `'use strict';\nconst m=require('./${alt}');\nmodule.exports=m;\nmodule.exports.default=m.default||m;\n`);
+            const p2 = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            delete p2.type;
+            p2.main = mainVal;
+            fs.writeFileSync(pkgPath, JSON.stringify(p2));
+          } catch {}
+          break;
+        }
+      }
+    } catch {}
+  }
+}
+
 function patchDotenv(dir) {
   const nm = path.join(dir, 'node_modules');
   if (!fs.existsSync(nm)) {
@@ -520,6 +561,7 @@ function patchDotenv(dir) {
   }
   patchChalk(nm);
   patchAxios(nm);
+  patchLegacyMains(nm);
   const dotenvDir = path.join(nm, 'dotenv');
   const idx = path.join(dotenvDir, 'index.js');
   if (fs.existsSync(idx)) return;
