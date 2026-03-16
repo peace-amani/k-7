@@ -324,20 +324,21 @@ async function downloadAndExtract() {
 }
 
 function patchChalk(nm) {
-  const chalkDir = path.join(nm, 'chalk');
+  const chalkDir  = path.join(nm, 'chalk');
   if (!fs.existsSync(chalkDir)) return;
-  const pkgPath  = path.join(chalkDir, 'package.json');
+  const pkgPath   = path.join(chalkDir, 'package.json');
   const indexPath = path.join(chalkDir, 'index.js');
   if (fs.existsSync(indexPath)) return;
   const srcPath = path.join(chalkDir, 'source', 'index.js');
-  if (fs.existsSync(srcPath)) {
-    try {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      pkg.main = 'source/index.js';
-      if (!pkg.exports) pkg.exports = { '.': { default: './source/index.js', import: './source/index.js' } };
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg));
-    } catch {}
-  }
+  if (!fs.existsSync(srcPath)) return;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    pkg.main = 'source/index.js';
+    pkg.type = 'module';
+    pkg.exports = { '.': { import: './source/index.js', default: './source/index.js' } };
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg));
+  } catch {}
+  fs.writeFileSync(indexPath, "export { default } from './source/index.js';\nexport * from './source/index.js';\n");
 }
 
 function patchDotenv(dir) {
