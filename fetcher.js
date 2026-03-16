@@ -337,6 +337,15 @@ async function downloadAndExtract() {
   }
 
   spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
+  patchDotenv(EXTRACT_DIR);
+}
+
+function patchDotenv(dir) {
+  const idx  = path.join(dir, 'node_modules', 'dotenv', 'index.js');
+  const main = path.join(dir, 'node_modules', 'dotenv', 'lib', 'main.js');
+  if (!fs.existsSync(idx) && fs.existsSync(main)) {
+    fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
+  }
 }
 
 async function applyLocalSettings() {
