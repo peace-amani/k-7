@@ -293,6 +293,7 @@ async function downloadAndExtract() {
     if (!fs.existsSync(path.join(EXTRACT_DIR, 'node_modules'))) {
       spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
     }
+    patchDotenv(EXTRACT_DIR);
     return;
   }
 
@@ -352,11 +353,20 @@ async function downloadAndExtract() {
 }
 
 function patchDotenv(dir) {
-  const idx  = path.join(dir, 'node_modules', 'dotenv', 'index.js');
-  const main = path.join(dir, 'node_modules', 'dotenv', 'lib', 'main.js');
-  if (!fs.existsSync(idx) && fs.existsSync(main)) {
-    fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
+  const dotenvDir = path.join(dir, 'node_modules', 'dotenv');
+  if (!fs.existsSync(dotenvDir)) return;
+  const idx  = path.join(dotenvDir, 'index.js');
+  const main = path.join(dotenvDir, 'lib', 'main.js');
+  if (fs.existsSync(idx)) return;
+  if (!fs.existsSync(main)) {
+    fs.rmSync(path.join(dir, 'node_modules'), { recursive: true, force: true });
+    spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: dir, stdio: 'ignore' });
+    if (!fs.existsSync(idx) && fs.existsSync(main)) {
+      fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
+    }
+    return;
   }
+  fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
 }
 
 async function applyLocalSettings() {
