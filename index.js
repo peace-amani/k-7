@@ -2646,7 +2646,6 @@ class AutoConnectOnStart {
             const ownerJid = sock.user.id;
             const cleaned = jidManager.cleanJid(ownerJid);
             
-            UltraCleanLogger.info(`⚡ Auto-connect on start triggered for ${cleaned.cleanNumber} (BACKGROUND)`);
             
             const mockMsg = {
                 key: {
@@ -2665,7 +2664,6 @@ class AutoConnectOnStart {
             this.hasRun = true;
             hasAutoConnectedOnStart = true;
             
-            UltraCleanLogger.success('✅ Auto-connect on start completed in background');
             
         } catch (error) {
             UltraCleanLogger.error(`Auto-connect on start failed: ${error.message}`);
@@ -4332,6 +4330,50 @@ function printStartupBox() {
     process.stdout.write('\n' + chalk.greenBright(box) + '\n\n');
 }
 
+function printConnectionBox(botName) {
+    const rainbow = ['\x1b[96m', '\x1b[94m', '\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[92m'];
+    const R = '\x1b[0m';
+    const W = '\x1b[1m\x1b[97m';
+    let ci = 0;
+    const c = () => rainbow[ci++ % rainbow.length];
+
+    const vlen = (s) => {
+        let n = 0;
+        for (const ch of s) {
+            const cp = ch.codePointAt(0);
+            n += (cp > 0xFFFF) ? 2 : (cp >= 0x2300 && cp <= 0x2BFF) ? 2 : 1;
+        }
+        return n;
+    };
+    const W_INNER = 44;
+    const bar = '═'.repeat(W_INNER + 2);
+    const pad = (s) => s + ' '.repeat(Math.max(0, W_INNER - vlen(s)));
+    const row = (text, bold) => {
+        const col = c();
+        const inner = bold
+            ? `${W} ${pad(text)} ${R}`
+            : ` ${pad(text)} `;
+        return `${col}║${R}${inner}${col}║${R}`;
+    };
+
+    const name = botName || 'WolfBot';
+    const lines = [
+        `${c()}╔${bar}╗${R}`,
+        row(`🐺 ${name} — CONNECTED`, true),
+        `${c()}╠${bar}╣${R}`,
+        row(`✅ WhatsApp connection established`),
+        row(`✅ Sudo system initialized`),
+        row(`✅ Auto-connect on start triggered`),
+        row(`✅ Restart auto-fix dispatched`),
+        row(`✅ Read receipts enabled`),
+        row(`✅ Connection message sent to owner`),
+        row(`✅ Memory monitor active`),
+        row(`✅ Anti-delete systems ready`),
+        `${c()}╚${bar}╝${R}`,
+    ];
+    process.stdout.write('\n' + lines.join('\n') + '\n\n');
+}
+
 // Initialize with loaded prefix
 prefixCache = loadPrefixFromFiles();
 isPrefixless = prefixCache === '' ? true : false;
@@ -4766,7 +4808,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
             
-            if (connection) UltraCleanLogger.info(`🔗 Connection update: ${connection}`);
+            if (connection && connection !== 'open') UltraCleanLogger.info(`🔗 Connection update: ${connection}`);
             
             if (connection === 'open') {
                 isConnected = true;
@@ -4789,10 +4831,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 if (conflictCount === 0) {
                     setTimeout(() => {
                         if (!isConnected) return;
-                        UltraCleanLogger.info('🔑 Syncing critical app state keys...');
                         sock.resyncAppState(['critical_block', 'critical_unblock_to_single'], true)
-                            .then(() => UltraCleanLogger.info('✅ Critical app state resync done'))
-                            .catch(e => UltraCleanLogger.info(`⚠️ App state resync: ${e.message}`));
+                            .catch(() => {});
                     }, 15000);
                 }
                 
@@ -4848,7 +4888,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 
                 
 
-                UltraCleanLogger.info('🔑 Sudo system ready (using signal LID mapping)');
 
                 setTimeout(() => {
                     if (isConnected) {
@@ -4875,7 +4914,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     try {
                         await sock.updateReadReceiptsPrivacy('all');
                         await sock.fetchPrivacySettings(true);
-                        UltraCleanLogger.info('✅ Read receipts enabled — status views will register correctly');
                     } catch (e) {
                         UltraCleanLogger.info(`⚠️ Could not enable read receipts: ${e.message}`);
                     }
@@ -4941,6 +4979,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 setTimeout(() => {
                     memoryMonitor.start();
                 }, 3000);
+
+                setTimeout(() => {
+                    if (isConnected) printConnectionBox(getCurrentBotName());
+                }, 9000);
                 
                 // ====== THE ONLY SUCCESS MESSAGE ======
                 setTimeout(async () => {
@@ -4955,7 +4997,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const sendPromise = sock.sendMessage(targetJid, { text: successMessage });
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
                         await Promise.race([sendPromise, timeoutPromise]);
-                        console.log(chalk.green(`✅ Connection message sent to owner`));
                         _lastConnectionMsgTime = Date.now();
                     } catch (sendError) {
                         console.log(chalk.red('❌ Could not send connection message:'), sendError.message);
@@ -6043,18 +6084,15 @@ async function triggerRestartAutoFix(sock) {
                 
                 await sock.sendMessage(ownerJid, { text: restartMsg });
                 _lastRestartMsgTime = Date.now();
-                UltraCleanLogger.success('✅ Restart message sent to owner');
             }
             
             if (ultimateFixSystem.shouldRunRestartFix(ownerJid)) {
-                UltraCleanLogger.info(`🔧 Triggering restart auto-fix for: ${ownerJid}`);
                 
                 ultimateFixSystem.markRestartFixAttempted();
                 
                 const fixResult = await ultimateFixSystem.applyUltimateFix(sock, ownerJid, cleaned, false, true);
                 
                 if (fixResult.success) {
-                    UltraCleanLogger.success('✅ Restart auto-fix completed');
                 }
             }
 
