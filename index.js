@@ -4315,19 +4315,42 @@ function printStartupBox() {
     const modeDisplay   = isPrefixless ? 'Prefixless' : 'Prefix';
     const dbEngine      = isUsingWasm() ? 'WASM' : 'native';
     const dbDisplay     = _dbInitReady  ? `ready (${dbEngine})` : 'unavailable';
-    const inner = 32;
-    const row = (s) => `│ ${s}${' '.repeat(Math.max(0, inner - s.length))} │`;
-    const bar = `┌${'─'.repeat(inner + 2)}┐`;
-    const end = `└${'─'.repeat(inner + 2)}┘`;
-    const box = [
-        bar,
-        row(`  🐺 ${getCurrentBotName()} v${VERSION}`),
-        row(`  Prefix : ${prefixDisplay}   Mode: ${modeDisplay}`),
-        row(`  SQLite : ${dbDisplay}`),
-        row(`  Status : all systems ready ✓`),
-        end
-    ].join('\n');
-    process.stdout.write('\n' + chalk.greenBright(box) + '\n\n');
+
+    const vlen = (s) => {
+        let n = 0;
+        for (const ch of [...s]) {
+            const cp = ch.codePointAt(0);
+            n += (cp > 0xFFFF || (cp >= 0x1F000 && cp <= 0x1FFFF)) ? 2 : 1;
+        }
+        return n;
+    };
+
+    const palette = ['\x1b[96m', '\x1b[36m', '\x1b[32m', '\x1b[92m', '\x1b[96m', '\x1b[36m'];
+    const R = '\x1b[0m';
+    const B = '\x1b[1m';
+    let ci = 0;
+    const c = () => palette[ci++ % palette.length];
+
+    const INNER = 36;
+    const bar   = '─'.repeat(INNER + 2);
+    const pad   = (s) => s + ' '.repeat(Math.max(0, INNER - vlen(s)));
+
+    const row = (text, bold) => {
+        const col = c();
+        const content = bold ? `${B}${pad(text)}${R}` : pad(text);
+        return `${col}│${R}  ${content}  ${col}│${R}`;
+    };
+
+    const lines = [
+        `${c()}╭${bar}╮${R}`,
+        row(`🐺 ${getCurrentBotName()} v${VERSION}`, true),
+        `${c()}├${bar}┤${R}`,
+        row(`Prefix : ${prefixDisplay}   Mode: ${modeDisplay}`),
+        row(`SQLite : ${dbDisplay}`),
+        row(`Status : all systems ready ✓`),
+        `${c()}╰${bar}╯${R}`,
+    ];
+    process.stdout.write('\n' + lines.join('\n') + '\n\n');
 }
 
 function printConnectionBox(botName) {
@@ -4339,28 +4362,28 @@ function printConnectionBox(botName) {
 
     const vlen = (s) => {
         let n = 0;
-        for (const ch of s) {
+        for (const ch of [...s]) {
             const cp = ch.codePointAt(0);
-            n += (cp > 0xFFFF) ? 2 : (cp >= 0x2300 && cp <= 0x2BFF) ? 2 : 1;
+            n += (cp > 0xFFFF || (cp >= 0x1F000 && cp <= 0x1FFFF)) ? 2 : 1;
         }
         return n;
     };
     const W_INNER = 44;
-    const bar = '═'.repeat(W_INNER + 2);
+    const bar = '─'.repeat(W_INNER + 2);
     const pad = (s) => s + ' '.repeat(Math.max(0, W_INNER - vlen(s)));
     const row = (text, bold) => {
         const col = c();
         const inner = bold
             ? `${W} ${pad(text)} ${R}`
             : ` ${pad(text)} `;
-        return `${col}║${R}${inner}${col}║${R}`;
+        return `${col}│${R}${inner}${col}│${R}`;
     };
 
     const name = botName || 'WolfBot';
     const lines = [
-        `${c()}╔${bar}╗${R}`,
+        `${c()}╭${bar}╮${R}`,
         row(`🐺 ${name} — CONNECTED`, true),
-        `${c()}╠${bar}╣${R}`,
+        `${c()}├${bar}┤${R}`,
         row(`✅ WhatsApp connection established`),
         row(`✅ Sudo system initialized`),
         row(`✅ Auto-connect on start triggered`),
@@ -4369,7 +4392,7 @@ function printConnectionBox(botName) {
         row(`✅ Connection message sent to owner`),
         row(`✅ Memory monitor active`),
         row(`✅ Anti-delete systems ready`),
-        `${c()}╚${bar}╝${R}`,
+        `${c()}╰${bar}╯${R}`,
     ];
     process.stdout.write('\n' + lines.join('\n') + '\n\n');
 }
