@@ -978,9 +978,13 @@ class UltraCleanLogger {
                 return;
             }
         }
-        const ts = `\x1b[2m\x1b[37m[${_getTime()}]\x1b[0m`;
-        const msg = args.map(a => `\x1b[37m${a}\x1b[0m`).join(' ');
-        originalConsoleMethods.log(`${ts} ${msg}`);
+        const text = args.join(' ');
+        const time = _getTime();
+        const _DIM = '\x1b[2m\x1b[37m';
+        const _WHT = '\x1b[37m';
+        originalConsoleMethods.log(`${_DIM}╭─⌈ 💬  LOG ⌋─── ${time}\x1b[0m`);
+        originalConsoleMethods.log(`${_DIM}├─⊷\x1b[0m ${_WHT}${text}\x1b[0m`);
+        originalConsoleMethods.log(`${_DIM}╰───\x1b[0m`);
     }
     
     static error(...args) {
@@ -1338,7 +1342,7 @@ setInterval(() => {
     const lag = now - _lagCheckTs - 5000;
     _lagCheckTs = now;
     if (lag > 1000) {
-        originalConsoleMethods.log(`⚠️ [EVENT-LOOP] Lag detected: ${lag}ms`);
+        UltraCleanLogger.warning(`⚠️ [EVENT-LOOP] Lag detected: ${lag}ms`);
     }
 }, 5000);
 
