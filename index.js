@@ -978,8 +978,9 @@ class UltraCleanLogger {
                 return;
             }
         }
-        const timestamp = chalk.gray(`[${_getTime()}]`);
-        originalConsoleMethods.log(timestamp, ...args);
+        const ts = `\x1b[2m\x1b[37m[${_getTime()}]\x1b[0m`;
+        const msg = args.map(a => `\x1b[37m${a}\x1b[0m`).join(' ');
+        originalConsoleMethods.log(`${ts} ${msg}`);
     }
     
     static error(...args) {
@@ -990,22 +991,24 @@ class UltraCleanLogger {
         const text = args.join(' ');
         const time = _getTime();
         originalConsoleMethods.error(`${_YB}╭─⌈ ❌ ERROR ⌋─── ${_YD}${time}${_R}`);
-        originalConsoleMethods.error(`${_Y}├─⊷ ${text}${_R}`);
+        originalConsoleMethods.error(`${_Y}├─⊷ \x1b[38;2;255;80;80m${text}${_R}`);
         originalConsoleMethods.error(`${_Y}╰───${_R}`);
     }
     
     static success(...args) {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
-        const timestamp = chalk.green(`[${_getTime()}]`);
-        originalConsoleMethods.log(timestamp, chalk.green('✅'), ...args);
+        const ts = `${_GB}[${_getTime()}]${_R}`;
+        const msg = args.map(a => `${_G}${a}${_R}`).join(' ');
+        originalConsoleMethods.log(`${ts} ${_G}✅${_R} ${msg}`);
     }
     
     static info(...args) {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
-        const timestamp = chalk.blue(`[${_getTime()}]`);
-        originalConsoleMethods.log(timestamp, chalk.blue('ℹ️'), ...args);
+        const ts = `${_BLB}[${_getTime()}]${_R}`;
+        const msg = args.map(a => `${_CYAN}${a}${_R}`).join(' ');
+        originalConsoleMethods.log(`${ts} ${_BL}ℹ️${_R} ${msg}`);
     }
     
     static warning(...args) {
@@ -1017,7 +1020,7 @@ class UltraCleanLogger {
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
         originalConsoleMethods.log(`${_YB}╭─⌈ ⚠️  WARNING ⌋─── ${_YD}${time}${_R}`);
-        originalConsoleMethods.log(`${_Y}├─⊷ ${text}${_R}`);
+        originalConsoleMethods.log(`${_Y}├─⊷ ${_ORG}${text}${_R}`);
         originalConsoleMethods.log(`${_Y}╰───${_R}`);
     }
     
