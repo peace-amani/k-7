@@ -75,15 +75,54 @@ const DEFAULT_CONFIG = {
     warnings: {}
 };
 
-function resolveRealNumber(jid, groupMeta) {
+function resolveRealNumber(jid, groupMeta, sock) {
     if (!jid) return 'Unknown';
+
     const raw = jid.split('@')[0].split(':')[0];
-    if (!jid.includes('@lid')) return raw;
+
+    // Find full participant object in groupMeta
+    const participant = groupMeta?.participants?.find(p =>
+        cleanJid(p.id) === jid || cleanJid(p.lid || '') === jid
+    );
+
+    // 1. phoneNumber field on participant object
+    if (participant?.phoneNumber) {
+        const num = String(participant.phoneNumber).replace(/[^0-9]/g, '');
+        if (num.length >= 7) return num;
+    }
+
+    // 2. Non-LID JID — number is directly in the JID
+    if (!jid.includes('@lid')) {
+        const num = raw.replace(/[^0-9]/g, '');
+        if (num && num.length >= 7) return num;
+    }
+
     const cache = globalThis.lidPhoneCache;
+
+    // 3. lidPhoneCache lookup
     if (cache) {
         const cached = cache.get(raw) || cache.get(jid.split('@')[0]);
         if (cached) return cached;
     }
+
+    // 4. sock.signalRepository.lidMapping (same as getparticipants.js)
+    const lidToCheck = participant?.lid || (jid.includes('@lid') ? jid : null);
+    if (lidToCheck) {
+        try {
+            if (sock?.signalRepository?.lidMapping?.getPNForLID) {
+                const pn = sock.signalRepository.lidMapping.getPNForLID(lidToCheck);
+                if (pn) {
+                    const num = String(pn).split('@')[0].replace(/[^0-9]/g, '');
+                    if (num.length >= 7) {
+                        if (cache) cache.set(raw, num);
+                        return num;
+                    }
+                }
+            }
+        } catch {}
+    }
+
+    // 5. Cross-match LID in groupMeta participants
     if (groupMeta?.participants) {
         for (const p of groupMeta.participants) {
             const pid = p.id || '';
@@ -108,11 +147,12 @@ function resolveRealNumber(jid, groupMeta) {
             }
         }
     }
-    return raw;
+
+    return raw || 'Unknown';
 }
 
-function getContactName(jid, groupMeta) {
-    const num = resolveRealNumber(jid, groupMeta);
+function getContactName(jid, groupMeta, sock) {
+    const num = resolveRealNumber(jid, groupMeta, sock);
     if (global.contactNames && global.contactNames instanceof Map) {
         return global.contactNames.get(num) || num;
     }
@@ -136,9 +176,8 @@ export async function handleAntidemoteEvent(sock, update) {
 
     const config = loadConfig();
     const groupConfig = config[groupId] || { ...DEFAULT_CONFIG };
-    const isExplicitlyDisabled = config[groupId]?.enabled === false;
 
-    if (isExplicitlyDisabled) {
+    if (!groupConfig.enabled) {
         log(`[ANTIDEMOTE] Disabled for this group, skipping`);
         return;
     }
@@ -167,14 +206,14 @@ export async function handleAntidemoteEvent(sock, update) {
     const botParticipant = groupMeta.participants.find(p => cleanJid(p.id) === botJid);
     const botIsAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
 
-    const authorNum = resolveRealNumber(authorJid, groupMeta);
-    const authorName = getContactName(authorJid, groupMeta);
+    const authorNum = resolveRealNumber(authorJid, groupMeta, sock);
+    const authorName = getContactName(authorJid, groupMeta, sock);
     const groupName = groupMeta.subject || groupId.split('@')[0];
 
     for (const participantJid of participants) {
         const targetJid = cleanJid(participantJid);
-        const targetNum = resolveRealNumber(targetJid, groupMeta);
-        const targetName = getContactName(targetJid, groupMeta);
+        const targetNum = resolveRealNumber(targetJid, groupMeta, sock);
+        const targetName = getContactName(targetJid, groupMeta, sock);
         const timestamp = new Date().toLocaleString();
 
         if (!groupConfig.warnings) groupConfig.warnings = {};
