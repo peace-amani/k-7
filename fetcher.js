@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import AdmZip from 'adm-zip';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 
 const __dirname = process.cwd();
 
@@ -264,6 +264,10 @@ async function downloadAndExtract() {
 
   if (fs.existsSync(EXTRACT_DIR) && _entryExists) {
     log('✅ Core already extracted, skipping download.');
+    if (!fs.existsSync(path.join(EXTRACT_DIR, 'node_modules'))) {
+      log('📦 Installing missing dependencies...');
+      spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'inherit' });
+    }
     return;
   }
 
@@ -322,6 +326,8 @@ async function downloadAndExtract() {
   }
 
   log('✅ Core extracted successfully!');
+  log('📦 Installing dependencies...');
+  spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'inherit' });
 }
 
 async function applyLocalSettings() {
