@@ -79,14 +79,14 @@ export default {
       main: "https://github.com/7silent-wolf/silentwolf",
       
       // Remote repository (where updates come from)
-      upstream: "https://github.com/nk-apex/n7.git",
+      upstream: "https://github.com/peace-amani/k-7.git",
       
       // Backup owner repository (if needed)
       owner: "https://github.com/7silent-wolf/silentwolf"
     },
     
     // ZIP update URL (fallback method)
-    zipUrl: "https://github.com/nk-apex/n7/archive/refs/heads/main.zip",
+    zipUrl: "https://github.com/peace-amani/k-7/archive/refs/heads/main.zip",
     
     // Timeout settings (in milliseconds)
     timeouts: {

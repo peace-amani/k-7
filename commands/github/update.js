@@ -1323,9 +1323,9 @@ const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
 /* -------------------- Configuration -------------------- */
-const UPDATE_ZIP_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL25rLWFwZXgvbjcvYXJjaGl2ZS9yZWZzL2hlYWRzL21haW4uemlw', 'base64').toString();
-const GIT_REPO_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL25rLWFwZXgvbjcuZ2l0', 'base64').toString();
-const OWNER_REPO_URL = "https://github.com/7silent-wolf/silentwolf.git";
+const UPDATE_ZIP_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy9hcmNoaXZlL3JlZnMvaGVhZHMvbWFpbi56aXA=', 'base64').toString();
+const GIT_REPO_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy5naXQ=', 'base64').toString();
+const OWNER_REPO_URL = "https://github.com/peace-amani/k-7.git";
 
 // Timeout configurations
 const DOWNLOAD_TIMEOUT = 120000;
