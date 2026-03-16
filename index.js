@@ -4315,7 +4315,7 @@ let _dbInitReady = false;
 function printStartupBox() {
     const prefixDisplay = isPrefixless ? 'none' : `"${getCurrentPrefix()}"`;
     const modeDisplay   = isPrefixless ? 'Prefixless' : 'Prefix';
-    const dbDisplay     = _dbInitReady  ? 'ready'      : 'JSON fallback';
+    const dbDisplay     = _dbInitReady  ? 'ready'      : 'unavailable';
     const inner = 32;
     const row = (s) => `│ ${s}${' '.repeat(Math.max(0, inner - s.length))} │`;
     const bar = `┌${'─'.repeat(inner + 2)}┐`;
@@ -4338,28 +4338,15 @@ updateTerminalHeader();
 
 // ====== DATABASE INIT ======
 async function initDatabase() {
+    await supabaseDb.initTables();
+    _dbInitReady = true;
     try {
-        const ready = await supabaseDb.initTables();
-        if (ready && supabaseDb.isAvailable()) {
-            _dbInitReady = true;
-            try {
-                const { loadBotName } = await import('./lib/botname.js');
-                const name = loadBotName();
-                if (name) {
-                    BOT_NAME = name;
-                    global.BOT_NAME = name;
-                }
-            } catch {}
-            await runDataMigrations();
-            return true;
-        } else {
-            _dbInitReady = false;
-            return false;
-        }
-    } catch (err) {
-        _dbInitReady = false;
-        return false;
-    }
+        const { loadBotName } = await import('./lib/botname.js');
+        const name = loadBotName();
+        if (name) { BOT_NAME = name; global.BOT_NAME = name; }
+    } catch {}
+    await runDataMigrations();
+    return true;
 }
 
 async function runDataMigrations() {
@@ -4409,7 +4396,10 @@ async function runDataMigrations() {
     }
 }
 
-const _dbInitPromise = initDatabase().catch(() => {});
+const _dbInitPromise = initDatabase().catch((err) => {
+    console.error(`\n❌ FATAL: SQLite failed to initialize — ${err.message}\n`);
+    process.exit(1);
+});
 
 // ====== MAIN BOT FUNCTION ======
 async function startBot(loginMode = 'auto', loginData = null) {
@@ -7575,10 +7565,6 @@ async function main() {
     try {
         // ====== HEROKU INITIALIZATION ======
         
-        // Initialize web status server (universal — all platforms)
-        setupWebServer();
-        setupHerokuKeepAlive();
-        
         // ====== HEROKU DETECTION & SETUP ======
         const isHeroku = process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.HEROKU_API_KEY || false;
         const herokuSessionId = process.env.SESSION_ID;
@@ -7610,8 +7596,10 @@ async function main() {
             }
         }
         
-        await _dbInitPromise;
+        try { await _dbInitPromise; } catch {}
         printStartupBox();
+        await setupWebServer();
+        setupHerokuKeepAlive();
         DiskManager.start();
         
         // ====== AUTO-RECONNECT LOGIC ======
@@ -7762,8 +7750,6 @@ process.on('unhandledRejection', (error) => {
     UltraCleanLogger.error(`Unhandled rejection: ${error?.message || error}`);
 });
 
-// Start web server immediately so Heroku/Render/Railway bind PORT before main() runs
-setupWebServer();
 
 // Start the bot
 main().catch((error) => {
