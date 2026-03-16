@@ -331,13 +331,11 @@ function patchDotenv(dir) {
   if (fs.existsSync(idx)) return;
   if (!fs.existsSync(main)) {
     fs.rmSync(path.join(dir, 'node_modules'), { recursive: true, force: true });
-    spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: dir, stdio: 'ignore' });
-    if (!fs.existsSync(idx) && fs.existsSync(main)) {
-      fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
-    }
-    return;
+    spawnSync('npm', ['install', '--no-audit'], { cwd: dir, stdio: 'ignore' });
   }
-  fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
+  if (fs.existsSync(main) && !fs.existsSync(idx)) {
+    fs.writeFileSync(idx, "'use strict';\nmodule.exports = require('./lib/main.js');\n");
+  }
 }
 
 // === SETTINGS SYNC ===
