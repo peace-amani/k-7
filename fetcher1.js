@@ -323,11 +323,29 @@ async function downloadAndExtract() {
   patchDotenv(EXTRACT_DIR);
 }
 
+function patchChalk(nm) {
+  const chalkDir = path.join(nm, 'chalk');
+  if (!fs.existsSync(chalkDir)) return;
+  const pkgPath  = path.join(chalkDir, 'package.json');
+  const indexPath = path.join(chalkDir, 'index.js');
+  if (fs.existsSync(indexPath)) return;
+  const srcPath = path.join(chalkDir, 'source', 'index.js');
+  if (fs.existsSync(srcPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      pkg.main = 'source/index.js';
+      if (!pkg.exports) pkg.exports = { '.': { default: './source/index.js', import: './source/index.js' } };
+      fs.writeFileSync(pkgPath, JSON.stringify(pkg));
+    } catch {}
+  }
+}
+
 function patchDotenv(dir) {
   const nm = path.join(dir, 'node_modules');
   if (!fs.existsSync(nm)) {
     spawnSync('npm', ['install', '--no-audit'], { cwd: dir, stdio: 'ignore' });
   }
+  patchChalk(nm);
   const dotenvDir = path.join(nm, 'dotenv');
   const idx = path.join(dotenvDir, 'index.js');
   if (fs.existsSync(idx)) return;
