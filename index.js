@@ -691,7 +691,7 @@ try {
         const _bnData = JSON.parse(fs.readFileSync(_bnFile, 'utf8'));
         if (_bnData.botName && _bnData.botName.trim()) {
             global.BOT_NAME = _bnData.botName.trim();
-            console.log(`✅ Bot name loaded: "${_bnData.botName.trim()}"`);
+            console.log(`Bot name: ${_bnData.botName.trim()}`);
         }
     }
 } catch {}
@@ -4309,30 +4309,16 @@ class LoginManager {
 // ====== TERMINAL HEADER UPDATE ======
 function updateTerminalHeader() {
     const currentPrefix = getCurrentPrefix();
-    const prefixDisplay = isPrefixless ? 'none (prefixless)' : `"${currentPrefix}"`;
-    
+    const prefixDisplay = isPrefixless ? 'none' : `"${currentPrefix}"`;
+
     console.clear();
-    console.log(chalk.cyan(`
-╔══════════════════════════════════════════════════════════════════════╗
-║   🐺 ${chalk.bold(`${BOT_NAME.toUpperCase()} v${VERSION} (PREFIXLESS & MEMBER DETECTION)`)}             
-║   💬 Prefix  : ${prefixDisplay}
-║   🔧 Auto Fix: ✅ ENABLED
-║   🔄 Real-time Prefix: ✅ ENABLED
-║   👁️ Status Detector: ✅ ACTIVE
-║   👥 Member Detector: ✅ ACTIVE
-║   🔐 Anti-ViewOnce: ✅ ACTIVE
-║   🛡️ Rate Limit Protection: ✅ ACTIVE
-║   🔗 Auto-Connect on Link: ${AUTO_CONNECT_ON_LINK ? '✅' : '❌'}
-║   🔄 Auto-Connect on Start: ${AUTO_CONNECT_ON_START ? '✅' : '❌'}
-║   🔐 Login Methods: Pairing Code | Session ID | Clean Start
-║   📱 Session Support: WOLF-BOT: format & Base64
-║   📊 Log Level: ULTRA CLEAN (Zero spam)
-║   🔊 Console: ✅ COMPLETELY FILTERED
-║   ⚡ SPEED: ✅ OPTIMIZED (FAST RESPONSE)
-║   🎯 Background Auth: ✅ ENABLED
-║   🎉 Welcome/Goodbye: OFF by default (per-group)
-╚══════════════════════════════════════════════════════════════════════╝
-`));
+    console.log(chalk.greenBright(
+`┌─────────────────────────────────┐
+│  🐺 ${BOT_NAME.toUpperCase()} ${VERSION}                   │
+│  Prefix  : ${prefixDisplay.padEnd(22)}│
+│  Mode    : ${(isPrefixless ? 'Prefixless' : 'Prefix').padEnd(22)}│
+└─────────────────────────────────┘`
+    ));
 }
 
 // Initialize with loaded prefix
@@ -4343,10 +4329,10 @@ updateTerminalHeader();
 // ====== DATABASE INIT ======
 async function initDatabase() {
     try {
-        UltraCleanLogger.info('💾 Database: Initializing SQLite...');
+        UltraCleanLogger.info('SQLite: setting up...');
         const ready = await supabaseDb.initTables();
         if (ready && supabaseDb.isAvailable()) {
-            UltraCleanLogger.success('💾 Database: SQLite ready (local storage)');
+            UltraCleanLogger.success('SQLite: ready');
             try {
                 const { loadBotName } = await import('./lib/botname.js');
                 const name = loadBotName();
@@ -4358,18 +4344,18 @@ async function initDatabase() {
             await runDataMigrations();
             return true;
         } else {
-            UltraCleanLogger.info('💾 Database: SQLite init failed, using local JSON fallback.');
+            UltraCleanLogger.info('SQLite: unavailable, using JSON fallback');
             return false;
         }
     } catch (err) {
-        UltraCleanLogger.error(`💾 Database: Init error - ${err.message}`);
+        UltraCleanLogger.error(`SQLite: init error — ${err.message}`);
         return false;
     }
 }
 
 async function runDataMigrations() {
     try {
-        UltraCleanLogger.info('💾 Database: Running data migrations...');
+        UltraCleanLogger.info('Migrations: running...');
         await initSudo();
         await migrateSudoToSupabase();
         await migrateWarningsToSupabase();
@@ -4410,7 +4396,7 @@ async function runDataMigrations() {
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;
 
-        UltraCleanLogger.success('💾 Database: Data migration & cache load complete');
+        UltraCleanLogger.success('Migrations: done');
     } catch (err) {
         UltraCleanLogger.error(`💾 Database: Migration error - ${err.message}`);
     }
@@ -4436,7 +4422,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         connectionOpenTime = 0;
         globalThis._botConnectionOpenTime = 0;
 
-        UltraCleanLogger.info('🚀 Initializing WhatsApp connection...');
+        UltraCleanLogger.info('WhatsApp: connecting...');
         
         // Handle different login modes
         if (loginMode === 'session' && loginData) {
@@ -7478,7 +7464,7 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 // // ====== MAIN APPLICATION ======
 // async function main() {
 //     try {
-//         UltraCleanLogger.success(`🚀 Starting ${getCurrentBotName()} v${VERSION} (PREFIXLESS & MEMBER DETECTION & ANTI-VIEWONCE)`);
+//         UltraCleanLogger.success(`Bot starting — ${getCurrentBotName()} v${VERSION}`);
 //         UltraCleanLogger.info(`Loaded prefix: "${isPrefixless ? 'none (prefixless)' : getCurrentPrefix()}"`);
 //         UltraCleanLogger.info(`Prefixless mode: ${isPrefixless ? '✅ ENABLED' : '❌ DISABLED'}`);
 //         UltraCleanLogger.info(`Auto-connect on link: ${AUTO_CONNECT_ON_LINK ? '✅' : '❌'}`);
@@ -7580,7 +7566,7 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 // ====== MAIN APPLICATION ======
 async function main() {
     try {
-        UltraCleanLogger.success(`🚀 Starting ${getCurrentBotName()} v${VERSION} (PREFIXLESS & MEMBER DETECTION & ANTI-VIEWONCE)`);
+        UltraCleanLogger.success(`Bot starting — ${getCurrentBotName()} v${VERSION}`);
         
         // ====== HEROKU INITIALIZATION ======
         UltraCleanLogger.info(`🌐 Environment: ${process.env.NODE_ENV || 'production'}`);
@@ -7622,18 +7608,12 @@ async function main() {
         }
         
         // Show bot features
-        UltraCleanLogger.info(`Loaded prefix: "${isPrefixless ? 'none (prefixless)' : getCurrentPrefix()}"`);
-        UltraCleanLogger.info(`Prefixless mode: ${isPrefixless ? '✅ ENABLED' : '❌ DISABLED'}`);
-        UltraCleanLogger.info(`Auto-connect on link: ${AUTO_CONNECT_ON_LINK ? '✅' : '❌'}`);
-        UltraCleanLogger.info(`Auto-connect on start: ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`);
-        UltraCleanLogger.info(`Rate limit protection: ${RATE_LIMIT_ENABLED ? '✅' : '❌'}`);
-        UltraCleanLogger.info(`Console filtering: ✅ ULTRA CLEAN ACTIVE`);
-        UltraCleanLogger.info(`⚡ Response speed: OPTIMIZED (Reduced delays by 50-70%)`);
-        UltraCleanLogger.info(`🔐 Session ID support: ✅ ENABLED (WOLF-BOT: format)`);
-        UltraCleanLogger.info(`🎯 Member Detection: ✅ ENABLED (New members in groups)`);
-        UltraCleanLogger.info(`🔐 Anti-ViewOnce: ✅ ENABLED (Private/Auto modes)`);
-        UltraCleanLogger.info(`👥 Welcome/Goodbye System: ✅ AVAILABLE (Off by default, enable per-group)`);
-        UltraCleanLogger.info(`🎯 Background processes: ✅ ENABLED`);
+        UltraCleanLogger.success(`Prefix: ${isPrefixless ? 'none (prefixless)' : getCurrentPrefix()}`);
+        UltraCleanLogger.success(`Auto-connect: ${AUTO_CONNECT_ON_LINK ? 'on' : 'off'}`);
+        UltraCleanLogger.success(`Rate limit: ${RATE_LIMIT_ENABLED ? 'on' : 'off'}`);
+        UltraCleanLogger.success('Member detection: on');
+        UltraCleanLogger.success('Anti-ViewOnce: on');
+        UltraCleanLogger.success('All systems ready');
         DiskManager.start();
         
         // ====== AUTO-RECONNECT LOGIC ======
