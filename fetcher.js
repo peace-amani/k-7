@@ -444,15 +444,71 @@ function patchChalk(nm) {
 function patchAxios(nm) {
   const axiosDir  = path.join(nm, 'axios');
   if (!fs.existsSync(axiosDir)) return;
-  const indexPath = path.join(axiosDir, 'index.js');
-  if (fs.existsSync(indexPath)) return;
-  const cjsPath   = path.join(axiosDir, 'dist', 'node', 'axios.cjs');
-  if (!fs.existsSync(cjsPath)) return;
-  fs.writeFileSync(indexPath, "'use strict';\nconst _a=require('./dist/node/axios.cjs');\nmodule.exports=_a.default||_a;\nmodule.exports.default=module.exports;\n");
+  const cjsShim = path.join(axiosDir, 'index.cjs');
+  const mjsShim = path.join(axiosDir, 'index.mjs');
+  if (fs.existsSync(cjsShim) && fs.existsSync(mjsShim)) return;
+  const cjs = [
+    "'use strict';",
+    "const https=require('https'),http=require('http'),zlib=require('zlib');",
+    "function doReq(cfg,rd){rd=rd||0;return new Promise((res,rej)=>{",
+    "  let u=cfg.url||'';",
+    "  if(cfg.baseURL&&!/^https?:/.test(u))u=cfg.baseURL.replace(/\\/$/,'')+'/'+u.replace(/^\\/+/,'');",
+    "  let p;try{p=new URL(u);}catch(e){return rej(e);}",
+    "  const mod=p.protocol==='https:'?https:http;",
+    "  const hdrs=Object.assign({'user-agent':'axios/1.0','accept':'application/json,text/plain,*/*'},cfg.headers||{});",
+    "  const body=cfg.data?(typeof cfg.data==='string'?cfg.data:JSON.stringify(cfg.data)):null;",
+    "  if(body)hdrs['content-length']=Buffer.byteLength(body);",
+    "  const opts={hostname:p.hostname,port:p.port||undefined,path:p.pathname+(p.search||''),method:(cfg.method||'GET').toUpperCase(),headers:hdrs};",
+    "  const r=mod.request(opts,resp=>{",
+    "    if([301,302,303,307,308].includes(resp.statusCode)&&resp.headers.location&&rd<10)",
+    "      return doReq({...cfg,url:resp.headers.location},rd+1).then(res).catch(rej);",
+    "    const enc=resp.headers['content-encoding']||'';",
+    "    let s=resp;",
+    "    if(enc.includes('gzip'))s=resp.pipe(zlib.createGunzip());",
+    "    else if(enc.includes('deflate'))s=resp.pipe(zlib.createInflate());",
+    "    const ch=[];s.on('data',c=>ch.push(c));",
+    "    s.on('end',()=>{",
+    "      const raw=Buffer.concat(ch).toString();",
+    "      let data=raw;",
+    "      if((resp.headers['content-type']||'').includes('json')){try{data=JSON.parse(raw);}catch{}}",
+    "      const out={data,status:resp.statusCode,statusText:resp.statusMessage,headers:resp.headers,config:cfg};",
+    "      if(resp.statusCode>=200&&resp.statusCode<300)res(out);",
+    "      else{const e=new Error('Request failed with status code '+resp.statusCode);e.response=out;rej(e);}",
+    "    });",
+    "    s.on('error',rej);",
+    "  });",
+    "  if(cfg.timeout)r.setTimeout(cfg.timeout,()=>r.destroy(new Error('timeout')));",
+    "  r.on('error',rej);if(body)r.write(body);r.end();",
+    "});}",
+    "const axios=cfg=>doReq(typeof cfg==='string'?{url:cfg,method:'GET'}:cfg);",
+    "['get','delete','head','options'].forEach(m=>{axios[m]=(url,c)=>doReq({...(c||{}),url,method:m.toUpperCase()});});",
+    "['post','put','patch'].forEach(m=>{axios[m]=(url,data,c)=>doReq({...(c||{}),url,data,method:m.toUpperCase()});});",
+    "axios.create=(def={})=>{",
+    "  const i=cfg=>doReq({...def,...(typeof cfg==='string'?{url:cfg}:(cfg||{}))});",
+    "  ['get','delete','head','options'].forEach(m=>{i[m]=(url,c)=>doReq({...def,...(c||{}),url,method:m.toUpperCase()});});",
+    "  ['post','put','patch'].forEach(m=>{i[m]=(url,data,c)=>doReq({...def,...(c||{}),url,data,method:m.toUpperCase()});});",
+    "  i.defaults={...def};i.interceptors={request:{use:()=>{}},response:{use:()=>{}}};return i;",
+    "};",
+    "axios.defaults={headers:{common:{}}};",
+    "axios.interceptors={request:{use:()=>{}},response:{use:()=>{}}};",
+    "axios.isAxiosError=e=>!!(e&&e.response);",
+    "axios.CanceledError=class CanceledError extends Error{};",
+    "axios.CancelToken={source:()=>({token:null,cancel:()=>{}})};",
+    "module.exports=axios;module.exports.default=axios;",
+  ].join('\n');
+  const mjs = [
+    "import _a from './index.cjs';",
+    "export default _a;",
+    "export const {create,get,post,put,patch,isAxiosError,defaults,interceptors,CanceledError,CancelToken}=_a;",
+  ].join('\n');
+  fs.writeFileSync(cjsShim, cjs);
+  fs.writeFileSync(mjsShim, mjs);
   try {
     const pkgPath = path.join(axiosDir, 'package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    pkg.main = 'index.js';
+    pkg.main = './index.cjs';
+    pkg.exports = { '.': { import: './index.mjs', require: './index.cjs', default: './index.cjs' } };
+    delete pkg.type;
     fs.writeFileSync(pkgPath, JSON.stringify(pkg));
   } catch {}
 }
