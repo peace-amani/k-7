@@ -319,8 +319,21 @@ async function downloadAndExtract() {
     throw new Error('Extraction completed but core directory was not found.');
   }
 
+  pinChalk4(EXTRACT_DIR);
   spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
   patchDotenv(EXTRACT_DIR);
+}
+
+function pinChalk4(dir) {
+  const pkgPath = path.join(dir, 'package.json');
+  if (!fs.existsSync(pkgPath)) return;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    let changed = false;
+    if (pkg.dependencies?.chalk)    { pkg.dependencies.chalk    = '^4.1.2'; changed = true; }
+    if (pkg.devDependencies?.chalk) { pkg.devDependencies.chalk  = '^4.1.2'; changed = true; }
+    if (changed) fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+  } catch {}
 }
 
 function patchChalk(nm) {
