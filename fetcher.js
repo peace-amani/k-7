@@ -217,20 +217,31 @@ const ENV_FILE           = path.join(__dirname, '.env');
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const C  = '\x1b[32m';
+const CY = '\x1b[36m';
+const GN = '\x1b[32m';
 const R  = '\x1b[0m';
 const RD = '\x1b[31m';
 const YL = '\x1b[33m';
+const DM = '\x1b[2m';
+const BD = '\x1b[1m';
 
-function log(msg)  { console.log(`${C}${msg}${R}`); }
-function err(msg)  { console.error(`${RD}${msg}${R}`); }
-function warn(msg) { console.log(`${YL}${msg}${R}`); }
+function ts() {
+  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+}
+function log(msg)  { console.log(`${DM}[${ts()}]${R} ℹ️  ${msg}`); }
+function ok(msg)   { console.log(`${DM}[${ts()}]${R} ✅  ${GN}${msg}${R}`); }
+function err(msg)  { console.error(`${DM}[${ts()}]${R} ❌  ${RD}${msg}${R}`); }
+function warn(msg) {
+  const t = ts();
+  console.log(`\n${YL}${BD}┌[ ⚠ WARNING ]${R}${YL}─── ${t}${R}`);
+  console.log(`${YL}└•• ${msg}${R}\n`);
+}
 
-process.stdout.write(`${C}
-┌──────────────────────────────────┐
+process.stdout.write(`${CY}
+╭──────────────────────────────────╮
 │   🐺 WOLFBOT v1.1.5              │
 │   Loader  : initializing...      │
-└──────────────────────────────────┘
+╰──────────────────────────────────╯
 ${R}`);
 
 // === RUNTIME PROFILE BOOTSTRAP ===
@@ -375,8 +386,8 @@ function startBot() {
   }
 
   if (!botDir) {
-    err('❌ No bot directory found. Cannot start bot.');
-    err('   Ensure the download succeeded or place bot files in a "core" folder.');
+    err('No bot directory found — download may have failed.');
+    err('Place bot files in a "core" folder and retry.');
     process.exit(1);
   }
 
@@ -385,7 +396,7 @@ function startBot() {
     if (fs.existsSync(path.join(botDir, file))) { mainFile = file; break; }
   }
 
-  log('🚀 Starting bot...');
+  ok('Bot launching...');
 
   const bot = spawn('node', [mainFile], {
     cwd:   botDir,
@@ -395,13 +406,13 @@ function startBot() {
 
   bot.on('close', (code) => {
     if (code !== 0 && code !== null) {
-      warn(`⚠️ Bot exited (code ${code}). Restarting in 3s...`);
+      warn(`Bot exited (code ${code}). Restarting in 3s...`);
       setTimeout(() => startBot(), 3000);
     }
   });
 
   bot.on('error', (e) => {
-    err(`❌ Failed to start: ${e.message}`);
+    err(`Failed to start: ${e.message}`);
     setTimeout(() => startBot(), 3000);
   });
 }
@@ -413,8 +424,8 @@ function startBot() {
     await downloadAndExtract();
     await applyLocalSettings();
   } catch (e) {
-    err(`❌ Setup failed: ${e.message}`);
-    err('   Attempting to start from existing files...');
+    err(`Setup failed: ${e.message}`);
+    warn('Attempting to start from existing files...');
   }
   startBot();
 })();
