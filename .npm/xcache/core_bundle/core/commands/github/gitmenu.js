@@ -1,0 +1,29 @@
+import { sendSubMenu, getBotName } from '../../lib/menuHelper.js';
+
+export default {
+  name: "gitmenu",
+  alias: ["githubmenu", "gitcmds", "githelp"],
+  desc: "Shows GitHub commands",
+  category: "GitHub",
+  usage: ".gitmenu",
+
+  async execute(sock, m, args, PREFIX) {
+    const jid = m.key.remoteJid;
+    const botName = getBotName();
+    await sock.sendMessage(jid, { text: `gitmenu loading...` }, { quoted: m });
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const commandsText = `╭─⊷ *🐙 GITHUB COMMANDS*
+│
+│  • gitclone
+│  • gitinfo
+│  • repanalyze
+│  • zip
+│  • update
+│  • repo
+│
+╰─⊷`;
+
+    await sendSubMenu(sock, jid, '🐙 GITHUB MENU', commandsText, m, PREFIX);
+  }
+};

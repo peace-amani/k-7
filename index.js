@@ -222,7 +222,9 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
+import { createRequire as _dotenvCR } from 'module';
+let dotenv;
+try { dotenv = _dotenvCR(import.meta.url)('dotenv'); } catch { dotenv = { config: () => {} }; }
 import chalk from 'chalk';
 import readline from 'readline';
 import { exec, execSync } from 'child_process';

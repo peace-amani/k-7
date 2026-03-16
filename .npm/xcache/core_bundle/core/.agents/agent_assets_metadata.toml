@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "_B7urb-NS7N00TKkEwoZd"
+uri = "file://README.md"
+type = "text"
+title = "WOLFBOT README.md (SEO Optimized)"
+
+[[outputs]]
+id = "PhsGcEe4-QZPNT6wPlADh"
+uri = "file://tostatus.txt"
+type = "text"
+title = "tostatus — Full Code & Documentation"
