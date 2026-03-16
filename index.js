@@ -230,7 +230,7 @@ import axios from "axios";
 import { normalizeMessageContent, downloadContentFromMessage, downloadMediaMessage, jidNormalizedUser, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
 import NodeCache from 'node-cache';
 import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudoByLid, getPhoneFromLid, getSudoList, hasUnmappedSudos } from './lib/sudo-store.js';
-import supabaseDb, { setConfigBotId } from './lib/database.js';
+import supabaseDb, { setConfigBotId, isUsingWasm } from './lib/database.js';
 import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
@@ -4315,7 +4315,8 @@ let _dbInitReady = false;
 function printStartupBox() {
     const prefixDisplay = isPrefixless ? 'none' : `"${getCurrentPrefix()}"`;
     const modeDisplay   = isPrefixless ? 'Prefixless' : 'Prefix';
-    const dbDisplay     = _dbInitReady  ? 'ready'      : 'unavailable';
+    const dbEngine      = isUsingWasm() ? 'WASM' : 'native';
+    const dbDisplay     = _dbInitReady  ? `ready (${dbEngine})` : 'unavailable';
     const inner = 32;
     const row = (s) => `│ ${s}${' '.repeat(Math.max(0, inner - s.length))} │`;
     const bar = `┌${'─'.repeat(inner + 2)}┐`;
