@@ -7648,8 +7648,12 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 // ====== MAIN APPLICATION ======
 async function main() {
     try {
-        // ====== HEROKU INITIALIZATION ======
-        
+        // ====== WEB SERVER — must bind to PORT before anything else (Heroku boot timeout) ======
+        try { await _dbInitPromise; } catch {}
+        printStartupBox();
+        await setupWebServer();
+        setupHerokuKeepAlive();
+
         // ====== HEROKU DETECTION & SETUP ======
         const isHeroku = process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.HEROKU_API_KEY || false;
         const herokuSessionId = process.env.SESSION_ID;
@@ -7680,11 +7684,6 @@ async function main() {
                 UltraCleanLogger.info('💡 Add SESSION_ID to Heroku Config Vars for auto-login');
             }
         }
-        
-        try { await _dbInitPromise; } catch {}
-        printStartupBox();
-        await setupWebServer();
-        setupHerokuKeepAlive();
         DiskManager.start();
         
         // ====== AUTO-RECONNECT LOGIC ======
