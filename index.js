@@ -4361,11 +4361,9 @@ function printStartupBox() {
 }
 
 function printConnectionBox(botName) {
-    const rainbow = ['\x1b[96m', '\x1b[94m', '\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[92m'];
     const R = '\x1b[0m';
-    const W = '\x1b[1m\x1b[97m';
-    let ci = 0;
-    const c = () => rainbow[ci++ % rainbow.length];
+    const W = '\x1b[1m\x1b[38;2;0;255;65m';
+    const c = () => '\x1b[38;2;0;255;65m';
 
     const vlen = (s) => {
         let n = 0;
@@ -4378,11 +4376,12 @@ function printConnectionBox(botName) {
     const W_INNER = 44;
     const bar = '─'.repeat(W_INNER + 2);
     const pad = (s) => s + ' '.repeat(Math.max(0, W_INNER - vlen(s)));
+    const G = '\x1b[38;2;0;255;65m';
     const row = (text, bold) => {
         const col = c();
         const inner = bold
             ? `${W} ${pad(text)} ${R}`
-            : ` ${pad(text)} `;
+            : `${G} ${pad(text)} ${R}`;
         return `${col}│${R}${inner}${col}│${R}`;
     };
 
