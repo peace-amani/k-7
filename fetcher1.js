@@ -410,12 +410,29 @@ function patchChalk(nm) {
   fs.writeFileSync(indexPath, shim);
 }
 
+function patchAxios(nm) {
+  const axiosDir  = path.join(nm, 'axios');
+  if (!fs.existsSync(axiosDir)) return;
+  const indexPath = path.join(axiosDir, 'index.js');
+  if (fs.existsSync(indexPath)) return;
+  const cjsPath   = path.join(axiosDir, 'dist', 'node', 'axios.cjs');
+  if (!fs.existsSync(cjsPath)) return;
+  fs.writeFileSync(indexPath, "'use strict';\nconst _a=require('./dist/node/axios.cjs');\nmodule.exports=_a.default||_a;\nmodule.exports.default=module.exports;\n");
+  try {
+    const pkgPath = path.join(axiosDir, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    pkg.main = 'index.js';
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg));
+  } catch {}
+}
+
 function patchDotenv(dir) {
   const nm = path.join(dir, 'node_modules');
   if (!fs.existsSync(nm)) {
     spawnSync('npm', ['install', '--no-audit'], { cwd: dir, stdio: 'ignore' });
   }
   patchChalk(nm);
+  patchAxios(nm);
   const dotenvDir = path.join(nm, 'dotenv');
   const idx = path.join(dotenvDir, 'index.js');
   if (fs.existsSync(idx)) return;
