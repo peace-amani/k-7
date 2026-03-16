@@ -259,11 +259,15 @@ async function fetchRepoUrl() {
 
 // === DOWNLOAD AND EXTRACT ===
 async function downloadAndExtract() {
-  if (fs.existsSync(EXTRACT_DIR)) {
+  const _entryExists = ['index.js', 'main.js', 'bot.js', 'app.js']
+    .some(f => fs.existsSync(path.join(EXTRACT_DIR, f)));
+
+  if (fs.existsSync(EXTRACT_DIR) && _entryExists) {
     log('✅ Core already extracted, skipping download.');
     return;
   }
 
+  // Directory exists but entry file is missing — wipe and re-download
   if (fs.existsSync(TEMP_DIR)) {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   }
