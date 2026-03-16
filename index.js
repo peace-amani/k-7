@@ -4373,7 +4373,7 @@ function printConnectionBox(botName) {
         }
         return n;
     };
-    const W_INNER = 20;
+    const W_INNER = 26;
     const bar = '─'.repeat(W_INNER + 2);
     const pad = (s) => s + ' '.repeat(Math.max(0, W_INNER - vlen(s)));
     const G = '\x1b[38;2;0;255;65m';
@@ -6191,7 +6191,7 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
     const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
     const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
     const _R  = '\x1b[0m';
-    const W   = 20;
+    const W   = 26;
     const bar = '─'.repeat(W + 2);
     const vlen = s => { let n=0; for (const ch of[...s]){const cp=ch.codePointAt(0);n+=(cp>0xFFFF||(cp>=0x1F000&&cp<=0x1FFFF))?2:1;} return n; };
     const pad  = s => { const v=vlen(s); return s+(v<W?' '.repeat(W-v):''); };
