@@ -482,12 +482,17 @@ function patchAxios(nm) {
   } catch {}
 }
 
+function canOpen(p) {
+  try { const fd = fs.openSync(p, 'r'); fs.closeSync(fd); return true; } catch { return false; }
+}
+
 function patchBaileys(nm) {
   const ALT_PATHS = [
     'lib/index.js','dist/index.js','src/index.js',
     'dist/node/index.js','lib/main.js','dist/main.js',
-    'build/index.js','lib/src/index.js',
+    'build/index.js','lib/src/index.js','index.js',
   ];
+  const TMP_NM = '/tmp/bfx_mods/node_modules';
 
   const pkgMap = {};
   const dirs = [];
@@ -501,21 +506,58 @@ function patchBaileys(nm) {
     }
   } catch {}
 
+  const needInstall = [];
+
   for (const [d, spec] of dirs) {
     try {
       const pkgPath = path.join(d, 'package.json');
-      if (!fs.existsSync(pkgPath)) continue;
+      if (!canOpen(pkgPath)) continue;
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
       const exp = pkg.exports;
       const emptyExports = exp != null && typeof exp === 'object' && !Array.isArray(exp) && Object.keys(exp).length === 0;
       const mainVal = pkg.main || 'index.js';
-      const mainMissing = !fs.existsSync(path.join(d, mainVal));
-      if (!emptyExports && !mainMissing) continue;
+      const mainBroken = !canOpen(path.join(d, mainVal));
+      if (!emptyExports && !mainBroken) continue;
+
+      let found = false;
       for (const alt of ALT_PATHS) {
         const altAbs = path.join(d, alt);
-        if (fs.existsSync(altAbs)) {
+        if (canOpen(altAbs)) {
           pkgMap[spec] = pathToFileURL(altAbs).href;
+          found = true;
           break;
+        }
+      }
+      if (!found) {
+        const parts = spec.split('/');
+        for (const alt of ALT_PATHS) {
+          const tmpF = path.join(TMP_NM, ...parts, alt);
+          if (canOpen(tmpF)) {
+            pkgMap[spec] = pathToFileURL(tmpF).href;
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) needInstall.push(spec);
+    } catch {}
+  }
+
+  if (needInstall.length > 0) {
+    try {
+      fs.mkdirSync('/tmp/bfx_mods', { recursive: true });
+      spawnSync('npm', ['install', '--prefix', '/tmp/bfx_mods', '--no-audit', '--no-fund', ...needInstall], {
+        stdio: 'ignore',
+        timeout: 120000,
+      });
+      for (const spec of needInstall) {
+        const parts = spec.split('/');
+        for (const alt of ALT_PATHS) {
+          const f = path.join(TMP_NM, ...parts, alt);
+          if (canOpen(f)) {
+            pkgMap[spec] = pathToFileURL(f).href;
+            break;
+          }
         }
       }
     } catch {}
@@ -527,7 +569,7 @@ function patchBaileys(nm) {
     `const MAP=${JSON.stringify(pkgMap)};`,
     "function isSubpath(s){const p=s.split('/');return s.startsWith('@')?p.length>2:p.length>1;}",
     "function pkgParts(s){const p=s.split('/');return s.startsWith('@')?p.slice(0,2):p.slice(0,1);}",
-    "const ALTS=['lib/index.js','dist/index.js','src/index.js','dist/node/index.js','lib/main.js','dist/main.js','build/index.js'];",
+    "const ALTS=['lib/index.js','dist/index.js','src/index.js','dist/node/index.js','lib/main.js','dist/main.js','build/index.js','index.js'];",
     "export async function resolve(s,c,n){",
     "  if(MAP[s])return{url:MAP[s],shortCircuit:true};",
     "  try{return await n(s,c);}catch(e){",
@@ -537,7 +579,7 @@ function patchBaileys(nm) {
     "        const base=dirname(fileURLToPath(c.parentURL));",
     "        const parts=pkgParts(s);",
     "        for(const a of ALTS){",
-    "          return{url:pathToFileURL(join(base,'node_modules',...parts,a)).href,shortCircuit:true};",
+    "          try{return await n(pathToFileURL(join(base,'node_modules',...parts,a)).href,c);}catch{}",
     "        }",
     "      }catch{}",
     "    }",
