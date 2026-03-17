@@ -514,25 +514,30 @@ function patchAxios(nm) {
 }
 
 function patchBaileys(nm) {
-  const BAILEYS_PKGS = [
-    ['@whiskeysockets', 'baileys'],
-    ['@adiwajshing', 'baileys'],
-    ['baileys'],
-  ];
-  const targets = [];
-  for (const parts of BAILEYS_PKGS) {
-    const c = path.join(nm, ...parts, 'lib', 'index.js');
-    if (fs.existsSync(c)) targets.push(c);
-  }
-  if (targets.length === 0) return;
-
   const hookSrc = [
     "import{existsSync}from'node:fs';",
-    "import{pathToFileURL}from'node:url';",
+    "import{pathToFileURL,fileURLToPath}from'node:url';",
+    "import{dirname,join}from'node:path';",
     "const SPECS=new Set(['@whiskeysockets/baileys','@adiwajshing/baileys','baileys']);",
-    `const T=${JSON.stringify(targets)};`,
+    "const NAMES={'@whiskeysockets/baileys':['@whiskeysockets','baileys'],'@adiwajshing/baileys':['@adiwajshing','baileys'],'baileys':['baileys']};",
+    "const ALTS=['lib/index.js','dist/index.js','src/index.js','dist/node/index.js'];",
+    "function findPkg(spec,parentURL){",
+    "  if(!parentURL)return null;",
+    "  const parts=NAMES[spec];if(!parts)return null;",
+    "  try{",
+    "    let d=dirname(fileURLToPath(parentURL));const seen=new Set();",
+    "    while(d&&!seen.has(d)){seen.add(d);",
+    "      const cand=join(d,'node_modules',...parts);",
+    "      if(existsSync(cand))return cand;",
+    "      const up=dirname(d);if(up===d)break;d=up;",
+    "    }",
+    "  }catch{}return null;",
+    "}",
     "export async function resolve(s,c,n){",
-    "  if(SPECS.has(s)){for(const t of T){if(existsSync(t))return{url:pathToFileURL(t).href,shortCircuit:true};}}",
+    "  if(SPECS.has(s)){",
+    "    const dir=findPkg(s,c.parentURL);",
+    "    if(dir){for(const a of ALTS){const t=join(dir,a);if(existsSync(t))return{url:pathToFileURL(t).href,shortCircuit:true};}}",
+    "  }",
     "  return n(s,c);",
     "}",
   ].join('\n');
@@ -667,14 +672,20 @@ function startBot() {
 
   ok('Bot launching...');
 
-  const nodeArgs = fs.existsSync('/tmp/_bfx_preload.mjs')
+  const _preloadOk = fs.existsSync('/tmp/_bfx_preload.mjs');
+  const nodeArgs = _preloadOk
     ? ['--import', 'file:///tmp/_bfx_preload.mjs', mainFile]
     : [mainFile];
+  const _env = { ...process.env };
+  if (_preloadOk) {
+    const _prev = (_env.NODE_OPTIONS || '').replace(/--import\s+file:\/\/\/tmp\/_bfx_preload\.mjs/g, '').trim();
+    _env.NODE_OPTIONS = (`${_prev} --import file:///tmp/_bfx_preload.mjs`).trim();
+  }
 
   const bot = spawn('node', nodeArgs, {
     cwd:   botDir,
     stdio: 'inherit',
-    env:   { ...process.env }
+    env:   _env,
   });
 
   bot.on('close', (code) => {
