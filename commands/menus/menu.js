@@ -3023,28 +3023,49 @@ case 3: {
 │ mediafire
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
-│ gpt       chatgpt
-│ gemini    cohere
-│ copilot   bing
-│ bard      claudeai
-│ grok      groq
-│ blackbox  mistral
-│ metai     perplexity
-│ qwenai    ilama
-│ venice    wormgpt
-│ deepseek  chatbot
+│ gpt
+│ chatgpt
+│ gemini
+│ cohere
+│ copilot
+│ bing
+│ bard
+│ claudeai
+│ grok
+│ groq
+│ blackbox
+│ mistral
+│ metai
+│ perplexity
+│ qwenai
+│ ilama
+│ venice
+│ wormgpt
+│ deepseek
+│ chatbot
 ├─ Open Source AI ─
-│ falcon    wizard
-│ vicuna    zephyr
-│ mixtral   dolphin
-│ phi       nous
-│ openchat  orca
-│ codellama solar
-│ starcoder yi
-│ internlm  chatglm
-│ nemotron  neural
-│ openhermes command
-│ tinyllama replitai
+│ falcon
+│ wizard
+│ vicuna
+│ zephyr
+│ mixtral
+│ dolphin
+│ phi
+│ nous
+│ openchat
+│ orca
+│ codellama
+│ solar
+│ starcoder
+│ yi
+│ internlm
+│ chatglm
+│ nemotron
+│ neural
+│ openhermes
+│ command
+│ tinyllama
+│ replitai
 └───────────────`,
 `┌──⌈ \`AI GENERATION\` ⌋
 │ imagine
@@ -8550,28 +8571,49 @@ case 7: {
 │ mediafire
 └───────────────`,
 `┌──⌈ \`AI COMMANDS\` ⌋
-│ gpt       chatgpt
-│ gemini    cohere
-│ copilot   bing
-│ bard      claudeai
-│ grok      groq
-│ blackbox  mistral
-│ metai     perplexity
-│ qwenai    ilama
-│ venice    wormgpt
-│ deepseek  chatbot
+│ gpt
+│ chatgpt
+│ gemini
+│ cohere
+│ copilot
+│ bing
+│ bard
+│ claudeai
+│ grok
+│ groq
+│ blackbox
+│ mistral
+│ metai
+│ perplexity
+│ qwenai
+│ ilama
+│ venice
+│ wormgpt
+│ deepseek
+│ chatbot
 ├─ Open Source AI ─
-│ falcon    wizard
-│ vicuna    zephyr
-│ mixtral   dolphin
-│ phi       nous
-│ openchat  orca
-│ codellama solar
-│ starcoder yi
-│ internlm  chatglm
-│ nemotron  neural
-│ openhermes command
-│ tinyllama replitai
+│ falcon
+│ wizard
+│ vicuna
+│ zephyr
+│ mixtral
+│ dolphin
+│ phi
+│ nous
+│ openchat
+│ orca
+│ codellama
+│ solar
+│ starcoder
+│ yi
+│ internlm
+│ chatglm
+│ nemotron
+│ neural
+│ openhermes
+│ command
+│ tinyllama
+│ replitai
 └───────────────`,
 `┌──⌈ \`AI GENERATION\` ⌋
 │ imagine
