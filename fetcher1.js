@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-import { URL } from 'url';
+import { URL, pathToFileURL } from 'url';
 import { spawn, spawnSync } from 'child_process';
 
 const __dirname = process.cwd();
@@ -483,30 +483,61 @@ function patchAxios(nm) {
 }
 
 function patchBaileys(nm) {
+  const ALT_PATHS = [
+    'lib/index.js','dist/index.js','src/index.js',
+    'dist/node/index.js','lib/main.js','dist/main.js',
+    'build/index.js','lib/src/index.js',
+  ];
+
+  const pkgMap = {};
+  const dirs = [];
+  try {
+    for (const e of fs.readdirSync(nm)) {
+      if (e.startsWith('@')) {
+        try { for (const s of fs.readdirSync(path.join(nm, e))) dirs.push([path.join(nm, e, s), `${e}/${s}`]); } catch {}
+      } else {
+        dirs.push([path.join(nm, e), e]);
+      }
+    }
+  } catch {}
+
+  for (const [d, spec] of dirs) {
+    try {
+      const pkgPath = path.join(d, 'package.json');
+      if (!fs.existsSync(pkgPath)) continue;
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const exp = pkg.exports;
+      const emptyExports = exp != null && typeof exp === 'object' && !Array.isArray(exp) && Object.keys(exp).length === 0;
+      const mainVal = pkg.main || 'index.js';
+      const mainMissing = !fs.existsSync(path.join(d, mainVal));
+      if (!emptyExports && !mainMissing) continue;
+      for (const alt of ALT_PATHS) {
+        const altAbs = path.join(d, alt);
+        if (fs.existsSync(altAbs)) {
+          pkgMap[spec] = pathToFileURL(altAbs).href;
+          break;
+        }
+      }
+    } catch {}
+  }
+
   const hookSrc = [
     "import{pathToFileURL,fileURLToPath}from'node:url';",
     "import{dirname,join}from'node:path';",
-    "const ALTS=['lib/index.js','dist/index.js','src/index.js','dist/node/index.js','lib/main.js','dist/main.js'];",
-    "function pkgParts(s){",
-    "  const p=s.split('/');",
-    "  return s.startsWith('@')?p.slice(0,2):p.slice(0,1);",
-    "}",
-    "function isSubpath(s){",
-    "  const p=s.split('/');",
-    "  return s.startsWith('@')?p.length>2:p.length>1;",
-    "}",
+    `const MAP=${JSON.stringify(pkgMap)};`,
+    "function isSubpath(s){const p=s.split('/');return s.startsWith('@')?p.length>2:p.length>1;}",
+    "function pkgParts(s){const p=s.split('/');return s.startsWith('@')?p.slice(0,2):p.slice(0,1);}",
+    "const ALTS=['lib/index.js','dist/index.js','src/index.js','dist/node/index.js','lib/main.js','dist/main.js','build/index.js'];",
     "export async function resolve(s,c,n){",
+    "  if(MAP[s])return{url:MAP[s],shortCircuit:true};",
     "  try{return await n(s,c);}catch(e){",
-    "    if(e.code==='ERR_MODULE_NOT_FOUND'&&c.parentURL&&!s.startsWith('.')",
-    "       &&!s.startsWith('/')&&!s.startsWith('node:')&&!s.startsWith('file:')&&!isSubpath(s)){",
-    "      const parts=pkgParts(s);",
+    "    if(e.code==='ERR_MODULE_NOT_FOUND'&&c.parentURL",
+    "       &&!s.startsWith('.')&&!s.startsWith('/')&&!s.startsWith('node:')&&!s.startsWith('file:')&&!isSubpath(s)){",
     "      try{",
     "        const base=dirname(fileURLToPath(c.parentURL));",
+    "        const parts=pkgParts(s);",
     "        for(const a of ALTS){",
-    "          try{",
-    "            const url=pathToFileURL(join(base,'node_modules',...parts,a)).href;",
-    "            return await n(url,{...c,parentURL:undefined});",
-    "          }catch{}",
+    "          return{url:pathToFileURL(join(base,'node_modules',...parts,a)).href,shortCircuit:true};",
     "        }",
     "      }catch{}",
     "    }",
