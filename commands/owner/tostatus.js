@@ -92,6 +92,13 @@ export default {
             const statusJidList = await buildStatusJidList(sock);
             console.log(`📱 [toStatus] Posting ${mediaType} to ${statusJidList.length} contacts`);
 
+            if (statusJidList.length === 0) {
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } }).catch(() => {});
+                return sock.sendMessage(chatId, {
+                    text: '❌ No valid recipients found. Make sure the bot has contacted at least one person first.'
+                }, { quoted: msg });
+            }
+
             const extraOpts = mediaType === 'Text' ? { backgroundColor: bgColor, font } : {};
             const result = await postPersonalStatus(sock, content, statusJidList, extraOpts);
 
