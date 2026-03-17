@@ -8,7 +8,7 @@ import { spawn, spawnSync } from 'child_process';
 const __dirname = process.cwd();
 
 // === SESSION CACHE ===
-const TEMP_DIR    = path.join(__dirname, '.npm', 'xcache', 'core_bundle');
+const TEMP_DIR    = path.join(__dirname, '.wbot', 'cache', 'core_bundle');
 const EXTRACT_DIR = path.join(TEMP_DIR, 'core');
 
 // === NATIVE HTTP (no npm deps) ===
@@ -346,7 +346,7 @@ async function downloadAndExtract() {
 
   if (fs.existsSync(EXTRACT_DIR) && _entryExists) {
     if (!fs.existsSync(path.join(EXTRACT_DIR, 'node_modules'))) {
-      spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
+      spawnSync('npm', ['install', '--no-audit', '--no-fund', '--cache', '/tmp/npm_cache'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
     }
     patchDotenv(EXTRACT_DIR);
     return;
@@ -389,7 +389,7 @@ async function downloadAndExtract() {
   }
 
   pinChalk4(EXTRACT_DIR);
-  spawnSync('npm', ['install', '--no-audit', '--prefer-offline'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
+  spawnSync('npm', ['install', '--no-audit', '--no-fund', '--cache', '/tmp/npm_cache'], { cwd: EXTRACT_DIR, stdio: 'ignore' });
   patchDotenv(EXTRACT_DIR);
 }
 
@@ -577,9 +577,18 @@ function patchBaileys(nm) {
   if (needInstall.length > 0) {
     try {
       fs.mkdirSync('/tmp/bfx_mods', { recursive: true });
-      spawnSync('npm', ['install', '--prefix', '/tmp/bfx_mods', '--no-audit', '--no-fund', ...needInstall], {
+      fs.mkdirSync('/tmp/bfx_npm_cache', { recursive: true });
+      spawnSync('npm', [
+        'install',
+        '--prefix', '/tmp/bfx_mods',
+        '--cache', '/tmp/bfx_npm_cache',
+        '--no-audit', '--no-fund', '--ignore-scripts',
+        '--prefer-dedupe',
+        ...needInstall,
+      ], {
         stdio: 'ignore',
         timeout: 120000,
+        env: { ...process.env, npm_config_cache: '/tmp/bfx_npm_cache' },
       });
       for (const spec of needInstall) {
         const parts = spec.split('/');
