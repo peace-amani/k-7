@@ -483,34 +483,25 @@ function patchAxios(nm) {
 }
 
 function patchBaileys(nm) {
-  const coreDir = path.dirname(nm);
   const BAILEYS_PKGS = [
     ['@whiskeysockets', 'baileys'],
     ['@adiwajshing', 'baileys'],
     ['baileys'],
   ];
-  let libPath = null;
+  const targets = [];
   for (const parts of BAILEYS_PKGS) {
-    const candidate = path.join(nm, ...parts, 'lib', 'index.js');
-    if (fs.existsSync(candidate)) { libPath = candidate; break; }
+    const c = path.join(nm, ...parts, 'lib', 'index.js');
+    if (fs.existsSync(c)) targets.push(c);
   }
-  if (!libPath) return;
+  if (targets.length === 0) return;
 
   const hookSrc = [
-    "import{dirname,join}from'node:path';",
-    "import{fileURLToPath,pathToFileURL}from'node:url';",
     "import{existsSync}from'node:fs';",
-    "const __d=dirname(fileURLToPath(import.meta.url));",
-    "const NM=join(__d,'node_modules');",
-    "const PKGS=[['@whiskeysockets','baileys'],['@adiwajshing','baileys'],['baileys']];",
+    "import{pathToFileURL}from'node:url';",
     "const SPECS=new Set(['@whiskeysockets/baileys','@adiwajshing/baileys','baileys']);",
+    `const T=${JSON.stringify(targets)};`,
     "export async function resolve(s,c,n){",
-    "  if(SPECS.has(s)){",
-    "    for(const p of PKGS){",
-    "      const t=join(NM,...p,'lib','index.js');",
-    "      if(existsSync(t))return{url:pathToFileURL(t).href,shortCircuit:true};",
-    "    }",
-    "  }",
+    "  if(SPECS.has(s)){for(const t of T){if(existsSync(t))return{url:pathToFileURL(t).href,shortCircuit:true};}}",
     "  return n(s,c);",
     "}",
   ].join('\n');
@@ -518,14 +509,11 @@ function patchBaileys(nm) {
   const preloadSrc = [
     "import{register}from'node:module';",
     "import{pathToFileURL}from'node:url';",
-    "import{fileURLToPath}from'node:url';",
-    "import{dirname,join}from'node:path';",
-    "const d=dirname(fileURLToPath(import.meta.url));",
-    "register(pathToFileURL(join(d,'_bfx_hook.mjs')));",
+    "register(pathToFileURL('/tmp/_bfx_hook.mjs'));",
   ].join('\n');
 
-  try { fs.writeFileSync(path.join(coreDir, '_bfx_hook.mjs'), hookSrc); } catch {}
-  try { fs.writeFileSync(path.join(coreDir, '_bfx_preload.mjs'), preloadSrc); } catch {}
+  try { fs.writeFileSync('/tmp/_bfx_hook.mjs', hookSrc); } catch {}
+  try { fs.writeFileSync('/tmp/_bfx_preload.mjs', preloadSrc); } catch {}
 }
 
 function patchLegacyMains(nm) {
@@ -651,9 +639,8 @@ function startBot() {
 
   ok('Bot launching...');
 
-  const preload = path.join(botDir, '_bfx_preload.mjs');
-  const nodeArgs = fs.existsSync(preload)
-    ? ['--import', './_bfx_preload.mjs', mainFile]
+  const nodeArgs = fs.existsSync('/tmp/_bfx_preload.mjs')
+    ? ['--import', 'file:///tmp/_bfx_preload.mjs', mainFile]
     : [mainFile];
 
   const bot = spawn('node', nodeArgs, {
