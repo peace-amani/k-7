@@ -1352,6 +1352,7 @@ const DiskManager = {
     CHECK_INTERVAL: 3 * 60 * 1000,
     CLEANUP_INTERVAL: 10 * 60 * 1000,
     lastWarning: 0,
+    lastCritical: 0,
     lastCleanup: 0,
     isLow: false,
 
@@ -1650,7 +1651,10 @@ const DiskManager = {
 
         if (freeMB < this.CRITICAL_MB) {
             this.isLow = true;
-            UltraCleanLogger.error(`🚨 CRITICAL: Only ${freeMB}MB disk space left! Running aggressive cleanup...`);
+            if (Date.now() - this.lastCritical > 30 * 60 * 1000) {
+                UltraCleanLogger.error(`🚨 CRITICAL: Only ${freeMB}MB disk space left! Running aggressive cleanup...`);
+                this.lastCritical = Date.now();
+            }
             await this.runCleanupAsync(true);
         } else if (freeMB < this.WARNING_MB) {
             this.isLow = true;
