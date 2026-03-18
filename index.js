@@ -5489,25 +5489,24 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             if (gc?.exemptLinks && antilinkIsExempt(linkResult.links, gc.exemptLinks)) {
                             } else {
                                 let isSenderAdmin = false;
-                                if (gc?.exemptAdmins !== false) {
-                                    try {
-                                        const gMeta = await sock.groupMetadata(chatJid);
+                                let gMeta = null;
+                                try {
+                                    gMeta = await sock.groupMetadata(chatJid);
+                                    if (gc?.exemptAdmins !== false) {
                                         const senderP = gMeta.participants.find(p => {
                                             const pClean = p.id.split(':')[0].split('@')[0];
                                             return pClean === senderClean;
                                         });
                                         isSenderAdmin = senderP?.admin === 'admin' || senderP?.admin === 'superadmin';
-                                    } catch {}
-                                }
+                                    }
+                                } catch {}
 
                                 if (!isSenderAdmin) {
                                     const mode = antilinkGetMode(chatJid);
                                     UltraCleanLogger.warning(`🔗 ANTILINK: Link from ${senderClean} in ${chatJid.split('@')[0]} [${mode}]`);
 
                                     if (mode === 'delete' || mode === 'kick') {
-                                        try {
-                                            await sock.sendMessage(chatJid, { delete: msg.key });
-                                        } catch {}
+                                        try { await sock.sendMessage(chatJid, { delete: msg.key }); } catch {}
                                     }
 
                                     if (mode === 'warn') {
@@ -5525,15 +5524,35 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                             });
                                         } catch {}
                                     } else if (mode === 'kick') {
+                                        const kickJid = `${senderClean}@s.whatsapp.net`;
                                         try {
-                                            const kickJid = `${senderClean}@s.whatsapp.net`;
-                                            await sock.sendMessage(chatJid, {
-                                                text: `🚫 @${senderClean} has been removed for sharing links.`,
-                                                mentions: [kickJid]
+                                            // Check bot is admin before attempting kick
+                                            const botClean = (sock.user?.id || '').split(':')[0].split('@')[0];
+                                            const botP = gMeta?.participants?.find(p => {
+                                                const pClean = p.id.split(':')[0].split('@')[0];
+                                                return pClean === botClean;
                                             });
-                                            await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                            const isBotAdmin = botP?.admin === 'admin' || botP?.admin === 'superadmin';
+
+                                            if (!isBotAdmin) {
+                                                await sock.sendMessage(chatJid, {
+                                                    text: `⚠️ Cannot remove @${senderClean} — I need admin rights to kick members.`,
+                                                    mentions: [kickJid]
+                                                });
+                                            } else {
+                                                // Kick first, announce only on success
+                                                await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                                await sock.sendMessage(chatJid, {
+                                                    text: `🚫 @${senderClean} has been removed for sharing links.`,
+                                                    mentions: [kickJid]
+                                                });
+                                            }
                                         } catch (kickErr) {
-                                            UltraCleanLogger.warning(`🔗 ANTILINK kick failed: ${kickErr.message}`);
+                                            UltraCleanLogger.warning(`🔗 ANTILINK kick failed for ${kickJid}: ${kickErr.message}`);
+                                            await sock.sendMessage(chatJid, {
+                                                text: `⚠️ Failed to remove @${senderClean}. Check my admin permissions.`,
+                                                mentions: [kickJid]
+                                            }).catch(() => {});
                                         }
                                     }
 
