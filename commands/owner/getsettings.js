@@ -20,57 +20,20 @@ function safeReadJSON(filePath) {
 }
 
 function getPrefix() {
-    const prefixData = safeReadJSON(path.join(__dirname, '../../data/prefix.json'));
-    if (prefixData?.prefix !== undefined) return prefixData.prefix || 'none (prefixless)';
-
     if (global.prefix) return global.prefix;
     if (global.CURRENT_PREFIX) return global.CURRENT_PREFIX;
     if (process.env.PREFIX) return process.env.PREFIX;
-
     return '?';
 }
 
 function getPrefixlessStatus() {
-    const prefixData = safeReadJSON(path.join(__dirname, '../../data/prefix.json'));
-    if (prefixData?.isPrefixless) return true;
-    return false;
+    const cfg = safeReadJSON(path.join(__dirname, '../../data/prefix.json'));
+    return cfg?.isPrefixless || false;
 }
 
 function getBotMode() {
     const data = safeReadJSON(path.join(__dirname, '../../bot_mode.json'));
     return data?.mode || 'public';
-}
-
-function getAutotypingState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/autotyping/config.json'));
-    if (!data) return 'OFF';
-    if (!data.enabled) return 'OFF';
-    return `ON (${data.mode || 'all'})`;
-}
-
-function getAutorecordingState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/autorecording/config.json'));
-    if (!data) return 'OFF';
-    if (!data.enabled) return 'OFF';
-    return `ON (${data.mode || 'all'})`;
-}
-
-function getAnticallState() {
-    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
-    if (!data) return 'OFF';
-    const settings = data.settings || {};
-    const anyEnabled = Object.values(settings).some(s => s?.enabled);
-    if (!anyEnabled) return 'OFF';
-    const first = Object.values(settings).find(s => s?.enabled);
-    return `ON (${first?.mode || 'decline'})`;
-}
-
-function getAnticallMessage() {
-    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
-    if (!data) return 'Calls are not allowed!';
-    const settings = data.settings || {};
-    const first = Object.values(settings).find(s => s?.enabled);
-    return first?.message || 'Calls are not allowed!';
 }
 
 function getMenuStyle() {
@@ -95,23 +58,7 @@ function getMenuImageUrl() {
         const data = safeReadJSON(p);
         if (data?.url) return data.url;
     }
-    const imgPath = getMenuImage();
-    if (imgPath) return 'Local (wolfbot.jpg)';
-    return 'Default';
-}
-
-function getWelcomeStatus() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/welcome_data.json'));
-    if (!data) return 'No groups configured';
-    const count = Object.keys(data).length;
-    return `${count} group(s) configured`;
-}
-
-function getGoodbyeStatus() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/goodbye_data.json'));
-    if (!data) return 'No groups configured';
-    const count = Object.keys(data).length;
-    return `${count} group(s) configured`;
+    return getMenuImage() ? 'Local (wolfbot.jpg)' : 'Default';
 }
 
 function getFooter() {
@@ -119,48 +66,131 @@ function getFooter() {
     return data?.footer || `${getBotName()} is the ALPHA`;
 }
 
-function getAntideleteState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/antidelete/antidelete.json'));
-    if (!data) return 'PRIVATE (default)';
-    if (!data.enabled && data.enabled !== undefined) return 'OFF';
-    return (data.mode || 'private').toUpperCase();
+function getAutotypingState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/autotyping/config.json'));
+    if (!data || !data.mode || data.mode === 'off') return '🔴 OFF';
+    return `🟢 ON (${data.mode})`;
 }
 
-function getAntiViewOnceState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/antiviewonce/config.json'));
-    if (!data) return 'PRIVATE (default)';
-    // New gc/pm format
-    if (data.gc && data.pm) {
-        const gc = data.gc.enabled ? data.gc.mode.toUpperCase() : 'OFF';
-        const pm = data.pm.enabled ? data.pm.mode.toUpperCase() : 'OFF';
-        return `GC: ${gc} | PM: ${pm}`;
-    }
-    // Legacy flat format
-    if (!data.enabled && data.enabled !== undefined) return 'OFF';
-    if (data.mode === 'off') return 'OFF';
-    return (data.mode || 'private').toUpperCase();
+function getAutorecordingState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/autorecording/config.json'));
+    if (!data || !data.mode || data.mode === 'off') return '🔴 OFF';
+    return `🟢 ON (${data.mode})`;
 }
 
 function getAutoreadState() {
     const data = safeReadJSON(path.join(__dirname, '../../autoread_settings.json'));
-    if (!data) return 'OFF';
-    return data.enabled ? `ON (${data.mode || 'both'})` : 'OFF';
+    if (!data || !data.enabled) return '🔴 OFF';
+    return `🟢 ON (${data.mode || 'both'})`;
 }
 
 function getAutoViewStatusState() {
-    const data = safeReadJSON('./data/autoViewConfig.json');
-    if (!data) return 'OFF';
-    return data.enabled ? 'ON' : 'OFF';
+    const data = safeReadJSON(path.join(__dirname, '../../data/autoViewConfig.json'));
+    if (!data) return '🔴 OFF';
+    return data.enabled ? '🟢 ON' : '🔴 OFF';
+}
+
+function getAutoDownloadStatusState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/autoDownloadStatusConfig.json'));
+    if (!data || !data.enabled) return '🔴 OFF';
+    return `🟢 ON (${data.mode || 'private'})`;
+}
+
+function getAutoreactStatusState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/autoReactConfig.json'));
+    if (!data || !data.enabled) return '🔴 OFF';
+    const emoji = data.fixedEmoji || data.emoji || '';
+    const mode = data.mode || 'fixed';
+    return `🟢 ON (${mode}${emoji ? ' ' + emoji : ''})`;
+}
+
+function getAnticallState() {
+    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
+    if (!data) return '🔴 OFF';
+    const settings = data.settings || {};
+    const first = Object.values(settings).find(s => s?.enabled);
+    if (!first) return '🔴 OFF';
+    return `🟢 ON (${first.mode || 'decline'})`;
+}
+
+function getAnticallMessage() {
+    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
+    if (!data) return '—';
+    const settings = data.settings || {};
+    const first = Object.values(settings).find(s => s?.enabled);
+    if (!first?.autoMessage || !first?.message) return 'None';
+    const msg = first.message;
+    return msg.length > 38 ? msg.substring(0, 38) + '…' : msg;
+}
+
+function getAntiViewOnceState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/antiviewonce/config.json'));
+    if (!data) return '🔴 OFF';
+    if (data.gc && data.pm) {
+        const gc = data.gc.enabled ? data.gc.mode.toUpperCase() : 'OFF';
+        const pm = data.pm.enabled ? data.pm.mode.toUpperCase() : 'OFF';
+        if (gc === 'OFF' && pm === 'OFF') return '🔴 OFF';
+        return `🟢 GC: ${gc} | PM: ${pm}`;
+    }
+    if (!data.enabled || data.mode === 'off') return '🔴 OFF';
+    return `🟢 ${(data.mode || 'private').toUpperCase()}`;
 }
 
 function getAntibugState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/antibug/config.json'));
-    if (!data) return 'No groups enabled';
-    const enabled = Object.values(data).filter(v => v?.enabled);
-    if (enabled.length === 0) return 'No groups enabled';
-    return `${enabled.length} group(s) enabled`;
+    const cfg = globalThis._antibugConfig;
+    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    const enabled = Object.values(cfg).filter(v => v?.enabled);
+    if (enabled.length === 0) return '🔴 OFF';
+    return `🟢 ${enabled.length} group(s)`;
 }
 
+function getAntilinkState() {
+    const cfg = globalThis._antilinkConfig;
+    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    const enabled = Object.values(cfg).filter(v => v?.enabled);
+    if (enabled.length === 0) return '🔴 OFF';
+    return `🟢 ${enabled.length} group(s)`;
+}
+
+function getAntispamState() {
+    const cfg = globalThis._antispamConfig;
+    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    const enabled = Object.values(cfg).filter(v => v?.enabled);
+    if (enabled.length === 0) return '🔴 OFF';
+    return `🟢 ${enabled.length} group(s)`;
+}
+
+function getOnlinePresenceState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/presence/config.json'));
+    if (!data || !data.enabled) return '🔴 OFF';
+    return `🟢 ON (${data.mode || 'online'})`;
+}
+
+function getDispState() {
+    const data = safeReadJSON(path.join(__dirname, '../../disp_settings.json'));
+    if (!data) return '🔴 OFF';
+    const groups = Object.keys(data).filter(k => data[k]?.enabled);
+    if (groups.length === 0) return '🔴 OFF';
+    return `🟢 ${groups.length} group(s)`;
+}
+
+async function getWelcomeStatus() {
+    try {
+        const data = await db.getConfig('welcome_data', {});
+        const count = data && typeof data === 'object' ? Object.keys(data).length : 0;
+        return count ? `${count} group(s)` : 'No groups';
+    } catch {}
+    return 'No groups';
+}
+
+async function getGoodbyeStatus() {
+    try {
+        const data = await db.getConfig('goodbye_data', {});
+        const count = data && typeof data === 'object' ? Object.keys(data).length : 0;
+        return count ? `${count} group(s)` : 'No groups';
+    } catch {}
+    return 'No groups';
+}
 
 function formatUptime(seconds) {
     const d = Math.floor(seconds / 86400);
@@ -211,21 +241,76 @@ export default {
             const isPrefixless = getPrefixlessStatus();
             const prefix = isPrefixless ? 'none (prefixless)' : getPrefix();
             const mode = getBotMode();
-            const autotyping = getAutotypingState();
-            const autorecording = getAutorecordingState();
-            const anticall = getAnticallState();
-            const anticallMsg = getAnticallMessage();
             const menuStyle = getMenuStyle();
             const menuImageUrl = getMenuImageUrl();
-            const warnLimit = getPerGroupLimit('default');
-            const welcomeStatus = getWelcomeStatus();
-            const goodbyeStatus = getGoodbyeStatus();
             const footer = getFooter();
-            const antidelete = getAntideleteState();
-            const antiViewOnce = getAntiViewOnceState();
+
+            const autotyping = getAutotypingState();
+            const autorecording = getAutorecordingState();
             const autoread = getAutoreadState();
             const autoViewStatus = getAutoViewStatusState();
+            const autoDownloadStatus = getAutoDownloadStatusState();
+            const autoreactStatus = getAutoreactStatusState();
+
+            const anticall = getAnticallState();
+            const anticallMsg = getAnticallMessage();
+            const antiViewOnce = getAntiViewOnceState();
             const antibug = getAntibugState();
+            const antilink = getAntilinkState();
+            const antispam = getAntispamState();
+            const onlinePresence = getOnlinePresenceState();
+            const dispState = getDispState();
+
+            const warnLimit = getPerGroupLimit('default');
+            const welcomeStatus = await getWelcomeStatus();
+            const goodbyeStatus = await getGoodbyeStatus();
+
+            let antidelete = '⚪ Unknown';
+            try {
+                const adCfg = await db.getConfig('antidelete_settings', null);
+                if (adCfg && typeof adCfg.enabled === 'boolean') {
+                    antidelete = adCfg.enabled ? `🟢 ${(adCfg.mode || 'private').toUpperCase()}` : '🔴 OFF';
+                } else {
+                    antidelete = '🔴 OFF';
+                }
+            } catch {}
+
+            let antidemote = '⚪ Not configured';
+            try {
+                const adm = await db.getConfig('antidemote_config', null);
+                if (adm && typeof adm === 'object') {
+                    const en = Object.values(adm).filter(v => v?.enabled);
+                    antidemote = en.length ? `🟢 ${en.length} group(s)` : '🔴 OFF';
+                }
+            } catch {}
+
+            let antipromote = '⚪ Not configured';
+            try {
+                const apm = safeReadJSON(path.join(__dirname, '../../data/antipromote/config.json'))
+                    || await db.getConfig('antipromote_config', null);
+                if (apm && typeof apm === 'object') {
+                    const en = Object.values(apm).filter(v => v?.enabled);
+                    antipromote = en.length ? `🟢 ${en.length} group(s)` : '🔴 OFF';
+                }
+            } catch {}
+
+            let antideleteStatusDisplay = '🔴 OFF';
+            try {
+                const adsInfo = getStatusAntideleteInfo();
+                if (adsInfo.enabled) {
+                    antideleteStatusDisplay = `🟢 ${(adsInfo.mode || 'private').toUpperCase()}`;
+                }
+            } catch {}
+
+            let antieditDisplay = '🔴 OFF';
+            try {
+                const aeInfo = getAntieditInfo();
+                if (aeInfo.gc.enabled || aeInfo.pm.enabled) {
+                    const gcMode = aeInfo.gc.enabled ? aeInfo.gc.mode.toUpperCase() : 'OFF';
+                    const pmMode = aeInfo.pm.enabled ? aeInfo.pm.mode.toUpperCase() : 'OFF';
+                    antieditDisplay = `🟢 GC: ${gcMode} | PM: ${pmMode}`;
+                }
+            } catch {}
 
             let readReceipts = '⚪ Not set';
             try {
@@ -239,26 +324,6 @@ export default {
             const memUsage = `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`;
             const totalCmds = globalThis._loadedCommandCount || countCommands(path.join(__dirname, '../../commands'));
 
-            let antideleteStatusDisplay = 'OFF';
-            try {
-                const adsInfo = getStatusAntideleteInfo();
-                if (adsInfo.enabled) {
-                    antideleteStatusDisplay = (adsInfo.mode || 'private').toUpperCase();
-                } else {
-                    antideleteStatusDisplay = 'OFF';
-                }
-            } catch {}
-
-            let antieditDisplay = 'OFF';
-            try {
-                const aeInfo = getAntieditInfo();
-                if (aeInfo.gc.enabled || aeInfo.pm.enabled) {
-                    const gcMode = aeInfo.gc.enabled ? aeInfo.gc.mode.toUpperCase() : 'OFF';
-                    const pmMode = aeInfo.pm.enabled ? aeInfo.pm.mode.toUpperCase() : 'OFF';
-                    antieditDisplay = `GC: ${gcMode} | PM: ${pmMode}`;
-                }
-            } catch {}
-
             let caption = `⚙️  \`W.O.L.F  𝚂𝙴𝚃𝚃𝙸𝙽𝙶𝚂\`\n\n`;
 
             caption += `┌─── *BASIC CONFIG* ───\n`;
@@ -269,7 +334,10 @@ export default {
             caption += `│ ◎ *Mode:* ${mode.toUpperCase()}\n`;
             caption += `│ ◎ *Menu Style:* ${menuStyle}\n`;
             caption += `│ ◎ *Menu Image:* ${menuImageUrl}\n`;
-            caption += `│ ◎ *Footer/Caption:* ${footer}\n`;
+            caption += `│ ◎ *Footer:* ${footer.length > 40 ? footer.substring(0, 40) + '…' : footer}\n`;
+            caption += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
+            caption += `│ ◎ *Online Presence:* ${onlinePresence}\n`;
+            caption += `│ ◎ *Disappearing Msgs:* ${dispState}\n`;
             caption += `└──────────────\n\n`;
 
             caption += `┌─── *AUTOMATION* ───\n`;
@@ -277,17 +345,22 @@ export default {
             caption += `│ ◎ *Autorecording:* ${autorecording}\n`;
             caption += `│ ◎ *Autoread:* ${autoread}\n`;
             caption += `│ ◎ *Auto View Status:* ${autoViewStatus}\n`;
+            caption += `│ ◎ *Auto Download Status:* ${autoDownloadStatus}\n`;
+            caption += `│ ◎ *Autoreact Status:* ${autoreactStatus}\n`;
             caption += `└──────────────\n\n`;
 
             caption += `┌─── *PROTECTION* ───\n`;
             caption += `│ ◎ *Anticall:* ${anticall}\n`;
-            caption += `│ ◎ *Anticall Msg:* ${anticallMsg.substring(0, 40)}${anticallMsg.length > 40 ? '...' : ''}`;
-            caption += `\n│ ◎ *Antidelete:* ${antidelete}\n`;
+            caption += `│ ◎ *Anticall Msg:* ${anticallMsg}\n`;
+            caption += `│ ◎ *Antidelete:* ${antidelete}\n`;
             caption += `│ ◎ *Antidelete Status:* ${antideleteStatusDisplay}\n`;
             caption += `│ ◎ *Antiedit:* ${antieditDisplay}\n`;
             caption += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
+            caption += `│ ◎ *Antilink:* ${antilink}\n`;
+            caption += `│ ◎ *Antispam:* ${antispam}\n`;
             caption += `│ ◎ *Antibug:* ${antibug}\n`;
-            caption += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
+            caption += `│ ◎ *Antidemote:* ${antidemote}\n`;
+            caption += `│ ◎ *Antipromote:* ${antipromote}\n`;
             caption += `│ ◎ *Warn Limit:* ${warnLimit}\n`;
             caption += `└──────────────\n\n`;
 
