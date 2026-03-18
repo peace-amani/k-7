@@ -56,15 +56,21 @@ function getAutorecordingState() {
 }
 
 function getAnticallState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/anticall/config.json'));
+    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
     if (!data) return 'OFF';
-    if (!data.enabled) return 'OFF';
-    return `ON (${data.action || 'reject'})`;
+    const settings = data.settings || {};
+    const anyEnabled = Object.values(settings).some(s => s?.enabled);
+    if (!anyEnabled) return 'OFF';
+    const first = Object.values(settings).find(s => s?.enabled);
+    return `ON (${first?.mode || 'decline'})`;
 }
 
 function getAnticallMessage() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/anticall/config.json'));
-    return data?.message || 'Calls are not allowed!';
+    const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
+    if (!data) return 'Calls are not allowed!';
+    const settings = data.settings || {};
+    const first = Object.values(settings).find(s => s?.enabled);
+    return first?.message || 'Calls are not allowed!';
 }
 
 function getMenuStyle() {
@@ -136,9 +142,9 @@ function getAntiViewOnceState() {
 }
 
 function getAutoreadState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/autoread/config.json'));
+    const data = safeReadJSON(path.join(__dirname, '../../autoread_settings.json'));
     if (!data) return 'OFF';
-    return data.enabled ? 'ON' : 'OFF';
+    return data.enabled ? `ON (${data.mode || 'both'})` : 'OFF';
 }
 
 function getAutoViewStatusState() {
@@ -220,6 +226,14 @@ export default {
             const autoread = getAutoreadState();
             const autoViewStatus = getAutoViewStatusState();
             const antibug = getAntibugState();
+
+            let readReceipts = '⚪ Not set';
+            try {
+                const rrPref = await db.getConfig('read_receipts_pref', null);
+                if (rrPref?.mode === 'all') readReceipts = '🟢 ON';
+                else if (rrPref?.mode === 'none') readReceipts = '🔴 OFF';
+            } catch {}
+
             const platform = detectPlatform();
             const uptime = formatUptime(process.uptime());
             const memUsage = `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`;
@@ -273,6 +287,7 @@ export default {
             caption += `│ ◎ *Antiedit:* ${antieditDisplay}\n`;
             caption += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
             caption += `│ ◎ *Antibug:* ${antibug}\n`;
+            caption += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
             caption += `│ ◎ *Warn Limit:* ${warnLimit}\n`;
             caption += `└──────────────\n\n`;
 
