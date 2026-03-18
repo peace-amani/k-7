@@ -74,8 +74,8 @@ function getAnticallMessage() {
 }
 
 function getMenuStyle() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/menustyle.json'));
-    return data?.style || '1';
+    const data = safeReadJSON(path.join(__dirname, '../menus/current_style.json'));
+    return data?.current || '1';
 }
 
 function getMenuImage() {
