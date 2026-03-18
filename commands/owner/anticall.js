@@ -688,92 +688,70 @@ setInterval(() => {
 
 export default {
     name: 'anticall',
+    alias: ['callblock', 'blockcall'],
     description: 'Manage automatic call handling and blocking',
-    category: 'utility',
-    async execute(sock, msg, args, metadata) {
+    category: 'owner',
+    ownerOnly: true,
+
+    async execute(sock, msg, args, PREFIX, extra) {
         const chatId = msg.key.remoteJid;
-        
-        // Get sender's JID
-        let sender = msg.key.participant || (msg.key.fromMe ? sock.user.id : msg.key.remoteJid);
-        sender = cleanJid(sender);
-        
-        // Load settings
+
+        const botJid = cleanJid(sock.user?.id);
+
         const antiCallData = loadAntiCall();
         const settings = antiCallData.settings || {};
         const blockedNumbers = antiCallData.blockedNumbers || [];
         const callLogs = antiCallData.callLogs || [];
         const lastCacheClear = antiCallData.lastCacheClear || new Date().toISOString();
-        
+
         const subCommand = args[0]?.toLowerCase();
         const action = args[1]?.toLowerCase();
-        
-        // Get bot's JID for settings
-        const botJid = cleanJid(sock.user?.id);
-        
-        // Attach listener if not already attached
+
+        const reply = (text) => sock.sendMessage(chatId, { text }, { quoted: msg });
+
         if (!antiCallListenerAttached) {
             setupAntiCallListener(sock);
             antiCallListenerAttached = true;
         }
-        
-        // Handle different subcommands
+
         if (subCommand === 'status') {
-            const userSettings = settings[botJid] || {
-                enabled: false,
-                mode: 'decline',
-                autoMessage: false,
-                message: "Sorry, I don't accept calls. Please message me instead."
-            };
-            
-            let statusText = `📞 *Anti-call Status*\n\n`;
-            statusText += `• Enabled: ${userSettings.enabled ? '✅ Yes' : '❌ No'}\n`;
-            statusText += `• Bot JID: ${botJid}\n`;
-            
-            if (userSettings.enabled) {
-                statusText += `• Mode: ${userSettings.mode.toUpperCase()}\n`;
-                statusText += `• Auto Message: ${userSettings.autoMessage ? '✅ Yes' : '❌ No'}\n`;
-                if (userSettings.autoMessage) {
-                    statusText += `• Message: ${userSettings.message}\n`;
-                }
+            const us = settings[botJid] || { enabled: false, mode: 'decline', autoMessage: false };
+            const nextClear = new Date(new Date(lastCacheClear).getTime() + 24 * 60 * 60 * 1000);
+            const msLeft = nextClear - Date.now();
+            const hLeft = Math.floor(msLeft / 3600000);
+            const mLeft = Math.floor((msLeft % 3600000) / 60000);
+
+            let txt = `╭─⌈ 📞 *ANTICALL STATUS* ⌋\n│\n`;
+            txt += `├─⊷ *Status:* ${us.enabled ? '🟢 ON' : '🔴 OFF'}\n`;
+            txt += `├─⊷ *Mode:* ${(us.mode || 'decline').toUpperCase()}\n`;
+            txt += `├─⊷ *Auto-reply:* ${us.autoMessage ? '✅ ON' : '❌ OFF'}\n`;
+            if (us.autoMessage && us.message) {
+                txt += `├─⊷ *Message:* ${us.message.substring(0, 40)}${us.message.length > 40 ? '…' : ''}\n`;
             }
-            
-            statusText += `\n📊 *Statistics*\n`;
-            statusText += `• Blocked numbers: ${blockedNumbers.length}\n`;
-            statusText += `• Total calls handled: ${callLogs.length}\n`;
-            statusText += `• Currently tracking: ${handledCalls.size} calls\n`;
-            
-            // Calculate time until next auto-clear
-            const nextClearTime = new Date(new Date(lastCacheClear).getTime() + 24 * 60 * 60 * 1000);
-            const timeUntilClear = nextClearTime - new Date();
-            const hoursUntilClear = Math.floor(timeUntilClear / (1000 * 60 * 60));
-            const minutesUntilClear = Math.floor((timeUntilClear % (1000 * 60 * 60)) / (1000 * 60));
-            
-            statusText += `• Next auto-clear: ${hoursUntilClear}h ${minutesUntilClear}m\n`;
-            statusText += `• Last cache clear: ${new Date(lastCacheClear).toLocaleString()}\n`;
-            
-            // Show last 5 calls
+            txt += `│\n`;
+            txt += `├─⊷ *Blocked numbers:* ${blockedNumbers.length}\n`;
+            txt += `├─⊷ *Calls handled:* ${callLogs.length}\n`;
+            txt += `├─⊷ *Next cache clear:* ${hLeft}h ${mLeft}m\n`;
             if (callLogs.length > 0) {
-                statusText += `\n📝 *Recent Calls:*\n`;
-                const recentCalls = callLogs.slice(-5).reverse();
-                recentCalls.forEach((log, index) => {
-                    const time = new Date(log.timestamp).toLocaleTimeString();
-                    const date = new Date(log.timestamp).toLocaleDateString();
-                    statusText += `${index + 1}. ${log.from} (${date} ${time}) - ${log.action}\n`;
+                txt += `│\n├─⊷ *Recent calls:*\n`;
+                callLogs.slice(-3).reverse().forEach((log, i) => {
+                    const t = new Date(log.timestamp).toLocaleTimeString();
+                    txt += `│  ${i + 1}. ${log.from?.split('@')[0]} — ${log.action} (${t})\n`;
                 });
             }
-            
-            // Show listener status
-            statusText += `\n🔧 *Listener Status:* ${antiCallListenerAttached ? '✅ Active' : '❌ Inactive'}`;
-            
-            await sock.sendMessage(chatId, { text: statusText }, { quoted: msg });
+            txt += `╰⊷ *Listener:* ${antiCallListenerAttached ? '✅ Active' : '❌ Inactive'}`;
+            return reply(txt);
         }
-        else if (subCommand === 'enable') {
+
+        if (subCommand === 'enable') {
             if (!action || !['decline', 'block'].includes(action)) {
-                return sock.sendMessage(chatId, { 
-                    text: '⚙️ *Anti-call Setup*\n\nUsage: `.anticall enable [mode]`\n\nAvailable modes:\n• `decline` - Automatically decline calls\n• `block` - Automatically block callers\n\nExample: `.anticall enable decline`' 
-                }, { quoted: msg });
+                return reply(
+                    `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
+                    `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Silently decline calls\n` +
+                    `├─⊷ *${PREFIX}anticall enable block*\n│  └⊷ Block the caller\n` +
+                    `╰⊷ Provide a mode: decline or block`
+                );
             }
-            
             settings[botJid] = {
                 enabled: true,
                 mode: action,
@@ -781,226 +759,109 @@ export default {
                 message: settings[botJid]?.message || "Sorry, I don't accept calls. Please message me instead.",
                 lastUpdated: new Date().toISOString()
             };
-            
             antiCallData.settings = settings;
             saveAntiCall(antiCallData);
-            
-            await sock.sendMessage(chatId, { 
-                text: `✅ *Anti-call enabled!*\n\nBot JID: ${botJid}\nMode: *${action.toUpperCase()}*\n\nCalls will now be automatically ${action === 'block' ? 'blocked' : 'declined'}.\n\nTo set an auto-reply message:\n\`.anticall message [your message]\`\n\nTo disable: \`.anticall disable\`` 
-            }, { quoted: msg });
+            return reply(
+                `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
+                `├─⊷ *Status:* 🟢 ON\n` +
+                `├─⊷ *Mode:* ${action.toUpperCase()}\n` +
+                `╰⊷ Calls will be ${action === 'block' ? 'blocked' : 'declined'} automatically`
+            );
         }
-        else if (subCommand === 'disable') {
-            if (settings[botJid]) {
+
+        if (subCommand === 'disable') {
+            if (settings[botJid]?.enabled) {
                 settings[botJid].enabled = false;
                 antiCallData.settings = settings;
                 saveAntiCall(antiCallData);
-                await sock.sendMessage(chatId, { 
-                    text: '❌ *Anti-call disabled!*\n\nCalls will now come through normally.' 
-                }, { quoted: msg });
-            } else {
-                await sock.sendMessage(chatId, { 
-                    text: 'ℹ️ Anti-call is already disabled for your account.' 
-                }, { quoted: msg });
+                return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n├─⊷ *Status:* 🔴 OFF\n╰⊷ Calls will come through normally`);
             }
+            return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n╰⊷ Already disabled`);
         }
-        else if (subCommand === 'message') {
+
+        if (subCommand === 'message') {
             const messageText = args.slice(1).join(' ').trim();
-            
             if (!messageText) {
-                return sock.sendMessage(chatId, { 
-                    text: 'Usage: `.anticall message [your message]`\n\nExample: `.anticall message Sorry, I don\'t accept calls. Please send a text message instead.`' 
-                }, { quoted: msg });
+                return reply(
+                    `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
+                    `├─⊷ *${PREFIX}anticall message [text]*\n│  └⊷ Set auto-reply for calls\n` +
+                    `╰⊷ Example: ${PREFIX}anticall message I can't take calls`
+                );
             }
-            
             if (!settings[botJid]) {
-                settings[botJid] = {
-                    enabled: false,
-                    mode: 'decline',
-                    autoMessage: true,
-                    message: messageText,
-                    lastUpdated: new Date().toISOString()
-                };
+                settings[botJid] = { enabled: false, mode: 'decline', autoMessage: true, message: messageText, lastUpdated: new Date().toISOString() };
             } else {
                 settings[botJid].autoMessage = true;
                 settings[botJid].message = messageText;
                 settings[botJid].lastUpdated = new Date().toISOString();
             }
-            
             antiCallData.settings = settings;
             saveAntiCall(antiCallData);
-            
-            await sock.sendMessage(chatId, { 
-                text: `✅ *Auto-reply message set!*\n\nMessage: "${messageText}"\n\nThis message will be sent after ${settings[botJid]?.mode === 'block' ? 'blocking' : 'declining'} a call.\n\nTo enable anti-call: \`.anticall enable [decline/block]\`` 
-            }, { quoted: msg });
+            return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n├─⊷ *Auto-reply:* ✅ ON\n├─⊷ *Message:* ${messageText.substring(0, 50)}\n╰⊷ Sent after every handled call`);
         }
-        else if (subCommand === 'nomessage') {
+
+        if (subCommand === 'nomessage') {
             if (!settings[botJid]) {
-                settings[botJid] = {
-                    enabled: settings[botJid]?.enabled || false,
-                    mode: settings[botJid]?.mode || 'decline',
-                    autoMessage: false,
-                    message: "Sorry, I don't accept calls. Please message me instead.",
-                    lastUpdated: new Date().toISOString()
-                };
+                settings[botJid] = { enabled: false, mode: 'decline', autoMessage: false, message: '', lastUpdated: new Date().toISOString() };
             } else {
                 settings[botJid].autoMessage = false;
                 settings[botJid].lastUpdated = new Date().toISOString();
             }
-            
             antiCallData.settings = settings;
             saveAntiCall(antiCallData);
-            
-            await sock.sendMessage(chatId, { 
-                text: '✅ *Auto-reply message disabled!*\n\nNo messages will be sent after calls.\n\nTo enable again: `.anticall message [your message]`' 
-            }, { quoted: msg });
+            return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n├─⊷ *Auto-reply:* ❌ OFF\n╰⊷ No message sent after calls`);
         }
-        else if (subCommand === 'clearhandled') {
+
+        if (subCommand === 'clearhandled') {
             handledCalls.clear();
             sentMessages.clear();
             lastAutoClearTime = Date.now();
-            
-            // Update last clear time in JSON file
             antiCallData.lastCacheClear = new Date().toISOString();
             saveAntiCall(antiCallData);
-            
-            await sock.sendMessage(chatId, { 
-                text: '✅ *Cleared call tracking cache!*\n\nThe bot will now track new calls from scratch.\n\nNext auto-clear: 24 hours from now.' 
-            }, { quoted: msg });
+            return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n├─⊷ *Cache cleared* ✅\n╰⊷ Next auto-clear in 24h`);
         }
-        else if (subCommand === 'debug') {
-            // Debug command to see what's happening
-            let debugText = `🔍 *Anti-call Debug Info*\n\n`;
-            debugText += `• Bot JID: ${botJid}\n`;
-            debugText += `• Listener attached: ${antiCallListenerAttached}\n`;
-            debugText += `• Currently tracking: ${handledCalls.size} calls\n`;
-            debugText += `• Messages sent tracking: ${sentMessages.size}\n`;
-            
-            // Calculate time since last auto-clear
-            const timeSinceLastClear = Date.now() - new Date(lastCacheClear).getTime();
-            const hoursSinceLastClear = Math.floor(timeSinceLastClear / (1000 * 60 * 60));
-            const minutesSinceLastClear = Math.floor((timeSinceLastClear % (1000 * 60 * 60)) / (1000 * 60));
-            
-            debugText += `• Time since last clear: ${hoursSinceLastClear}h ${minutesSinceLastClear}m\n`;
-            debugText += `• Last cache clear: ${new Date(lastCacheClear).toLocaleString()}\n`;
-            debugText += `• Current settings for bot:\n`;
-            
-            const botSettings = settings[botJid];
-            if (botSettings) {
-                for (const [key, value] of Object.entries(botSettings)) {
-                    debugText += `  ${key}: ${value}\n`;
-                }
-            } else {
-                debugText += `  No settings found\n`;
-            }
-            
-            debugText += `\n• Total blocked numbers: ${blockedNumbers.length}\n`;
-            debugText += `• Total call logs: ${callLogs.length}\n`;
-            
-            // Show currently tracked calls
-            if (handledCalls.size > 0) {
-                debugText += `\n📞 *Currently tracked calls:*\n`;
-                let i = 1;
-                for (const [callId, timestamp] of handledCalls.entries()) {
-                    const timeAgo = Date.now() - timestamp;
-                    const minutesAgo = Math.floor(timeAgo / (1000 * 60));
-                    const secondsAgo = Math.floor((timeAgo % (1000 * 60)) / 1000);
-                    debugText += `${i}. ${callId} - ${minutesAgo}m ${secondsAgo}s ago\n`;
-                    i++;
-                }
-            }
-            
-            await sock.sendMessage(chatId, { text: debugText }, { quoted: msg });
-        }
-        else if (subCommand === 'test') {
-            // Test the anti-call feature
-            const testNumber = args[1] || '1234567890@s.whatsapp.net';
-            const botSettings = settings[botJid] || {
-                enabled: false,
-                mode: 'decline',
-                autoMessage: false,
-                message: "Test message"
-            };
-            
-            let testText = `🔍 *Anti-call Test*\n\n`;
-            testText += `Test from: ${testNumber}\n`;
-            testText += `Bot JID: ${botJid}\n`;
-            testText += `Enabled: ${botSettings.enabled ? 'Yes' : 'No'}\n`;
-            
-            if (botSettings.enabled) {
-                testText += `Mode: ${botSettings.mode}\n`;
-                testText += `Auto Message: ${botSettings.autoMessage ? 'Yes' : 'No'}\n`;
-                if (botSettings.autoMessage) {
-                    testText += `Message: ${botSettings.message}\n`;
-                }
-                testText += `\n✅ Would ${botSettings.mode === 'block' ? 'block and decline' : 'decline'} call from ${testNumber}`;
-            } else {
-                testText += `\n❌ Anti-call is disabled. Calls would come through normally.`;
-            }
-            
-            await sock.sendMessage(chatId, { text: testText }, { quoted: msg });
-        }
-        else if (subCommand === 'blocklist') {
+
+        if (subCommand === 'blocklist') {
             if (blockedNumbers.length === 0) {
-                await sock.sendMessage(chatId, { 
-                    text: '📋 *Blocked Numbers*\n\nNo numbers are currently blocked.\n\nBlock a number: `.anticall block [number]`' 
-                }, { quoted: msg });
-            } else {
-                let listText = '📋 *Blocked Numbers*\n\n';
-                blockedNumbers.forEach((number, index) => {
-                    const time = new Date(number.blockedAt).toLocaleString();
-                    listText += `${index + 1}. ${number.number}\n   Blocked: ${time}\n`;
-                    if (number.reason) {
-                        listText += `   Reason: ${number.reason}\n`;
-                    }
-                    listText += '\n';
-                });
-                listText += `Total: ${blockedNumbers.length} numbers\n\nUnblock: \`.anticall unblock [number]\``;
-                
-                await sock.sendMessage(chatId, { text: listText }, { quoted: msg });
+                return reply(`╭─⌈ 📞 *BLOCKED NUMBERS* ⌋\n│\n╰⊷ No numbers blocked yet`);
             }
+            let txt = `╭─⌈ 📞 *BLOCKED NUMBERS* ⌋\n│\n`;
+            blockedNumbers.slice(0, 10).forEach((n, i) => {
+                txt += `├─⊷ ${i + 1}. ${n.number}\n│  └⊷ ${new Date(n.blockedAt).toLocaleDateString()}\n`;
+            });
+            if (blockedNumbers.length > 10) txt += `├─⊷ ...and ${blockedNumbers.length - 10} more\n`;
+            txt += `╰⊷ Total: ${blockedNumbers.length} number(s)`;
+            return reply(txt);
         }
-        else if (subCommand === 'logs') {
+
+        if (subCommand === 'logs') {
             const limit = parseInt(args[1]) || 10;
-            const filteredLogs = callLogs.slice(-limit).reverse();
-            
-            if (filteredLogs.length === 0) {
-                await sock.sendMessage(chatId, { 
-                    text: '📝 *Call Logs*\n\nNo calls have been handled yet.' 
-                }, { quoted: msg });
-            } else {
-                let logsText = `📝 *Call Logs* (Last ${filteredLogs.length})\n\n`;
-                
-                filteredLogs.forEach((log, index) => {
-                    const time = new Date(log.timestamp).toLocaleTimeString();
-                    const date = new Date(log.timestamp).toLocaleDateString();
-                    logsText += `${index + 1}. *From:* ${log.from}\n`;
-                    logsText += `   *Time:* ${date} ${time}\n`;
-                    logsText += `   *Action:* ${log.action.toUpperCase()}\n`;
-                    if (log.messageSent) {
-                        logsText += `   *Message:* Sent\n`;
-                    }
-                    logsText += '\n';
-                });
-                
-                logsText += `Total calls: ${callLogs.length}`;
-                
-                await sock.sendMessage(chatId, { text: logsText }, { quoted: msg });
+            const recent = callLogs.slice(-limit).reverse();
+            if (recent.length === 0) {
+                return reply(`╭─⌈ 📞 *CALL LOGS* ⌋\n│\n╰⊷ No calls handled yet`);
             }
+            let txt = `╭─⌈ 📞 *CALL LOGS* ⌋\n│\n`;
+            recent.forEach((log, i) => {
+                const t = new Date(log.timestamp).toLocaleString();
+                txt += `├─⊷ ${i + 1}. ${log.from?.split('@')[0]}\n│  └⊷ ${log.action.toUpperCase()} • ${t}\n`;
+            });
+            txt += `╰⊷ Total: ${callLogs.length} call(s)`;
+            return reply(txt);
         }
-        else {
-            // Show help
-            const helpText = `📞 *Anti-call Command*
 
-• \`.anticall enable [decline/block]\` 
-• \`.anticall disable\` 
-• \`.anticall message [text]\` 
-• \`.anticall nomessage\` 
-• \`.anticall clearhandled\`
-• \`.anticall blocklist\` 
-`;
-
-            await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
-        }
+        return reply(
+            `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
+            `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Decline all incoming calls\n` +
+            `├─⊷ *${PREFIX}anticall enable block*\n│  └⊷ Block callers automatically\n` +
+            `├─⊷ *${PREFIX}anticall disable*\n│  └⊷ Turn off anticall\n` +
+            `├─⊷ *${PREFIX}anticall message [text]*\n│  └⊷ Set auto-reply message\n` +
+            `├─⊷ *${PREFIX}anticall nomessage*\n│  └⊷ Remove auto-reply\n` +
+            `├─⊷ *${PREFIX}anticall status*\n│  └⊷ View current settings\n` +
+            `├─⊷ *${PREFIX}anticall blocklist*\n│  └⊷ View blocked numbers\n` +
+            `├─⊷ *${PREFIX}anticall logs*\n│  └⊷ View recent call history\n` +
+            `├─⊷ *${PREFIX}anticall clearhandled*\n│  └⊷ Clear call tracking cache\n` +
+            `╰⊷ *Powered by WOLF TECH*`
+        );
     }
 };
 

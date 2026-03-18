@@ -237,7 +237,7 @@ export default {
             const platform = detectPlatform();
             const uptime = formatUptime(process.uptime());
             const memUsage = `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`;
-            const totalCmds = countCommands(path.join(__dirname, '../../commands'));
+            const totalCmds = globalThis._loadedCommandCount || countCommands(path.join(__dirname, '../../commands'));
 
             let antideleteStatusDisplay = 'OFF';
             try {

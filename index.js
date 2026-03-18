@@ -5269,6 +5269,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         await commandLoadPromise;
         if (!commandsLoaded) {
             UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
+            globalThis._loadedCommandCount = commands.size;
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
@@ -6105,6 +6106,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         
         if (!commandsLoaded) {
             UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
+            globalThis._loadedCommandCount = commands.size;
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
