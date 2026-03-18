@@ -4473,7 +4473,16 @@ async function runDataMigrations() {
     }
 }
 
-const _dbInitPromise = initDatabase().catch((err) => {
+const _dbInitPromise = initDatabase().then(() => {
+    // Re-apply prefix now that DB caches are populated
+    const savedPrefix = loadPrefixFromFiles();
+    prefixCache = savedPrefix;
+    isPrefixless = savedPrefix === '';
+    global.prefix = prefixCache;
+    global.CURRENT_PREFIX = prefixCache;
+    process.env.PREFIX = prefixCache;
+    UltraCleanLogger.info(`Prefix restored from DB: "${isPrefixless ? 'none (prefixless)' : prefixCache}"`);
+}).catch((err) => {
     console.error(`\n❌ FATAL: SQLite failed to initialize — ${err.message}\n`);
     process.exit(1);
 });
@@ -4946,10 +4955,15 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 setTimeout(async () => {
                     if (!isConnected) return;
                     try {
-                        await sock.updateReadReceiptsPrivacy('all');
+                        const rrPref = await _loadConfigCache('read_receipts_pref', null);
+                        const rrMode = rrPref?.mode;
+                        if (rrMode === 'all' || rrMode === 'none') {
+                            await sock.updateReadReceiptsPrivacy(rrMode);
+                            UltraCleanLogger.info(`Read receipts restored: ${rrMode}`);
+                        }
                         await sock.fetchPrivacySettings(true);
                     } catch (e) {
-                        UltraCleanLogger.info(`⚠️ Could not enable read receipts: ${e.message}`);
+                        UltraCleanLogger.info(`⚠️ Could not apply read receipts setting: ${e.message}`);
                     }
                 }, 6000);
 
