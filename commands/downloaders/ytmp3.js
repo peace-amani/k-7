@@ -29,23 +29,18 @@ async function queryAPI(url, endpoints, base) {
   return { success: false };
 }
 
-async function downloadAndValidate(url) {
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'arraybuffer',
-    timeout: 90000,
-    maxRedirects: 5,
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    validateStatus: (s) => s >= 200 && s < 400
-  });
-  const buffer = Buffer.from(response.data);
-  if (buffer.length < 1000) throw new Error('File too small, likely not audio');
-  const header = buffer.slice(0, 50).toString('utf8').toLowerCase();
-  if (header.includes('<!doctype') || header.includes('<html') || header.includes('bad gateway')) {
-    throw new Error('Received HTML instead of audio');
+async function checkSizeMB(url) {
+  try {
+    const res = await axios.head(url, {
+      timeout: 10000,
+      maxRedirects: 5,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    const len = parseInt(res.headers['content-length'] || '0', 10);
+    return len > 0 ? len / (1024 * 1024) : null;
+  } catch {
+    return null;
   }
-  return buffer;
 }
 
 export default {
@@ -124,6 +119,8 @@ export default {
         }
       }
 
+      await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
+
       let result = await queryAPI(videoUrl, AUDIO_ENDPOINTS);
       if (!result.success) result = await queryKeithAudio(videoUrl);
       if (!result.success) {
@@ -138,14 +135,11 @@ export default {
       const thumbUrl = data.thumbnail || v0.thumbnail || (v0.videoId ? `https://i.ytimg.com/vi/${v0.videoId}/hqdefault.jpg` : null);
 
       console.log(`🎵 [YTMP3] Found via ${endpoint}: ${trackTitle}`);
-      await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      const audioBuffer = await downloadAndValidate(data.download_url);
-      const fileSizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
-
-      if (parseFloat(fileSizeMB) > 50) {
+      const sizeMB = await checkSizeMB(data.download_url);
+      if (sizeMB !== null && sizeMB > 50) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ MP3 too large: ${fileSizeMB}MB\nMax size: 50MB` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ MP3 too large: ${sizeMB.toFixed(1)}MB\nMax size: 50MB` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
@@ -157,16 +151,17 @@ export default {
       }
 
       const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
+      const sizeLabel = sizeMB !== null ? `${sizeMB.toFixed(1)}MB` : quality;
 
       await sock.sendMessage(jid, {
-        audio: audioBuffer,
+        audio: { url: data.download_url },
         mimetype: 'audio/mpeg',
         ptt: false,
         fileName: `${cleanTitle}.mp3`,
         contextInfo: {
           externalAdReply: {
             title: trackTitle.substring(0, 60),
-            body: `🎵 ${quality} • ${fileSizeMB}MB | Downloaded by ${getBotName()}`,
+            body: `🎵 ${sizeLabel} | Downloaded by ${getBotName()}`,
             mediaType: 2,
             thumbnail: thumbnailBuffer,
             sourceUrl: videoUrl,
@@ -177,7 +172,7 @@ export default {
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTMP3] Success: ${trackTitle} (${fileSizeMB}MB) via ${endpoint}`);
+      console.log(`✅ [YTMP3] Success: ${trackTitle} via ${endpoint}`);
 
     } catch (error) {
       console.error('❌ [YTMP3] Error:', error.message);

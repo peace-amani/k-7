@@ -14,7 +14,6 @@ try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
 const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download';
 const AUDIO_ENDPOINTS = ['song', 'yta', 'dlmp3', 'ytmp3'];
-const VIDEO_ENDPOINTS = ['ytv', 'dlmp4', 'ytmp4'];
 
 const ENDPOINT_TIMEOUT = { song: 3000, default: 15000 };
 
@@ -33,21 +32,18 @@ async function queryAPI(url, endpoints) {
   return { success: false };
 }
 
-async function downloadAndValidate(url) {
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'arraybuffer',
-    timeout: 60000,
-    maxRedirects: 5,
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    validateStatus: (s) => s >= 200 && s < 400
-  });
-  const buffer = Buffer.from(response.data);
-  if (buffer.length < 1000) throw new Error('File too small');
-  const header = buffer.slice(0, 50).toString('utf8').toLowerCase();
-  if (header.includes('<!doctype') || header.includes('<html')) throw new Error('Received HTML instead of audio');
-  return buffer;
+async function checkSizeMB(url) {
+  try {
+    const res = await axios.head(url, {
+      timeout: 10000,
+      maxRedirects: 5,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    const len = parseInt(res.headers['content-length'] || '0', 10);
+    return len > 0 ? len / (1024 * 1024) : null;
+  } catch {
+    return null;
+  }
 }
 
 export default {
@@ -165,12 +161,10 @@ export default {
 
       console.log(`🎵 [PLAY] Found via ${endpoint}: ${trackTitle}`);
 
-      const audioBuffer = await downloadAndValidate(data.download_url);
-      const fileSizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
-
-      if (parseFloat(fileSizeMB) > 50) {
+      const sizeMB = await checkSizeMB(data.download_url);
+      if (sizeMB !== null && sizeMB > 50) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ File too large (${fileSizeMB}MB). Maximum is 50MB.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ File too large (${sizeMB.toFixed(1)}MB). Maximum is 50MB.` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
@@ -183,11 +177,12 @@ export default {
 
       const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
       const fileName = `${cleanTitle}.mp3`;
+      const sizeLabel = sizeMB !== null ? `${sizeMB.toFixed(1)}MB` : quality;
 
-      const contextInfo = {
+      const baseReply = {
         externalAdReply: {
           title: trackTitle.substring(0, 60),
-          body: `🎵 ${v0.author?.name ? v0.author.name + ' | ' : ''}${v0.timestamp ? '⏱️ ' + v0.timestamp + ' | ' : ''}${quality} | Downloaded by ${getBotName()}`,
+          body: `🎵 ${v0.author?.name ? v0.author.name + ' | ' : ''}${v0.timestamp ? '⏱️ ' + v0.timestamp + ' | ' : ''}${sizeLabel} | Downloaded by ${getBotName()}`,
           mediaType: 2,
           thumbnail: thumbnailBuffer,
           sourceUrl: videoUrl,
@@ -196,21 +191,27 @@ export default {
         }
       };
 
-      await sock.sendMessage(jid, { audio: audioBuffer, mimetype: 'audio/mpeg', fileName, contextInfo }, { quoted: m });
       await sock.sendMessage(jid, {
-        document: audioBuffer,
+        audio: { url: data.download_url },
+        mimetype: 'audio/mpeg',
+        fileName,
+        contextInfo: baseReply
+      }, { quoted: m });
+
+      await sock.sendMessage(jid, {
+        document: { url: data.download_url },
         mimetype: 'audio/mpeg',
         fileName,
         contextInfo: {
           externalAdReply: {
-            ...contextInfo.externalAdReply,
-            body: `📄 Document | ${quality} | Downloaded by ${getBotName()}`
+            ...baseReply.externalAdReply,
+            body: `📄 Document | ${sizeLabel} | Downloaded by ${getBotName()}`
           }
         }
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [PLAY] Success: "${trackTitle}" (${fileSizeMB}MB) via ${endpoint}`);
+      console.log(`✅ [PLAY] Success: "${trackTitle}" via ${endpoint}`);
 
     } catch (error) {
       console.error('❌ [PLAY] ERROR:', error.message);

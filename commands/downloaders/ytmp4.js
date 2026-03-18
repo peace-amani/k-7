@@ -30,23 +30,18 @@ async function queryAPI(url, endpoints) {
   return { success: false };
 }
 
-async function downloadAndValidate(url, timeout = 120000) {
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'arraybuffer',
-    timeout,
-    maxRedirects: 5,
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    validateStatus: (s) => s >= 200 && s < 400
-  });
-  const buffer = Buffer.from(response.data);
-  if (buffer.length < 5000) throw new Error('File too small, likely not video');
-  const header = buffer.slice(0, 50).toString('utf8').toLowerCase();
-  if (header.includes('<!doctype') || header.includes('<html') || header.includes('bad gateway')) {
-    throw new Error('Received HTML instead of video');
+async function checkSizeMB(url) {
+  try {
+    const res = await axios.head(url, {
+      timeout: 10000,
+      maxRedirects: 5,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    const len = parseInt(res.headers['content-length'] || '0', 10);
+    return len > 0 ? len / (1024 * 1024) : null;
+  } catch {
+    return null;
   }
-  return buffer;
 }
 
 export default {
@@ -141,12 +136,10 @@ export default {
       console.log(`🎬 [YTMP4] Found via ${endpoint}: ${trackTitle}`);
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      const videoBuffer = await downloadAndValidate(data.download_url);
-      const fileSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
-
-      if (parseFloat(fileSizeMB) > 99) {
+      const sizeMB = await checkSizeMB(data.download_url);
+      if (sizeMB !== null && sizeMB > 99) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Video too large: ${fileSizeMB}MB\nMax size: 99MB` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Video too large: ${sizeMB.toFixed(1)}MB\nMax size: 99MB` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
@@ -158,18 +151,19 @@ export default {
       }
 
       const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
+      const sizeLabel = sizeMB !== null ? `${sizeMB.toFixed(1)}MB` : quality;
 
       await sock.sendMessage(jid, {
-        video: videoBuffer,
+        video: { url: data.download_url },
         mimetype: 'video/mp4',
-        caption: `🎬 *${trackTitle}*\n📹 *Quality:* ${quality}\n📦 *Size:* ${fileSizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
+        caption: `🎬 *${trackTitle}*\n📹 *Quality:* ${quality}\n📦 *Size:* ${sizeLabel}\n\n🐺 *Downloaded by ${getBotName()}*`,
         fileName: `${cleanTitle}.mp4`,
         thumbnail: thumbnailBuffer,
         gifPlayback: false
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTMP4] Success: ${trackTitle} (${fileSizeMB}MB) via ${endpoint}`);
+      console.log(`✅ [YTMP4] Success: ${trackTitle} (${sizeLabel}) via ${endpoint}`);
 
     } catch (error) {
       console.error('❌ [YTMP4] Fatal error:', error.message);
