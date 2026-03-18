@@ -5526,12 +5526,15 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                         } catch {}
                                     } else if (mode === 'kick') {
                                         try {
+                                            const kickJid = `${senderClean}@s.whatsapp.net`;
                                             await sock.sendMessage(chatJid, {
                                                 text: `🚫 @${senderClean} has been removed for sharing links.`,
-                                                mentions: [senderJid]
+                                                mentions: [kickJid]
                                             });
-                                            await sock.groupParticipantsUpdate(chatJid, [senderJid], 'remove');
-                                        } catch {}
+                                            await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                        } catch (kickErr) {
+                                            UltraCleanLogger.warning(`🔗 ANTILINK kick failed: ${kickErr.message}`);
+                                        }
                                     }
 
                                     return;
