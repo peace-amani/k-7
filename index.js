@@ -801,6 +801,16 @@ async function reloadConfigCaches() {
         // Keep BOT_MODE in sync with the reloaded cache
         if (_cache_bot_mode && _cache_bot_mode.mode) BOT_MODE = _cache_bot_mode.mode;
 
+        // Re-apply prefix now that caches are loaded with the correct bot_id
+        const _reloadedPrefix = loadPrefixFromFiles();
+        if (_reloadedPrefix !== prefixCache || prefixCache === DEFAULT_PREFIX) {
+            prefixCache = _reloadedPrefix;
+            isPrefixless = prefixCache === '';
+            global.prefix = prefixCache;
+            global.CURRENT_PREFIX = prefixCache;
+            process.env.PREFIX = prefixCache;
+        }
+
     } catch {}
 }
 
@@ -4474,14 +4484,13 @@ async function runDataMigrations() {
 }
 
 const _dbInitPromise = initDatabase().then(() => {
-    // Re-apply prefix now that DB caches are populated
+    // Pre-connection prefix load (uses default bot_id — final restore happens after socket connects in reloadConfigCaches)
     const savedPrefix = loadPrefixFromFiles();
     prefixCache = savedPrefix;
     isPrefixless = savedPrefix === '';
     global.prefix = prefixCache;
     global.CURRENT_PREFIX = prefixCache;
     process.env.PREFIX = prefixCache;
-    UltraCleanLogger.info(`Prefix restored from DB: "${isPrefixless ? 'none (prefixless)' : prefixCache}"`);
 }).catch((err) => {
     console.error(`\n❌ FATAL: SQLite failed to initialize — ${err.message}\n`);
     process.exit(1);
@@ -4893,7 +4902,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     setBotId(sock.user.id);
                     setConfigBotId(sock.user.id);
                     initSudo(sock.user.id).catch(() => {});
-                    reloadConfigCaches().catch(() => {});
+                    reloadConfigCaches().then(() => {
+                        if (typeof globalThis._autoTypingInit === 'function') {
+                            try { globalThis._autoTypingInit(sock); } catch {}
+                        }
+                    }).catch(() => {});
                     try {
                         const uid = sock.user.id;
                         const ulid = sock.user.lid;

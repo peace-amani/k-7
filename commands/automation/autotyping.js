@@ -75,6 +75,9 @@ function shouldTypeInChat(chatJid) {
 
 class AutoTypingManager {
     static initialize(sock) {
+        if (sock && autoTypingConfig.botSock && autoTypingConfig.botSock !== sock) {
+            autoTypingConfig.isHooked = false;
+        }
         if (!autoTypingConfig.isHooked && sock) {
             autoTypingConfig.botSock = sock;
             this.hookIntoBot();
@@ -272,5 +275,11 @@ export default {
                 text: `❌ AutoTyping error: ${err.message}`
             }, { quoted: m });
         }
+    }
+};
+
+globalThis._autoTypingInit = (sock) => {
+    if (autoTypingConfig.mode !== 'off') {
+        AutoTypingManager.initialize(sock);
     }
 };
