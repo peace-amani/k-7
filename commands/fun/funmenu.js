@@ -24,6 +24,7 @@ export default {
 │  • goodnight
 │  • channelstatus
 │  • hack
+│  • fakeblank
 │
 ╰─⊷`;
 
