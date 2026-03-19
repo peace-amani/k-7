@@ -18,6 +18,8 @@ export const getBoxStyleCommands = () => {
 │  • gctime
 │  • antileave
 │  • welcome
+│  • joinapproval
+│  • onlyadmins
 │  • creategroup
 │  • leave
 │  • ex
@@ -50,6 +52,7 @@ export const getBoxStyleCommands = () => {
 │  • listinactive
 │  • stickerpack
 │  • online
+│  • disp
 │
 ╰─⊷
 

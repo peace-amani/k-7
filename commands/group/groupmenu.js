@@ -33,6 +33,8 @@ export default {
 │  • unmute
 │  • welcome
 │  • goodbye
+│  • joinapproval
+│  • onlyadmins
 │  • leave
 │  • join
 │  • creategroup
@@ -70,6 +72,7 @@ export default {
 │  • listinactive
 │  • approveall
 │  • rejectall
+│  • disp
 │
 ╰─⊷`;
 

@@ -1529,6 +1529,8 @@ case 1: {
 │  • listbadword
 │  • welcome
 │  • goodbye
+│  • joinapproval
+│  • onlyadmins
 │  • leave
 │  • creategroup
 │
@@ -1566,6 +1568,7 @@ case 1: {
 │  • approveall
 │  • rejectall
 │  • stickerpack
+│  • disp
 │
 ╰─⊷
 
@@ -2209,6 +2212,8 @@ case 2: {
 > • unlock — unlock group
 > • welcome — set welcome message
 > • goodbye — set goodbye message
+> • joinapproval — link approval mode
+> • onlyadmins — who can add members
 
 > 🚫 *AUTO-MODERATION* — auto-protect group
 > • antilink — block links
@@ -2829,6 +2834,8 @@ case 3: {
 │ listbadword
 │ welcome
 │ goodbye
+│ joinapproval
+│ onlyadmins
 │ leave
 │ creategroup
 └───────────────`,
@@ -2865,6 +2872,7 @@ case 3: {
 │ listinactive
 │ approveall
 │ rejectall
+│ disp
 └───────────────`,
 `┌──⌈ \`MENU SETTINGS\` ⌋
 │ menu
@@ -3802,6 +3810,8 @@ case 4: {
 │  • removebadword
 │  • listbadword
 │  • welcome
+│  • joinapproval
+│  • onlyadmins
 │
 ├─⊷ *🚫 AUTO-MODERATION*
 │  • antisticker
@@ -3828,6 +3838,7 @@ case 4: {
 │  • setdesc
 │  • fangtrace
 │  • getgpp
+│  • disp
 │
 ╰─⊷
 
@@ -5550,6 +5561,8 @@ case 5: {
 │  • listbadword
 │  • welcome
 │  • goodbye
+│  • joinapproval
+│  • onlyadmins
 │  • leave
 │  • creategroup
 │
@@ -5587,6 +5600,7 @@ case 5: {
 │  • approveall
 │  • rejectall
 │  • stickerpack
+│  • disp
 │
 ╰─⊷
 
@@ -6597,6 +6611,8 @@ case 6: {
 > │ listbadword
 > │ welcome
 > │ goodbye
+> │ joinapproval
+> │ onlyadmins
 > │ leave
 > │ creategroup
 > └───────────────`,
@@ -6633,6 +6649,7 @@ case 6: {
 > │ listinactive
 > │ approveall
 > │ rejectall
+> │ disp
 > └───────────────`,
 `> ┌──⌈ \`MENU SETTINGS\` ⌋
 > │ menu
@@ -8377,6 +8394,8 @@ case 7: {
 │ listbadword
 │ welcome
 │ goodbye
+│ joinapproval
+│ onlyadmins
 │ leave
 │ creategroup
 └───────────────`,
@@ -8413,6 +8432,7 @@ case 7: {
 │ listinactive
 │ approveall
 │ rejectall
+│ disp
 └───────────────`,
 `┌──⌈ \`MENU SETTINGS\` ⌋
 │ menu
@@ -9099,6 +9119,8 @@ case 9: {
 │  • listbadword
 │  • welcome
 │  • goodbye
+│  • joinapproval
+│  • onlyadmins
 │  • leave
 │  • creategroup
 │
@@ -9136,6 +9158,7 @@ case 9: {
 │  • approveall
 │  • rejectall
 │  • stickerpack
+│  • disp
 │
 ╰─⊷
 

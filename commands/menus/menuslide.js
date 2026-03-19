@@ -44,7 +44,7 @@ const SLIDES = [
   },
   {
     icon: '👥', title: 'Group Management',
-    cmds: ['antilink', 'welcome', 'kick', 'ban', 'tagall', 'mute', 'promote', 'demote', 'joinapproval', 'disp', 'groupmenu']
+    cmds: ['antilink', 'welcome', 'joinapproval', 'onlyadmins', 'kick', 'ban', 'tagall', 'mute', 'promote', 'demote', 'disp', 'groupmenu']
   },
   {
     icon: '🎵', title: 'Music & Media',
