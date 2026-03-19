@@ -12,8 +12,6 @@ export default {
   async execute(sock, msg, args, PREFIX) {
     const chatId = msg.key.remoteJid;
     const botName = getBotName();
-    await sock.sendMessage(chatId, { text: `ephotomenu loading...` }, { quoted: msg });
-    await new Promise(resolve => setTimeout(resolve, 800));
 
     const neonEffects = [];
     const threeDEffects = [];
