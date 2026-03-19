@@ -5765,6 +5765,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     const _abSenderJid   = msg.key.participant || _abJid;
                     const _abSenderClean = _abSenderJid.split(':')[0].split('@')[0];
                     const _abIsOwner     = jidManager.isOwner(msg);
+                    // Skip if sender is the bot itself (echoed group message)
+                    const _abBotNum      = (sock.user?.id || '').split(':')[0].split('@')[0];
+                    if (_abBotNum && _abSenderClean === _abBotNum) return;
 
                     if (!_abIsOwner && antibotCheck(msg)) {
                         let _abIsAdmin = false;

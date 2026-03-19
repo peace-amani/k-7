@@ -5,30 +5,39 @@ const BRAND = () => getOwnerName().toUpperCase();
 // ─── Bot detection ────────────────────────────────────────────────────────────
 // These are the key signals that reliably identify automated/bot messages.
 
-const BOT_KEY_PREFIXES = [
-  'BAE5',  // Baileys default outgoing ID prefix
-  '3EB0',  // WhatsApp Web / multi-device bot IDs
-  'B24C',  // Some fork variants
+// BAE5 is the Baileys-library-specific outgoing message ID prefix.
+// 3EB0 is WhatsApp Web (normal users) — excluded to avoid false positives.
+const BOT_KEY_PREFIXES = ['BAE5'];
+
+// Message types that are never bot content — always skip these
+const SKIP_MSG_TYPES = [
+  'reactionMessage',
+  'protocolMessage',
+  'senderKeyDistributionMessage',
+  'messageContextInfo',
+  'ephemeralMessage',
 ];
 
 export function isBotMessage(msg) {
-  const id = msg?.key?.id || '';
-
-  // 1. Message ID prefix — the most reliable signal
-  if (BOT_KEY_PREFIXES.some(p => id.startsWith(p))) return true;
-
-  // 2. Interactive message types that only bots/apps send in groups
   const m = msg?.message;
   if (!m) return false;
 
-  if (m.buttonsMessage)            return true;
-  if (m.listMessage)               return true;
-  if (m.templateMessage)           return true;
-  if (m.interactiveMessage)        return true;
-  if (m.botInvokeMessage)          return true;
+  // Skip reactions, protocol and other system message types
+  if (SKIP_MSG_TYPES.some(t => m[t] !== undefined)) return false;
+
+  // 1. Baileys message ID prefix
+  const id = msg?.key?.id || '';
+  if (BOT_KEY_PREFIXES.some(p => id.startsWith(p))) return true;
+
+  // 2. Interactive message types only bots/apps send
+  if (m.buttonsMessage)             return true;
+  if (m.listMessage)                return true;
+  if (m.templateMessage)            return true;
+  if (m.interactiveMessage)         return true;
+  if (m.botInvokeMessage)           return true;
   if (m.interactiveResponseMessage) return true;
 
-  // 3. Suspiciously high forwarding score (automated message chains)
+  // 3. Very high forwarding score (automated chain messages)
   const fwdScore = m.extendedTextMessage?.contextInfo?.forwardingScore ||
                    m.imageMessage?.contextInfo?.forwardingScore ||
                    m.videoMessage?.contextInfo?.forwardingScore || 0;
