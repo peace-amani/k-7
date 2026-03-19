@@ -3,20 +3,16 @@ import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-// Resolve a participant's actual phone JID from a LID or any JID
+// Resolve a participant's actual phone JID — LIDs cannot be kicked directly
 function resolvePhoneJid(targetP, fallbackJid) {
   if (!targetP) return fallbackJid;
   const id = targetP.id || fallbackJid;
-  // Already a regular phone JID — nothing to do
   if (!id.includes('@lid')) return id;
-  // 1. Use phoneNumber field if present
   const pn = targetP.phoneNumber ? String(targetP.phoneNumber).replace(/[^0-9]/g, '') : null;
   if (pn) return `${pn}@s.whatsapp.net`;
-  // 2. Try global LID→phone cache (populated by index.js as messages arrive)
   const lidNum = id.split(':')[0].split('@')[0];
   const cached = globalThis.lidPhoneCache?.get(lidNum);
   if (cached) return `${cached}@s.whatsapp.net`;
-  // 3. Last resort — return as-is (kick will likely fail, but at least it tries)
   return id;
 }
 
@@ -106,15 +102,13 @@ export default {
       return sock.sendMessage(chatId, { text: `❌ ${reason}` }, { quoted: msg });
     }
 
-    // Always save session first — kick NEVER happens here
-    const sessionKey = `kick:${senderClean}:${chatId.split('@')[0]}`;
-    setActionSession(sessionKey, { action: 'remove', targets: toKick, chatId });
-
     const targetNames = toKick.map(j => `@${j.split('@')[0].split(':')[0]}`).join(', ');
-    const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Tap *Confirm Kick* to proceed.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
-    // Try interactive button first (flat format, no quoted arg — matches the working auto-wrapper call)
+    // BUTTON MODE: show confirm button, kickconfirm does the actual kick
     if (isButtonModeEnabled() && giftedBtnsKick?.sendInteractiveMessage) {
+      const sessionKey = `kick:${senderClean}:${chatId.split('@')[0]}`;
+      setActionSession(sessionKey, { action: 'remove', targets: toKick, chatId });
+      const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Tap *Confirm Kick* to proceed.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
       try {
         await giftedBtnsKick.sendInteractiveMessage(sock, chatId, {
           text: confirmText,
@@ -126,14 +120,22 @@ export default {
         });
         return;
       } catch (e) {
-        // silent — fallback below
+        // Button send failed — fall through to direct kick
       }
     }
 
-    // Fallback: plain text — session already saved, auto-wrapper will add Confirm Kick button
-    await sock.sendMessage(chatId, {
-      text: confirmText,
-      mentions: toKick
-    }, { quoted: msg });
+    // DEFAULT MODE (or button send failed): kick immediately
+    try {
+      await sock.groupParticipantsUpdate(chatId, toKick, 'remove');
+      await sock.sendMessage(chatId, {
+        text: `👢 Kicked ${toKick.length} user(s): ${targetNames}`,
+        mentions: toKick
+      }, { quoted: msg });
+    } catch (err) {
+      const skippedMsg = skipped.length ? `\n⚠️ Skipped ${skipped.length} admin(s).` : '';
+      await sock.sendMessage(chatId, {
+        text: `❌ Failed to kick user(s). Check my admin permissions.${skippedMsg}`
+      }, { quoted: msg });
+    }
   },
 };
