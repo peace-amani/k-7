@@ -104,27 +104,35 @@ export default {
 
     const targetNames = toKick.map(j => `@${j.split('@')[0].split(':')[0]}`).join(', ');
 
-    // BUTTON MODE: show confirm button, kickconfirm does the actual kick
-    if (isButtonModeEnabled() && giftedBtnsKick?.sendInteractiveMessage) {
+    // BUTTON MODE: show confirm button — kickconfirm does the actual kick, never kick here
+    if (isButtonModeEnabled()) {
       const sessionKey = `kick:${senderClean}:${chatId.split('@')[0]}`;
       setActionSession(sessionKey, { action: 'remove', targets: toKick, chatId });
-      const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Tap *Confirm Kick* to proceed.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
-      try {
-        await giftedBtnsKick.sendInteractiveMessage(sock, chatId, {
-          text: confirmText,
-          footer: '⏳ Session expires in 5 minutes',
-          interactiveButtons: [
-            { type: 'quick_reply', display_text: '✅ Confirm Kick', id: `${PREFIX}kickconfirm` },
-            { type: 'quick_reply', display_text: '❌ Cancel', id: `${PREFIX}kickcancel` }
-          ]
-        });
-        return;
-      } catch (e) {
-        // Button send failed — fall through to direct kick
+      const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Reply *${PREFIX}kickconfirm* to proceed.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      if (giftedBtnsKick?.sendInteractiveMessage) {
+        try {
+          await giftedBtnsKick.sendInteractiveMessage(sock, chatId, {
+            text: confirmText,
+            footer: '⏳ Session expires in 5 minutes',
+            interactiveButtons: [
+              { type: 'quick_reply', display_text: '✅ Confirm Kick', id: `${PREFIX}kickconfirm` },
+              { type: 'quick_reply', display_text: '❌ Cancel', id: `${PREFIX}kickcancel` }
+            ]
+          });
+          return;
+        } catch (e) {
+          // Button send failed — fall back to plain text confirm below
+        }
       }
+      // Plain text confirm (session already saved, user types kickconfirm to proceed)
+      await sock.sendMessage(chatId, {
+        text: confirmText,
+        mentions: toKick
+      }, { quoted: msg });
+      return;
     }
 
-    // DEFAULT MODE (or button send failed): kick immediately
+    // DEFAULT MODE: kick immediately
     try {
       await sock.groupParticipantsUpdate(chatId, toKick, 'remove');
       await sock.sendMessage(chatId, {
