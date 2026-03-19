@@ -3,6 +3,23 @@ import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
+// Resolve a participant's actual phone JID from a LID or any JID
+function resolvePhoneJid(targetP, fallbackJid) {
+  if (!targetP) return fallbackJid;
+  const id = targetP.id || fallbackJid;
+  // Already a regular phone JID — nothing to do
+  if (!id.includes('@lid')) return id;
+  // 1. Use phoneNumber field if present
+  const pn = targetP.phoneNumber ? String(targetP.phoneNumber).replace(/[^0-9]/g, '') : null;
+  if (pn) return `${pn}@s.whatsapp.net`;
+  // 2. Try global LID→phone cache (populated by index.js as messages arrive)
+  const lidNum = id.split(':')[0].split('@')[0];
+  const cached = globalThis.lidPhoneCache?.get(lidNum);
+  if (cached) return `${cached}@s.whatsapp.net`;
+  // 3. Last resort — return as-is (kick will likely fail, but at least it tries)
+  return id;
+}
+
 const _requireKick = createRequire(import.meta.url);
 let giftedBtnsKick;
 try { giftedBtnsKick = _requireKick('gifted-btns'); } catch (e) {}
@@ -81,7 +98,7 @@ export default {
         }
       }
 
-      toKick.push(targetP ? targetP.id : jid);
+      toKick.push(resolvePhoneJid(targetP, jid));
     }
 
     if (toKick.length === 0) {
