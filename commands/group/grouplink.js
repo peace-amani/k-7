@@ -56,10 +56,6 @@ export default {
         `│\n` +
         `│ ✧ *Name:* ${groupName}\n` +
         `│ ✧ *Members:* ${members}\n` +
-        `│ ✧ *Link:* ${inviteLink}\n` +
-        `│\n` +
-        `│ • \`${PREFIX}revoke\` - Reset link\n` +
-        `│ • \`${PREFIX}groupinfo\` - Group details\n` +
         `│\n` +
         `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
