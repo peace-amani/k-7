@@ -663,6 +663,7 @@ import { setupWebServer, updateWebStatus } from './lib/webServer.js';
 import { handleGroupParticipantUpdate as antidemoteHandler } from './commands/group/antidemote.js';
 import { isWelcomeEnabled, getWelcomeMessage, sendWelcomeMessage } from './commands/group/welcome.js';
 import { isGoodbyeEnabled, getGoodbyeMessage, sendGoodbyeMessage } from './commands/group/goodbye.js';
+import { isJoinApprovalEnabled } from './commands/group/joinapproval.js';
 import { handleStatusMention as statusMentionHandler } from './commands/group/antistatusmention.js';
 import { setupAntiGroupStatusListener } from './commands/group/antigroupstatus.js';
 
@@ -5349,36 +5350,29 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             // Check both flags up front — one metadata fetch covers both
                             const welcomeOn = await isWelcomeEnabled(groupId);
 
-                            // Approval mode: only relevant when an admin triggered the add (update.author is set)
-                            let approvalOn = false;
+                            // Approval mode: bot-side per-group flag (toggled via .joinapproval on/off)
+                            const approvalOn = await isJoinApprovalEnabled(groupId);
                             let resolvedApproverJid = null;
                             let resolvedMembers = participants;
 
-                            if (update.author) {
-                                try {
-                                    const gMeta = await sock.groupMetadata(groupId);
-                                    approvalOn = !!gMeta.joinApprovalMode;
-                                } catch {}
-
-                                if (approvalOn) {
-                                    // Resolve approver JID (may be LID)
-                                    const authorRaw = String(update.author);
-                                    resolvedApproverJid = authorRaw.includes('@lid')
-                                        ? (() => {
-                                            const lidNum = authorRaw.split(':')[0].split('@')[0];
-                                            const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
-                                            return phone ? `${phone}@s.whatsapp.net` : authorRaw;
-                                        })()
-                                        : (authorRaw.includes('@') ? authorRaw : `${authorRaw}@s.whatsapp.net`);
-
-                                    // Resolve member JIDs (may be LIDs)
-                                    resolvedMembers = participants.map(p => {
-                                        if (!p.includes('@lid')) return p;
-                                        const lidNum = p.split(':')[0].split('@')[0];
+                            if (approvalOn && update.author) {
+                                // Resolve approver JID (may be LID)
+                                const authorRaw = String(update.author);
+                                resolvedApproverJid = authorRaw.includes('@lid')
+                                    ? (() => {
+                                        const lidNum = authorRaw.split(':')[0].split('@')[0];
                                         const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
-                                        return phone ? `${phone}@s.whatsapp.net` : p;
-                                    });
-                                }
+                                        return phone ? `${phone}@s.whatsapp.net` : authorRaw;
+                                    })()
+                                    : (authorRaw.includes('@') ? authorRaw : `${authorRaw}@s.whatsapp.net`);
+
+                                // Resolve member JIDs (may be LIDs)
+                                resolvedMembers = participants.map(p => {
+                                    if (!p.includes('@lid')) return p;
+                                    const lidNum = p.split(':')[0].split('@')[0];
+                                    const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
+                                    return phone ? `${phone}@s.whatsapp.net` : p;
+                                });
                             }
 
                             if (approvalOn && welcomeOn) {
