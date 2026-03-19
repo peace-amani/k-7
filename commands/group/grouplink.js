@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { getBotName } from '../../lib/botname.js';
 
 export default {
   name: 'grouplink',
@@ -96,7 +97,7 @@ export default {
                 hasMediaAttachment: true
               },
               body: { text: caption },
-              footer: { text: '🐺 Silent Wolf Bot' },
+              footer: { text: `🐺 ${getBotName()}` },
               nativeFlowMessage: {
                 buttons: buttons
               }
@@ -105,7 +106,7 @@ export default {
         } else {
           await sendInteractiveMessage(sock, jid, {
             text: caption,
-            footer: '🐺 Silent Wolf Bot',
+            footer: `🐺 ${getBotName()}`,
             interactiveButtons: buttons
           });
         }
