@@ -115,17 +115,17 @@ export default {
     if (!sub || sub === 'status') {
       const enabled    = gc.enabled === true;
       const mode       = gc.mode || 'delete';
-      const statusIcon = enabled ? `✅ ON  [${mode.toUpperCase()}]` : '❌ OFF';
+      const statusIcon = enabled ? `✅ ON [${mode.toUpperCase()}]` : '❌ OFF';
       return sock.sendMessage(chatId, {
         text:
-          `╭─⌈ 🤖 *ANTI-BOT — ${groupMeta.subject}* ⌋\n` +
+          `╭─⌈ 🤖 *ANTI-BOT* ⌋\n` +
           `│\n` +
-          `├─⊷ Status : *${statusIcon}*\n` +
+          `├ Status : *${statusIcon}*\n` +
           `│\n` +
-          `├─⊷ *${PREFIX}antibot on warn*   — alert & delete msg\n` +
-          `├─⊷ *${PREFIX}antibot on delete* — silently delete msg\n` +
-          `├─⊷ *${PREFIX}antibot on kick*   — delete msg + kick sender\n` +
-          `├─⊷ *${PREFIX}antibot off*       — disable protection\n` +
+          `├ *${PREFIX}antibot on warn*\n` +
+          `├ *${PREFIX}antibot on delete*\n` +
+          `├ *${PREFIX}antibot on kick*\n` +
+          `├ *${PREFIX}antibot off*\n` +
           `│\n` +
           `╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
@@ -139,18 +139,11 @@ export default {
       config[chatId] = { ...gc, enabled: true, mode };
       saveConfig(config);
 
-      const modeDesc = {
-        warn:   '⚠️ Warn sender + delete message',
-        delete: '🗑️ Silently delete bot messages',
-        kick:   '👢 Delete message + kick sender'
-      }[mode];
-
       return sock.sendMessage(chatId, {
         text:
           `╭─⌈ 🤖 *ANTI-BOT ENABLED* ⌋\n` +
-          `├─⊷ *Mode:*   ${mode.toUpperCase()}\n` +
-          `├─⊷ *Action:* ${modeDesc}\n` +
-          `╰⊷ Bot messages will now be handled automatically.`
+          `├ *Mode:* ${mode.toUpperCase()}\n` +
+          `╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
     }
 
@@ -159,23 +152,20 @@ export default {
       config[chatId] = { ...gc, enabled: false };
       saveConfig(config);
       return sock.sendMessage(chatId, {
-        text: `╭─⌈ 🤖 *ANTI-BOT DISABLED* ⌋\n╰⊷ Bot messages are no longer filtered.`
+        text: `╭─⌈ 🤖 *ANTI-BOT DISABLED* ⌋\n╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
     }
 
     return sock.sendMessage(chatId, {
       text:
-        `╭─⌈ 🤖 *ANTI-BOT HELP* ⌋\n` +
-        `├─⊷ *${PREFIX}antibot on warn*\n` +
-        `│  └⊷ Enable — warn sender & delete\n` +
-        `├─⊷ *${PREFIX}antibot on delete*\n` +
-        `│  └⊷ Enable — silently delete\n` +
-        `├─⊷ *${PREFIX}antibot on kick*\n` +
-        `│  └⊷ Enable — delete + kick\n` +
-        `├─⊷ *${PREFIX}antibot off*\n` +
-        `│  └⊷ Disable protection\n` +
-        `├─⊷ *${PREFIX}antibot status*\n` +
-        `│  └⊷ Show current settings\n` +
+        `╭─⌈ 🤖 *ANTI-BOT* ⌋\n` +
+        `│\n` +
+        `├ *${PREFIX}antibot on warn*\n` +
+        `├ *${PREFIX}antibot on delete*\n` +
+        `├ *${PREFIX}antibot on kick*\n` +
+        `├ *${PREFIX}antibot off*\n` +
+        `├ *${PREFIX}antibot status*\n` +
+        `│\n` +
         `╰⊷ *Powered by ${BRAND()} TECH*`
     }, { quoted: msg });
   }
