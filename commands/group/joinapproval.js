@@ -44,7 +44,7 @@ export default {
           `├─⊷ Join Approval : *${approvalIcon}*\n` +
           `├─⊷ Who Can Add   : *${addModeIcon}*\n` +
           `├─⊷ Use *${PREFIX}joinapproval on/off* to toggle approval\n` +
-          `├─⊷ Use *${PREFIX}joinapproval addmode admin/all* to set add mode\n` +
+          `├─⊷ Use *${PREFIX}onlyadmins on/off* to set who can add members\n` +
           `╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
     }
@@ -72,41 +72,15 @@ export default {
       }
     }
 
-    // Set member-add mode
-    if (sub === 'addmode') {
-      const mode = (args[1] || '').toLowerCase();
-      if (mode !== 'admin' && mode !== 'all') {
-        return sock.sendMessage(chatId, {
-          text: `❌ Usage: *${PREFIX}joinapproval addmode admin* or *${PREFIX}joinapproval addmode all*`
-        }, { quoted: msg });
-      }
-      const baileysMode = mode === 'admin' ? 'admin_add' : 'all_member_add';
-      try {
-        await sock.groupMemberAddMode(chatId, baileysMode);
-        const desc = mode === 'admin' ? 'Only admins can add new members.' : 'All members can add others.';
-        return sock.sendMessage(chatId, {
-          text:
-            `╭─⌈ 👥 *MEMBER ADD MODE* ⌋\n` +
-            `├─⊷ Mode : *${mode === 'admin' ? 'Admins only' : 'All members'}*\n` +
-            `├─⊷ ${desc}\n` +
-            `╰⊷ *Powered by ${BRAND()} TECH*`
-        }, { quoted: msg });
-      } catch (err) {
-        return sock.sendMessage(chatId, {
-          text: `❌ Failed to update add mode: ${err.message}`
-        }, { quoted: msg });
-      }
-    }
-
     // Unknown subcommand — show help
     return sock.sendMessage(chatId, {
       text:
         `╭─⌈ 🛡️ *JOIN APPROVAL HELP* ⌋\n` +
-        `├─⊷ *${PREFIX}joinapproval*            — show current settings\n` +
-        `├─⊷ *${PREFIX}joinapproval on*         — require approval to join\n` +
-        `├─⊷ *${PREFIX}joinapproval off*        — allow free joining\n` +
-        `├─⊷ *${PREFIX}joinapproval addmode admin* — only admins can add\n` +
-        `├─⊷ *${PREFIX}joinapproval addmode all*   — all members can add\n` +
+        `├─⊷ *${PREFIX}joinapproval*       — show current settings\n` +
+        `├─⊷ *${PREFIX}joinapproval on*    — require approval to join\n` +
+        `├─⊷ *${PREFIX}joinapproval off*   — allow free joining\n` +
+        `├─⊷ *${PREFIX}onlyadmins on*      — only admins can add members\n` +
+        `├─⊷ *${PREFIX}onlyadmins off*     — anyone can add members\n` +
         `╰⊷ *Powered by ${BRAND()} TECH*`
     }, { quoted: msg });
   },
