@@ -173,7 +173,7 @@ function normalizeJid(participant) {
     return null;
 }
 
-export async function sendWelcomeMessage(sock, groupId, memberJids, customMessage) {
+export async function sendWelcomeMessage(sock, groupId, memberJids, customMessage, { approvedBy } = {}) {
     try {
         let metadata;
         try {
@@ -228,16 +228,24 @@ export async function sendWelcomeMessage(sock, groupId, memberJids, customMessag
                     .replace(/{group}/g, groupName)
                     .replace(/{members}/g, memberCount.toString())
                     .replace(/{mention}/g, `@${userName}`);
+
+                // Prepend approval line when joinApprovalMode is on
+                const approvedByDisplay = approvedBy ? approvedBy.split('@')[0].split(':')[0] : null;
+                const fullText = approvedByDisplay
+                    ? `╭─⌈ ✅ *JOIN APPROVED* ⌋\n├─⊷ Approved by: @${approvedByDisplay}\n╰────────────────────\n${welcomeText}`
+                    : welcomeText;
+
+                const allMentions = approvedBy ? [userId, approvedBy] : [userId];
                 
                 const sendImage = memberPpBuffer || groupPpBuffer;
                 
                 if (sendImage) {
                     const msgPayload = {
                         image: sendImage,
-                        caption: welcomeText,
-                        mentions: [userId],
+                        caption: fullText,
+                        mentions: allMentions,
                         contextInfo: {
-                            mentionedJid: [userId],
+                            mentionedJid: allMentions,
                             externalAdReply: {
                                 title: `🐺 Welcome to ${groupName}`,
                                 body: `👥 Member #${memberCount}`,
@@ -251,8 +259,8 @@ export async function sendWelcomeMessage(sock, groupId, memberJids, customMessag
                     await sock.sendMessage(groupId, msgPayload);
                 } else {
                     await sock.sendMessage(groupId, {
-                        text: welcomeText,
-                        mentions: [userId]
+                        text: fullText,
+                        mentions: allMentions
                     });
                 }
                 

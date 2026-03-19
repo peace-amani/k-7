@@ -5345,48 +5345,67 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 }).filter(p => p && p.includes('@'));
                 
                 if (update.action === 'add' && participants.length > 0) {
-                    if (await isWelcomeEnabled(groupId)) {
-                        const welcomeMsg = await getWelcomeMessage(groupId);
-                        UltraCleanLogger.info(`🎉 Welcoming ${participants.length} new member(s) in ${groupId.split('@')[0]}`);
-                        sendWelcomeMessage(sock, groupId, participants, welcomeMsg).catch(() => {});
-                    }
+                    (async () => {
+                        try {
+                            // Check both flags up front — one metadata fetch covers both
+                            const welcomeOn = await isWelcomeEnabled(groupId);
 
-                    // Approval notification — fires when joinApprovalMode is on and an admin approves a pending member
-                    if (update.author) {
-                        (async () => {
-                            try {
-                                const gMeta = await sock.groupMetadata(groupId);
-                                if (!gMeta.joinApprovalMode) return;
+                            // Approval mode: only relevant when an admin triggered the add (update.author is set)
+                            let approvalOn = false;
+                            let resolvedApproverJid = null;
+                            let resolvedMembers = participants;
 
-                                // Resolve approver JID (may be LID)
-                                const authorRaw = String(update.author);
-                                const authorNum = authorRaw.includes('@lid')
-                                    ? (() => {
-                                        const lidNum = authorRaw.split(':')[0].split('@')[0];
+                            if (update.author) {
+                                try {
+                                    const gMeta = await sock.groupMetadata(groupId);
+                                    approvalOn = !!gMeta.joinApprovalMode;
+                                } catch {}
+
+                                if (approvalOn) {
+                                    // Resolve approver JID (may be LID)
+                                    const authorRaw = String(update.author);
+                                    resolvedApproverJid = authorRaw.includes('@lid')
+                                        ? (() => {
+                                            const lidNum = authorRaw.split(':')[0].split('@')[0];
+                                            const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
+                                            return phone ? `${phone}@s.whatsapp.net` : authorRaw;
+                                        })()
+                                        : (authorRaw.includes('@') ? authorRaw : `${authorRaw}@s.whatsapp.net`);
+
+                                    // Resolve member JIDs (may be LIDs)
+                                    resolvedMembers = participants.map(p => {
+                                        if (!p.includes('@lid')) return p;
+                                        const lidNum = p.split(':')[0].split('@')[0];
                                         const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
-                                        return phone ? `${phone}@s.whatsapp.net` : authorRaw;
-                                    })()
-                                    : (authorRaw.includes('@') ? authorRaw : `${authorRaw}@s.whatsapp.net`);
-                                const approverDisplay = authorNum.split('@')[0].split(':')[0];
+                                        return phone ? `${phone}@s.whatsapp.net` : p;
+                                    });
+                                }
+                            }
 
-                                // Resolve member JIDs (may be LIDs)
-                                const resolvedMembers = participants.map(p => {
-                                    if (!p.includes('@lid')) return p;
-                                    const lidNum = p.split(':')[0].split('@')[0];
-                                    const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
-                                    return phone ? `${phone}@s.whatsapp.net` : p;
-                                });
+                            if (approvalOn && welcomeOn) {
+                                // COMBINED: one message with approval header + welcome body
+                                const welcomeMsg = await getWelcomeMessage(groupId);
+                                UltraCleanLogger.info(`✅ Approval + welcome for ${resolvedMembers.length} member(s) in ${groupId.split('@')[0]}`);
+                                sendWelcomeMessage(sock, groupId, resolvedMembers, welcomeMsg, { approvedBy: resolvedApproverJid }).catch(() => {});
 
+                            } else if (approvalOn) {
+                                // Approval only (welcome is off)
+                                const approverDisplay = resolvedApproverJid.split('@')[0].split(':')[0];
                                 const memberTags = resolvedMembers.map(p => `@${p.split('@')[0].split(':')[0]}`).join(', ');
                                 const verb = resolvedMembers.length === 1 ? 'was' : 'were';
-
                                 await sock.sendMessage(groupId, {
                                     text: `╭─⌈ ✅ *JOIN APPROVED* ⌋\n├─⊷ ${memberTags} ${verb} approved\n├─⊷ Approved by: @${approverDisplay}\n╰⊷ Welcome to the group! 🎉`,
-                                    mentions: [...resolvedMembers, authorNum]
+                                    mentions: [...resolvedMembers, resolvedApproverJid]
                                 });
-                            } catch {}
-                        })();
-                    }
+
+                            } else if (welcomeOn) {
+                                // Welcome only (joinapproval is off — normal join via link or direct add)
+                                const welcomeMsg = await getWelcomeMessage(groupId);
+                                UltraCleanLogger.info(`🎉 Welcoming ${participants.length} new member(s) in ${groupId.split('@')[0]}`);
+                                sendWelcomeMessage(sock, groupId, participants, welcomeMsg).catch(() => {});
+                            }
+                        } catch {}
+                    })();
                 }
                 
                 if ((update.action === 'remove' || update.action === 'leave') && participants.length > 0) {
