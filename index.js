@@ -675,7 +675,6 @@ import { initStatusReplyListener } from './lib/statusReplyListener.js';
 
 // Import W.O.L.F chatbot system
 import { isChatbotActiveForChat, handleChatbotMessage } from './commands/ai/chatbot.js';
-import { isChatLocked } from './lib/chatlockStore.js';
 
 // ====== ENVIRONMENT SETUP ======
 dotenv.config({ path: './.env' });
@@ -6928,10 +6927,6 @@ async function handleIncomingMessage(sock, msg) {
             return;
         }
 
-        // Chatlock: silently ignore messages from locked chats for non-owner/non-bot senders
-        if (isChatLocked(chatId) && !msg.key.fromMe && !jidManager.isOwner(msg) && !jidManager.isSudo(msg)) {
-            return;
-        }
         
         try {
             autoLinkSystem.shouldAutoLink(sock, msg).then(linked => {
