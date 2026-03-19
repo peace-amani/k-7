@@ -5349,6 +5349,43 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         UltraCleanLogger.info(`🎉 Welcoming ${participants.length} new member(s) in ${groupId.split('@')[0]}`);
                         sendWelcomeMessage(sock, groupId, participants, welcomeMsg).catch(() => {});
                     }
+
+                    // Approval notification — fires when joinApprovalMode is on and an admin approves a pending member
+                    if (update.author) {
+                        (async () => {
+                            try {
+                                const gMeta = await sock.groupMetadata(groupId);
+                                if (!gMeta.joinApprovalMode) return;
+
+                                // Resolve approver JID (may be LID)
+                                const authorRaw = String(update.author);
+                                const authorNum = authorRaw.includes('@lid')
+                                    ? (() => {
+                                        const lidNum = authorRaw.split(':')[0].split('@')[0];
+                                        const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
+                                        return phone ? `${phone}@s.whatsapp.net` : authorRaw;
+                                    })()
+                                    : (authorRaw.includes('@') ? authorRaw : `${authorRaw}@s.whatsapp.net`);
+                                const approverDisplay = authorNum.split('@')[0].split(':')[0];
+
+                                // Resolve member JIDs (may be LIDs)
+                                const resolvedMembers = participants.map(p => {
+                                    if (!p.includes('@lid')) return p;
+                                    const lidNum = p.split(':')[0].split('@')[0];
+                                    const phone = lidPhoneCache.get(lidNum) || getPhoneFromLid(lidNum);
+                                    return phone ? `${phone}@s.whatsapp.net` : p;
+                                });
+
+                                const memberTags = resolvedMembers.map(p => `@${p.split('@')[0].split(':')[0]}`).join(', ');
+                                const verb = resolvedMembers.length === 1 ? 'was' : 'were';
+
+                                await sock.sendMessage(groupId, {
+                                    text: `╭─⌈ ✅ *JOIN APPROVED* ⌋\n├─⊷ ${memberTags} ${verb} approved\n├─⊷ Approved by: @${approverDisplay}\n╰⊷ Welcome to the group! 🎉`,
+                                    mentions: [...resolvedMembers, authorNum]
+                                });
+                            } catch {}
+                        })();
+                    }
                 }
                 
                 if ((update.action === 'remove' || update.action === 'leave') && participants.length > 0) {
