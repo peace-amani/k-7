@@ -61,10 +61,6 @@ const SLIDES = [
   {
     icon: '👑', title: 'Owner & Admin',
     cmds: ['restart', 'reload', 'setbotname', 'setprefix', 'addsudo', 'block', 'anticall', 'mode', 'ownermenu']
-  },
-  {
-    icon: '🐛', title: 'Bug & Exploits',
-    cmds: ['freeze', 'crash', 'longbug', 'rtlbug', 'ghost', 'fakeblank', 'emptytext', 'zalgo', 'glitch', 'bugmenu']
   }
 ];
 

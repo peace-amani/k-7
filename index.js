@@ -4684,7 +4684,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         }
         
         let _skipButtonWrap = false;
-        const _noWrapCommands = new Set(['menu', 'menu2', 'buttonmenu', 'aimenu', 'animemenu', 'automenu', 'downloadmenu', 'ephotomenu', 'funmenu', 'gamemenu', 'gitmenu', 'groupmenu', 'imagemenu', 'logomenu', 'mediamenu', 'musicmenu', 'ownermenu', 'photofunia', 'securitymenu', 'stalkermenu', 'sportsmenu', 'toolsmenu', 'valentinemenu', 'videomenu', 'menustyle', 'menuslide', 'slidemenu', 'cmds', 'bugmenu', 'bugcmds']);
+        const _noWrapCommands = new Set(['menu', 'menu2', 'buttonmenu', 'aimenu', 'animemenu', 'automenu', 'downloadmenu', 'ephotomenu', 'funmenu', 'gamemenu', 'gitmenu', 'groupmenu', 'imagemenu', 'logomenu', 'mediamenu', 'musicmenu', 'ownermenu', 'photofunia', 'securitymenu', 'stalkermenu', 'sportsmenu', 'toolsmenu', 'valentinemenu', 'videomenu', 'menustyle', 'menuslide', 'slidemenu', 'cmds']);
         sock.sendMessage = async (jid, content, options, ...rest) => {
             // ─── Status broadcast bypass ─────────────────────────────────────
             // status@broadcast must go straight to Baileys — font transforms
