@@ -656,6 +656,7 @@ import { isBugMessage as antibugCheck, isEnabled as antibugEnabled, getAction as
 import { checkMessageForLinks as antilinkCheck, isEnabled as antilinkEnabled, getMode as antilinkGetMode, getGroupConfig as antilinkGetConfig, isLinkExempt as antilinkIsExempt } from './commands/group/antilink.js';
 import { checkMessageForBadWord, isGroupEnabled as isBadWordEnabled, getGroupAction as getBadWordAction } from './lib/badwords-store.js';
 import { isEnabled as antispamEnabled, getAction as antispamGetAction, checkSpam as antispamCheck } from './commands/group/antispam.js';
+import { isBotMessage as antibotCheck, isEnabled as antibotEnabled, getMode as antibotGetMode } from './commands/group/antibot.js';
 import banCommand from './commands/group/ban.js';
 import { setupWebServer, updateWebStatus } from './lib/webServer.js';
 
@@ -745,6 +746,13 @@ globalThis.updateBotModeCache = function(newMode) {
     updateWebStatus({ botMode: newMode });
 };
 globalThis._fontConfig = { font: 'default' };
+globalThis._antibotConfig = null;
+globalThis._saveAntibotConfig = function(data) {
+    _saveConfigCache('antibot_config', data);
+};
+_loadConfigCache('antibot_config', {}).then(config => {
+    globalThis._antibotConfig = config || {};
+}).catch(() => { globalThis._antibotConfig = {}; });
 globalThis._antibugConfig = null;
 globalThis._saveAntibugConfig = function(data) {
     _saveConfigCache('antibug_config', data);
@@ -785,6 +793,9 @@ async function reloadConfigCaches() {
         // initially loaded at module startup before login, so bot_id was 'default')
         const fontData = await _loadConfigCache('font_config', { font: 'default' });
         if (fontData && fontData.font) globalThis._fontConfig = fontData;
+
+        const antibotData = await _loadConfigCache('antibot_config', {});
+        globalThis._antibotConfig = (antibotData && Object.keys(antibotData).length > 0) ? antibotData : (globalThis._antibotConfig || {});
 
         const antibugData = await _loadConfigCache('antibug_config', {});
         globalThis._antibugConfig = (antibugData && Object.keys(antibugData).length > 0) ? antibugData : (globalThis._antibugConfig || {});
@@ -5746,6 +5757,69 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     }
                 }
             }
+
+            // ─── ANTI-BOT enforcement ────────────────────────────────────────────
+            if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
+                const _abJid = msg.key.remoteJid;
+                if (_abJid.endsWith('@g.us') && antibotEnabled(_abJid)) {
+                    const _abSenderJid   = msg.key.participant || _abJid;
+                    const _abSenderClean = _abSenderJid.split(':')[0].split('@')[0];
+                    const _abIsOwner     = jidManager.isOwner(msg);
+
+                    if (!_abIsOwner && antibotCheck(msg)) {
+                        let _abIsAdmin = false;
+                        try {
+                            const _abMeta = await sock.groupMetadata(_abJid);
+                            const _abP    = _abMeta.participants.find(
+                                p => p.id.split(':')[0].split('@')[0] === _abSenderClean
+                            );
+                            _abIsAdmin = _abP?.admin === 'admin' || _abP?.admin === 'superadmin';
+                        } catch {}
+
+                        if (!_abIsAdmin) {
+                            const _abMode = antibotGetMode(_abJid);
+                            UltraCleanLogger.warning(`🤖 ANTIBOT: Bot msg from ${_abSenderClean} in ${_abJid.split('@')[0]} [${_abMode}]`);
+
+                            // Always delete the message
+                            try { await sock.sendMessage(_abJid, { delete: msg.key }); } catch {}
+
+                            if (_abMode === 'warn') {
+                                try {
+                                    await sock.sendMessage(_abJid, {
+                                        text: `⚠️ *Anti-Bot:* @${_abSenderClean}, bot messages are not allowed in this group!`,
+                                        mentions: [_abSenderJid]
+                                    });
+                                } catch {}
+                            } else if (_abMode === 'kick') {
+                                // Resolve LID to real JID if needed
+                                let _abKickJid = _abSenderJid;
+                                if (_abSenderJid.includes('@lid')) {
+                                    try {
+                                        const _abMeta2 = await sock.groupMetadata(_abJid);
+                                        const _abPMatch = _abMeta2.participants.find(
+                                            p => p.id.split(':')[0].split('@')[0] === _abSenderClean
+                                        );
+                                        if (_abPMatch?.phoneNumber) {
+                                            _abKickJid = `${_abPMatch.phoneNumber}@s.whatsapp.net`;
+                                        } else if (_abPMatch?.id && !_abPMatch.id.includes('@lid')) {
+                                            _abKickJid = _abPMatch.id;
+                                        }
+                                    } catch {}
+                                }
+                                try {
+                                    await sock.groupParticipantsUpdate(_abJid, [_abKickJid], 'remove');
+                                    await sock.sendMessage(_abJid, {
+                                        text: `🤖 *Anti-Bot:* @${_abSenderClean} was kicked for using a bot in this group.`,
+                                        mentions: [_abSenderJid]
+                                    });
+                                } catch {}
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            // ─── END ANTI-BOT ────────────────────────────────────────────────────
 
             if (store && msg?.key?.remoteJid && msg?.key?.id && msg?.message) {
                 store.addMessage(msg.key.remoteJid, msg.key.id, msg);

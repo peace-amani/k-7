@@ -41,6 +41,7 @@ export default {
 
 ╭─⊷ *🚫 AUTO-MODERATION*
 │
+│  • antibot
 │  • antilink
 │  • antisticker
 │  • antiimage
