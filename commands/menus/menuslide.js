@@ -308,7 +308,7 @@ export default {
   async execute(sock, msg, args) {
     const chatId  = msg.key.remoteJid;
     const prefix  = global.prefix || process.env.PREFIX || '.';
-    const botName = (await getBotName().catch(() => BRAND())) || BRAND();
+    const botName = getBotName() || BRAND();
 
     // Determine which slide to show (args[0] is 1-based)
     let slideIndex = 0;
