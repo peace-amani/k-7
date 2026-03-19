@@ -5539,13 +5539,14 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             } else {
                                 let isSenderAdmin = false;
                                 let gMeta = null;
+                                let senderP = null;
                                 try {
                                     gMeta = await sock.groupMetadata(chatJid);
+                                    senderP = gMeta.participants.find(p => {
+                                        const pClean = p.id.split(':')[0].split('@')[0];
+                                        return pClean === senderClean;
+                                    });
                                     if (gc?.exemptAdmins !== false) {
-                                        const senderP = gMeta.participants.find(p => {
-                                            const pClean = p.id.split(':')[0].split('@')[0];
-                                            return pClean === senderClean;
-                                        });
                                         isSenderAdmin = senderP?.admin === 'admin' || senderP?.admin === 'superadmin';
                                     }
                                 } catch {}
@@ -5573,17 +5574,32 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                             });
                                         } catch {}
                                     } else if (mode === 'kick') {
-                                        const kickJid = `${senderClean}@s.whatsapp.net`;
+                                        // Resolve actual phone JID — senderJid may be a LID which WhatsApp can't kick
+                                        let kickJid;
+                                        if (senderJid.includes('@lid')) {
+                                            // 1. Try phoneNumber field on the group participant
+                                            const pn = senderP?.phoneNumber ? String(senderP.phoneNumber).replace(/[^0-9]/g, '') : null;
+                                            if (pn) {
+                                                kickJid = `${pn}@s.whatsapp.net`;
+                                            } else {
+                                                // 2. Try LID → phone cache
+                                                const cachedPhone = lidPhoneCache.get(senderClean) || getPhoneFromLid(senderClean);
+                                                kickJid = cachedPhone ? `${cachedPhone}@s.whatsapp.net` : senderJid;
+                                            }
+                                        } else {
+                                            kickJid = `${senderClean}@s.whatsapp.net`;
+                                        }
+                                        const kickDisplay = kickJid.split('@')[0];
                                         try {
                                             await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
                                             await sock.sendMessage(chatJid, {
-                                                text: `🚫 @${senderClean} has been removed for sharing links.`,
+                                                text: `🚫 @${kickDisplay} has been removed for sharing links.`,
                                                 mentions: [kickJid]
                                             });
                                         } catch (kickErr) {
                                             UltraCleanLogger.warning(`🔗 ANTILINK kick failed for ${kickJid}: ${kickErr.message}`);
                                             await sock.sendMessage(chatJid, {
-                                                text: `⚠️ Failed to remove @${senderClean}. Check my admin permissions.`,
+                                                text: `⚠️ Failed to remove @${kickDisplay}. Check my admin permissions.`,
                                                 mentions: [kickJid]
                                             }).catch(() => {});
                                         }
