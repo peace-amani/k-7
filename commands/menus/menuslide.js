@@ -1,349 +1,164 @@
-import { createRequire } from 'module';
+import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { getBotName } from '../../lib/botname.js';
 
-const _require = createRequire(import.meta.url);
-let giftedBtns;
-try { giftedBtns = _require('gifted-btns'); } catch {}
-
 const BRAND = () => getOwnerName().toUpperCase();
 
-// ─── Slide definitions ────────────────────────────────────────────────────────
-const SLIDES = [
+// ─── Slide / card definitions ─────────────────────────────────────────────────
+// Each card is one swipeable slide in the horizontal carousel.
+// body: short command list shown on the card
+// button: the quick-reply button label + command id (opens that category menu)
+const CARDS = [
   {
-    icon: '🤖',
-    title: 'AI & Models',
-    body: [
-      '╭─⌈ 🤖 *AI & MODELS* ⌋',
-      '├─⊷ `.chatgpt`   ChatGPT (OpenAI)',
-      '├─⊷ `.gemini`    Google Gemini',
-      '├─⊷ `.grok`      xAI Grok',
-      '├─⊷ `.deepseek`  DeepSeek AI',
-      '├─⊷ `.claude`    Anthropic Claude',
-      '├─⊷ `.mistral`   Mistral AI',
-      '├─⊷ `.llama`     Meta LLaMA',
-      '├─⊷ `.perplexity` Perplexity AI',
-      '├─⊷ `.groq`      Groq (ultra-fast)',
-      '├─⊷ `.vision`    Image understanding',
-      '├─⊷ `.totext`    Voice → text',
-      '├─⊷ `.summarize` Summarise text',
-      '├─⊷ `.aimenu`    Full AI menu',
-    ]
+    title: '🤖 AI & Models',
+    subtitle: 'ChatGPT, Gemini, Grok & more',
+    body: '📌 Key commands:\n• .chatgpt  • .gemini\n• .grok  • .deepseek\n• .claude  • .mistral\n• .vision  • .summarize',
+    btn: { label: '📋 Open AI Menu', id: '.aimenu' }
   },
   {
-    icon: '🎬',
-    title: 'AI Video & Image Gen',
-    body: [
-      '╭─⌈ 🎬 *AI VIDEO & IMAGE GEN* ⌋',
-      '├─⊷ `.imagine`   Generate image (AI)',
-      '├─⊷ `.flux`      Flux image model',
-      '├─⊷ `.anime`     Anime-style image',
-      '├─⊷ `.art`       Artistic generation',
-      '├─⊷ `.real`      Realistic photo',
-      '├─⊷ `.remini`    Enhance photo quality',
-      '├─⊷ `.videogen`  AI video generation',
-      '├─⊷ `.tovideo`   Convert to video',
-      '├─⊷ `.lovevideo` Love-themed video',
-      '├─⊷ `.removebg`  Remove background',
-      '├─⊷ `.imagemenu` Full image gen menu',
-    ]
+    title: '🎬 Image & Video Gen',
+    subtitle: 'AI-generated media',
+    body: '📌 Key commands:\n• .imagine  • .flux\n• .anime  • .art\n• .real  • .remini\n• .videogen  • .removebg',
+    btn: { label: '📋 Open Image Menu', id: '.imagemenu' }
   },
   {
-    icon: '🎌',
-    title: 'Anime & Fun',
-    body: [
-      '╭─⌈ 🎌 *ANIME & FUN* ⌋',
-      '├─⊷ `.hug`       Send a hug',
-      '├─⊷ `.pat`       Pat someone',
-      '├─⊷ `.kiss`      Kiss someone',
-      '├─⊷ `.waifu`     Random waifu',
-      '├─⊷ `.neko`      Neko image',
-      '├─⊷ `.dance`     Dance gif',
-      '├─⊷ `.cry`       Cry gif',
-      '├─⊷ `.slap`      Slap someone',
-      '├─⊷ `.hack`      Fake hacking screen',
-      '├─⊷ `.quote`     Random quote',
-      '├─⊷ `.animemenu` Full anime menu',
-    ]
+    title: '🎌 Anime & Fun',
+    subtitle: 'Anime, games & entertainment',
+    body: '📌 Key commands:\n• .hug  • .pat  • .kiss\n• .waifu  • .neko\n• .dance  • .hack\n• .quote  • .joke',
+    btn: { label: '📋 Open Fun Menu', id: '.funmenu' }
   },
   {
-    icon: '⚙️',
-    title: 'Automation',
-    body: [
-      '╭─⌈ ⚙️ *AUTOMATION* ⌋',
-      '├─⊷ `.autoread`       Auto-read messages',
-      '├─⊷ `.autoreact`      Auto-react to msgs',
-      '├─⊷ `.autotyping`     Auto typing indicator',
-      '├─⊷ `.autoviewstatus` Auto-view statuses',
-      '├─⊷ `.autodownloadstatus` Save statuses',
-      '├─⊷ `.autoreactstatus` React to statuses',
-      '├─⊷ `.autorecording`  Auto recording bubble',
-      '├─⊷ `.reactowner`     React to owner msgs',
-      '├─⊷ `.reactdev`       React to dev msgs',
-      '├─⊷ `.automenu`       Full automation menu',
-    ]
+    title: '⚙️ Automation',
+    subtitle: 'Auto-actions & smart features',
+    body: '📌 Key commands:\n• .autoread  • .autoreact\n• .autotyping\n• .autoviewstatus\n• .autodownloadstatus\n• .autorecording',
+    btn: { label: '📋 Open Auto Menu', id: '.automenu' }
   },
   {
-    icon: '🎨',
-    title: 'Design & Logo Effects',
-    body: [
-      '╭─⌈ 🎨 *DESIGN & LOGO EFFECTS* ⌋',
-      '├─⊷ `.logo`        Basic logo',
-      '├─⊷ `.firelogo`    Fire logo effect',
-      '├─⊷ `.neonlogo`    Neon glow logo',
-      '├─⊷ `.goldlogo`    Gold logo',
-      '├─⊷ `.diamondlogo` Diamond logo',
-      '├─⊷ `.dragonlogo`  Dragon logo',
-      '├─⊷ `.rainbowlogo` Rainbow logo',
-      '├─⊷ `.matrixlogo`  Matrix logo',
-      '├─⊷ `.phoenixlogo` Phoenix logo',
-      '├─⊷ `.brandlogo`   Brand-style logo',
-      '├─⊷ `.logomenu`    Full logo menu',
-    ]
+    title: '🎨 Design & Logos',
+    subtitle: 'Logo & text effects',
+    body: '📌 Key commands:\n• .logo  • .firelogo\n• .neonlogo  • .goldlogo\n• .diamondlogo\n• .rainbowlogo\n• .brandlogo',
+    btn: { label: '📋 Open Logo Menu', id: '.logomenu' }
   },
   {
-    icon: '⬇️',
-    title: 'Downloaders',
-    body: [
-      '╭─⌈ ⬇️ *DOWNLOADERS* ⌋',
-      '├─⊷ `.ytmp3`      YouTube → MP3',
-      '├─⊷ `.ytmp4`      YouTube → MP4',
-      '├─⊷ `.ytplay`     Search & play YT',
-      '├─⊷ `.tiktok`     TikTok video',
-      '├─⊷ `.instagram`  Instagram video/reel',
-      '├─⊷ `.facebook`   Facebook video',
-      '├─⊷ `.snapchat`   Snapchat video',
-      '├─⊷ `.spotify`    Spotify track info',
-      '├─⊷ `.mediafire`  MediaFire download',
-      '├─⊷ `.apk`        App download',
-      '├─⊷ `.downloadmenu` Full downloader menu',
-    ]
+    title: '⬇️ Downloaders',
+    subtitle: 'YouTube, TikTok, Instagram & more',
+    body: '📌 Key commands:\n• .ytmp3  • .ytmp4\n• .tiktok  • .instagram\n• .facebook  • .spotify\n• .mediafire  • .apk',
+    btn: { label: '📋 Open Download Menu', id: '.downloadmenu' }
   },
   {
-    icon: '🔐',
-    title: 'Security & Hacking',
-    body: [
-      '╭─⌈ 🔐 *SECURITY & HACKING* ⌋',
-      '├─⊷ `.nmap`       Port scan',
-      '├─⊷ `.whois`      Domain WHOIS lookup',
-      '├─⊷ `.dnslookup`  DNS records',
-      '├─⊷ `.portscan`   Open ports check',
-      '├─⊷ `.sslcheck`   SSL certificate check',
-      '├─⊷ `.sqlicheck`  SQLi vulnerability test',
-      '├─⊷ `.xsscheck`   XSS check',
-      '├─⊷ `.malwarecheck` URL malware scan',
-      '├─⊷ `.phishcheck` Phishing detection',
-      '├─⊷ `.leakcheck`  Data breach check',
-      '├─⊷ `.securitymenu` Full security menu',
-    ]
+    title: '🔐 Security',
+    subtitle: 'Hacking & security tools',
+    body: '📌 Key commands:\n• .nmap  • .whois\n• .sslcheck  • .dnslookup\n• .portscan  • .sqlicheck\n• .malwarecheck  • .phishcheck',
+    btn: { label: '📋 Open Security Menu', id: '.securitymenu' }
   },
   {
-    icon: '📸',
-    title: 'Photo Effects',
-    body: [
-      '╭─⌈ 📸 *PHOTO EFFECTS* ⌋',
-      '├─⊷ `.neon`         Neon text photo',
-      '├─⊷ `.3dtext`       3D text effect',
-      '├─⊷ `.graffiti`     Graffiti-style text',
-      '├─⊷ `.fire`         Fire text',
-      '├─⊷ `.galaxy`       Galaxy effect',
-      '├─⊷ `.hologram`     Hologram style',
-      '├─⊷ `.metal`        Metal engraving',
-      '├─⊷ `.matrix`       Matrix-style text',
-      '├─⊷ `.gradient`     Gradient text',
-      '├─⊷ `.photofunia`   100+ PhotoFunia effects',
-      '├─⊷ `.ephotomenu`   Full ephoto menu',
-    ]
+    title: '📸 Photo Effects',
+    subtitle: 'Ephoto & PhotoFunia effects',
+    body: '📌 Key commands:\n• .neon  • .graffiti\n• .hologram  • .matrix\n• .gradient  • .metal\n• .text3d  • .photofunia',
+    btn: { label: '📋 Open Ephoto Menu', id: '.ephotomenu' }
   },
   {
-    icon: '👥',
-    title: 'Group Management',
-    body: [
-      '╭─⌈ 👥 *GROUP MANAGEMENT* ⌋',
-      '├─⊷ `.antilink`   Anti-link protection',
-      '├─⊷ `.welcome`    Welcome message toggle',
-      '├─⊷ `.kick`       Kick a member',
-      '├─⊷ `.ban` / `.unban` Ban/unban member',
-      '├─⊷ `.promote` / `.demote` Admin controls',
-      '├─⊷ `.tagall`     Tag all members',
-      '├─⊷ `.mute` / `.unmute` Mute group',
-      '├─⊷ `.joinapproval` Link approval mode',
-      '├─⊷ `.onlyadmins` Admin-only messages',
-      '├─⊷ `.disp`       Disappearing messages',
-      '├─⊷ `.groupmenu`  Full group menu',
-    ]
+    title: '👥 Group Tools',
+    subtitle: 'Group admin & management',
+    body: '📌 Key commands:\n• .antilink  • .welcome\n• .kick  • .ban  • .tagall\n• .mute  • .joinapproval\n• .promote  • .demote',
+    btn: { label: '📋 Open Group Menu', id: '.groupmenu' }
   },
   {
-    icon: '🎵',
-    title: 'Music & Media',
-    body: [
-      '╭─⌈ 🎵 *MUSIC & MEDIA CONVERSION* ⌋',
-      '├─⊷ `.play`       Play/search music',
-      '├─⊷ `.song`       Download song',
-      '├─⊷ `.lyrics`     Get song lyrics',
-      '├─⊷ `.shazam`     Identify a song',
-      '├─⊷ `.tosticker`  Image → sticker',
-      '├─⊷ `.toaudio`    Video → audio',
-      '├─⊷ `.togif`      Video → GIF',
-      '├─⊷ `.tovoice`    Text → voice note',
-      '├─⊷ `.tts`        Text-to-speech',
-      '├─⊷ `.trim`       Trim audio/video',
-      '├─⊷ `.musicmenu`  Full music menu',
-    ]
+    title: '🎵 Music & Media',
+    subtitle: 'Play, convert & download music',
+    body: '📌 Key commands:\n• .play  • .song\n• .lyrics  • .shazam\n• .tosticker  • .toaudio\n• .tts  • .togif',
+    btn: { label: '📋 Open Music Menu', id: '.musicmenu' }
   },
   {
-    icon: '🗞️',
-    title: 'News & Sports',
-    body: [
-      '╭─⌈ 🗞️ *NEWS & SPORTS* ⌋',
-      '├─⊷ `.bbcnews`    BBC News headlines',
-      '├─⊷ `.citizennews` Citizen TV news',
-      '├─⊷ `.kbcnews`    KBC news',
-      '├─⊷ `.technews`   Tech news',
-      '├─⊷ `.football`   Football scores',
-      '├─⊷ `.cricket`    Cricket scores',
-      '├─⊷ `.basketball` Basketball scores',
-      '├─⊷ `.f1`         Formula 1 news',
-      '├─⊷ `.tennis`     Tennis updates',
-      '├─⊷ `.sportsnews` Sports news',
-      '├─⊷ `.sportsmenu` Full sports menu',
-    ]
+    title: '🗞️ News & Sports',
+    subtitle: 'Latest news & match scores',
+    body: '📌 Key commands:\n• .bbcnews  • .technews\n• .football  • .cricket\n• .basketball  • .f1\n• .tennis  • .sportsnews',
+    btn: { label: '📋 Open Sports Menu', id: '.sportsmenu' }
   },
   {
-    icon: '🕵️',
-    title: 'Stalker & Tools',
-    body: [
-      '╭─⌈ 🕵️ *STALKER & TOOLS* ⌋',
-      '├─⊷ `.igstalk`    Stalk Instagram user',
-      '├─⊷ `.gitstalk`   Stalk GitHub user',
-      '├─⊷ `.tiktokstalk` Stalk TikTok user',
-      '├─⊷ `.twitterstalk` Stalk Twitter user',
-      '├─⊷ `.ipstalk`    IP address info',
-      '├─⊷ `.npmstalk`   NPM package info',
-      '├─⊷ `.movies`     Movie search',
-      '├─⊷ `.trailer`    Movie trailer',
-      '├─⊷ `.translate`  Translate text',
-      '├─⊷ `.wiki`       Wikipedia search',
-      '├─⊷ `.stalkermenu` Full stalker menu',
-    ]
+    title: '🕵️ Stalker & Tools',
+    subtitle: 'Social media lookup & tools',
+    body: '📌 Key commands:\n• .igstalk  • .gitstalk\n• .tiktokstalk  • .twitterstalk\n• .movies  • .translate\n• .wiki  • .weather',
+    btn: { label: '📋 Open Stalker Menu', id: '.stalkermenu' }
   },
   {
-    icon: '👑',
-    title: 'Owner & Admin',
-    body: [
-      '╭─⌈ 👑 *OWNER & ADMIN* ⌋',
-      '├─⊷ `.owner`      Show owner info',
-      '├─⊷ `.restart`    Restart the bot',
-      '├─⊷ `.reload`     Reload commands',
-      '├─⊷ `.setbotname` Change bot name',
-      '├─⊷ `.setprefix`  Change command prefix',
-      '├─⊷ `.addsudo`    Add sudo user',
-      '├─⊷ `.block`      Block a user',
-      '├─⊷ `.anticall`   Block incoming calls',
-      '├─⊷ `.antidelete` Anti-delete messages',
-      '├─⊷ `.mode`       Public/private mode',
-      '├─⊷ `.ownermenu`  Full owner menu',
-    ]
+    title: '👑 Owner & Admin',
+    subtitle: 'Bot owner & settings',
+    body: '📌 Key commands:\n• .restart  • .reload\n• .setbotname  • .setprefix\n• .addsudo  • .block\n• .anticall  • .mode',
+    btn: { label: '📋 Open Owner Menu', id: '.ownermenu' }
   }
 ];
 
-const TOTAL = SLIDES.length;
-
-// ─── Build the text for one slide ────────────────────────────────────────────
-function buildSlideText(index, botName) {
-  const slide = SLIDES[index];
-  const lines = [
-    ...slide.body,
-    `├─────────────────────`,
-    `├─⊷ Slide ${index + 1} of ${TOTAL}`,
-    `╰⊷ *${botName} Menu*`
-  ];
-  return lines.join('\n');
+// ─── Build interactive carousel card (each card = one InteractiveMessage) ─────
+function buildCard(card) {
+  return {
+    header: {
+      title: card.title,
+      subtitle: card.subtitle,
+      hasMediaAttachment: false
+    },
+    body: { text: card.body },
+    footer: { text: `🐺 ${getBotName() || BRAND()}` },
+    nativeFlowMessage: {
+      buttons: [
+        {
+          name: 'quick_reply',
+          buttonParamsJson: JSON.stringify({
+            display_text: card.btn.label,
+            id: card.btn.id
+          })
+        }
+      ]
+    }
+  };
 }
 
-// ─── Build interactive button array ──────────────────────────────────────────
-function buildButtons(index, prefix) {
-  const buttons = [];
-
-  if (index > 0) {
-    buttons.push({
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: `◀ ${SLIDES[index - 1].icon} ${SLIDES[index - 1].title}`,
-        id: `${prefix}menuslide ${index}`        // 1-based: previous = current index (0-based)
-      })
-    });
-  }
-
-  if (index < TOTAL - 1) {
-    buttons.push({
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: `${SLIDES[index + 1].icon} ${SLIDES[index + 1].title} ▶`,
-        id: `${prefix}menuslide ${index + 2}`    // 1-based: next = index + 2
-      })
-    });
-  }
-
-  // Always add a home button on any slide that isn't the first
-  if (index > 0) {
-    buttons.push({
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: `🏠 Start Over`,
-        id: `${prefix}menuslide`
-      })
-    });
-  }
-
-  return buttons;
-}
-
-// ─── Command export ───────────────────────────────────────────────────────────
+// ─── Command export ────────────────────────────────────────────────────────────
 export default {
   name: 'menuslide',
   alias: ['slidemenu', 'cmds'],
-  description: 'Browse command categories as interactive slides. Usage: .menuslide [1-' + TOTAL + ']',
+  description: 'Browse all bot command categories as swipeable carousel slides.',
 
-  async execute(sock, msg, args) {
+  async execute(sock, msg) {
     const chatId  = msg.key.remoteJid;
-    const prefix  = global.prefix || process.env.PREFIX || '.';
     const botName = getBotName() || BRAND();
 
-    // Determine which slide to show (args[0] is 1-based)
-    let slideIndex = 0;
-    if (args[0]) {
-      const n = parseInt(args[0], 10);
-      if (!isNaN(n) && n >= 1 && n <= TOTAL) {
-        slideIndex = n - 1;
-      }
+    try {
+      const carouselMsg = generateWAMessageFromContent(chatId, {
+        viewOnceMessage: {
+          message: {
+            interactiveMessage: {
+              body: { text: `🐺 *${botName} — Command Categories*\nSwipe left or right to browse all categories 👇` },
+              footer: { text: `${CARDS.length} categories • Tap a button to open full menu` },
+              carouselMessage: {
+                carouselCardType: 1,   // HSCROLL_CARDS — horizontal scroll
+                messageVersion: 1,
+                cards: CARDS.map(buildCard)
+              }
+            }
+          }
+        }
+      }, {
+        quoted: msg,
+        userJid: sock.user?.id || chatId
+      });
+
+      await sock.relayMessage(chatId, carouselMsg.message, {
+        messageId: carouselMsg.key.id
+      });
+
+    } catch (err) {
+      console.error('[MENUSLIDE] Carousel failed, sending plain list:', err.message);
+
+      // Fallback: plain text list of all categories + key commands
+      const prefix = global.prefix || process.env.PREFIX || '.';
+      const text = [
+        `╭─⌈ 🐺 *${botName} MENU* ⌋`,
+        ...CARDS.map((c, i) => `├─⊷ ${c.title}\n│    ${c.body.split('\n').slice(1).join(' ')}`),
+        `╰⊷ Use *${prefix}aimenu*, *${prefix}groupmenu* etc. for full category menus`
+      ].join('\n');
+
+      await sock.sendMessage(chatId, { text }, { quoted: msg });
     }
-
-    const text    = buildSlideText(slideIndex, botName);
-    const buttons = buildButtons(slideIndex, prefix);
-    const footer  = `🐺 ${botName} • Use buttons to navigate`;
-
-    // Send as interactive message if gifted-btns is available
-    if (giftedBtns) {
-      try {
-        return await giftedBtns.sendInteractiveMessage(sock, chatId, {
-          text,
-          footer,
-          interactiveButtons: buttons
-        });
-      } catch {
-        // fall through to plain text
-      }
-    }
-
-    // Fallback: plain text with navigation hint
-    const navHint = [
-      slideIndex > 0      ? `◀ ${prefix}menuslide ${slideIndex}` : null,
-      slideIndex < TOTAL - 1 ? `▶ ${prefix}menuslide ${slideIndex + 2}` : null,
-    ].filter(Boolean).join('   ');
-
-    return sock.sendMessage(chatId, {
-      text: text + (navHint ? `\n\n${navHint}` : '')
-    }, { quoted: msg });
   }
 };
