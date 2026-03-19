@@ -1340,7 +1340,16 @@ let hasAutoConnectedOnStart = false;
 let hasSentWelcomeMessage = false;
 let initialCommandsLoaded = false;
 let commandsLoaded = false;
-let _lastConnectionMsgTime = 0;
+let _lastConnectionMsgTime = (() => {
+    try {
+        const _stampFile = './data/.last_conn_msg';
+        if (fs.existsSync(_stampFile)) {
+            const val = parseInt(fs.readFileSync(_stampFile, 'utf8'));
+            if (!isNaN(val)) return val;
+        }
+    } catch {}
+    return 0;
+})();
 let conflictCount = 0;
 let isConflictRecovery = false;
 let connectionOpenTime = 0;
@@ -4143,8 +4152,12 @@ function setupHerokuKeepAlive() {
         
         // Periodic activity to prevent sleeping
         setInterval(() => {
-            UltraCleanLogger.info('💓 Heroku keep-alive pulse');
             lastActivityTime = Date.now();
+            const appUrl = process.env.HEROKU_URL || process.env.APP_URL || process.env.RENDER_EXTERNAL_URL;
+            if (appUrl) {
+                fetch(appUrl.startsWith('http') ? appUrl : `https://${appUrl}`, { signal: AbortSignal.timeout(10000) })
+                    .catch(() => {});
+            }
         }, 20 * 60 * 1000); // Every 20 minutes
         
         // Memory monitoring for Heroku
@@ -4906,6 +4919,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         if (typeof globalThis._autoTypingInit === 'function') {
                             try { globalThis._autoTypingInit(sock); } catch {}
                         }
+                        if (typeof globalThis._autoRecordingInit === 'function') {
+                            try { globalThis._autoRecordingInit(sock); } catch {}
+                        }
+                        if (typeof globalThis._autoReadInit === 'function') {
+                            try { globalThis._autoReadInit(sock); } catch {}
+                        }
                     }).catch(() => {});
                     try {
                         const uid = sock.user.id;
@@ -5059,9 +5078,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
                         await Promise.race([sendPromise, timeoutPromise]);
                         _lastConnectionMsgTime = Date.now();
+                        try { fs.writeFileSync('./data/.last_conn_msg', String(_lastConnectionMsgTime)); } catch {}
                     } catch (sendError) {
                         console.log(chalk.red('❌ Could not send connection message:'), sendError.message);
                         _lastConnectionMsgTime = Date.now();
+                        try { fs.writeFileSync('./data/.last_conn_msg', String(_lastConnectionMsgTime)); } catch {}
                     }
                 }, 5000);
                 
@@ -5554,27 +5575,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                     } else if (mode === 'kick') {
                                         const kickJid = `${senderClean}@s.whatsapp.net`;
                                         try {
-                                            // Check bot is admin before attempting kick
-                                            const botClean = (sock.user?.id || '').split(':')[0].split('@')[0];
-                                            const botP = gMeta?.participants?.find(p => {
-                                                const pClean = p.id.split(':')[0].split('@')[0];
-                                                return pClean === botClean;
+                                            await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                            await sock.sendMessage(chatJid, {
+                                                text: `🚫 @${senderClean} has been removed for sharing links.`,
+                                                mentions: [kickJid]
                                             });
-                                            const isBotAdmin = botP?.admin === 'admin' || botP?.admin === 'superadmin';
-
-                                            if (!isBotAdmin) {
-                                                await sock.sendMessage(chatJid, {
-                                                    text: `⚠️ Cannot remove @${senderClean} — I need admin rights to kick members.`,
-                                                    mentions: [kickJid]
-                                                });
-                                            } else {
-                                                // Kick first, announce only on success
-                                                await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
-                                                await sock.sendMessage(chatJid, {
-                                                    text: `🚫 @${senderClean} has been removed for sharing links.`,
-                                                    mentions: [kickJid]
-                                                });
-                                            }
                                         } catch (kickErr) {
                                             UltraCleanLogger.warning(`🔗 ANTILINK kick failed for ${kickJid}: ${kickErr.message}`);
                                             await sock.sendMessage(chatJid, {
@@ -7838,11 +7843,10 @@ async function main() {
         
         // Handle restarts based on platform
         if (process.env.HEROKU || process.env.DYNO) {
-            // Longer delay on Heroku to avoid rapid restarts
-            UltraCleanLogger.warning('🔄 Heroku restart scheduled in 30 seconds...');
+            UltraCleanLogger.warning('🔄 Heroku restart scheduled in 5 seconds...');
             setTimeout(async () => {
                 await main();
-            }, 30000);
+            }, 5000);
         } else {
             // Faster restart for local/panel deployments
             UltraCleanLogger.warning('🔄 Restarting in 8 seconds...');

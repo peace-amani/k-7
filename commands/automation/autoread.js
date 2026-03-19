@@ -546,9 +546,11 @@ async function markAsRead(sock, jid, messageId) {
 
 // Process and auto-read messages
 let autoreadActive = false;
+let _autoReadHookedSock = null;
 
 function setupAutoread(sock) {
-    if (autoreadActive) return;
+    if (autoreadActive && _autoReadHookedSock === sock) return;
+    if (_autoReadHookedSock !== sock) autoreadActive = false;
     
     const settings = loadSettings();
     
@@ -611,6 +613,7 @@ function setupAutoread(sock) {
     });
     
     autoreadActive = true;
+    _autoReadHookedSock = sock;
     
     // Only show success message if not silent
     if (!settings.silent) {
@@ -945,11 +948,17 @@ export default {
 
 // Export setup function for manual initialization
 export function startAutoread(sock) {
-    if (!autoreadActive) {
+    if (!autoreadActive || _autoReadHookedSock !== sock) {
         setupAutoread(sock);
-        autoreadActive = true;
     }
 }
+
+globalThis._autoReadInit = (sock) => {
+    const settings = loadSettings();
+    if (settings.enabled && settings.mode !== 'off') {
+        setupAutoread(sock);
+    }
+};
 
 
 

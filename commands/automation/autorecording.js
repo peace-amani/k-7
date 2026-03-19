@@ -75,6 +75,9 @@ function shouldRecordInChat(chatJid) {
 
 class AutoRecordingManager {
     static initialize(sock) {
+        if (sock && autoRecordingConfig.botSock && autoRecordingConfig.botSock !== sock) {
+            autoRecordingConfig.isHooked = false;
+        }
         if (!autoRecordingConfig.isHooked && sock) {
             autoRecordingConfig.botSock = sock;
             this.hookIntoBot();
@@ -281,5 +284,11 @@ export default {
                 text: `❌ AutoRecording error: ${err.message}`
             }, { quoted: m });
         }
+    }
+};
+
+globalThis._autoRecordingInit = (sock) => {
+    if (autoRecordingConfig.mode !== 'off') {
+        AutoRecordingManager.initialize(sock);
     }
 };
