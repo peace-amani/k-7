@@ -11,19 +11,9 @@ export default {
       const jid = m.key.remoteJid;
       const botName = getBotName();
 
-      const uptime = process.uptime();
-      const days    = Math.floor(uptime / 86400);
-      const hours   = Math.floor((uptime % 86400) / 3600);
-      const minutes = Math.floor((uptime % 3600) / 60);
-
-      let uptimeStr = '';
-      if (days > 0)    uptimeStr += `${days}days : `;
-      uptimeStr += `${hours}hrs : ${minutes}mins`;
-
       const text =
         `╭─⌈ 🐺 *${botName}* ⌋\n` +
-        `│ ✅ Status  : Online\n` +
-        `│ ⏱️ Uptime  : ${uptimeStr}\n` +
+        `│ ✅ Status : Online\n` +
         `╰⊷ *${botName} is alive!*`;
 
       const fkontak = {
