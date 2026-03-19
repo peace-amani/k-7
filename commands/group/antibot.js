@@ -119,14 +119,16 @@ export default {
       return sock.sendMessage(chatId, {
         text:
           `╭─⌈ 🤖 *ANTI-BOT* ⌋\n` +
+          `├─⊷ *Status:* ${statusIcon}\n` +
           `│\n` +
-          `├ Status : *${statusIcon}*\n` +
-          `│\n` +
-          `├ *${PREFIX}antibot on warn*\n` +
-          `├ *${PREFIX}antibot on delete*\n` +
-          `├ *${PREFIX}antibot on kick*\n` +
-          `├ *${PREFIX}antibot off*\n` +
-          `│\n` +
+          `├─⊷ *${PREFIX}antibot on warn*\n` +
+          `│  └⊷ Warn sender & delete msg\n` +
+          `├─⊷ *${PREFIX}antibot on delete*\n` +
+          `│  └⊷ Silently delete bot msgs\n` +
+          `├─⊷ *${PREFIX}antibot on kick*\n` +
+          `│  └⊷ Delete msg & kick sender\n` +
+          `├─⊷ *${PREFIX}antibot off*\n` +
+          `│  └⊷ Disable protection\n` +
           `╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
     }
@@ -142,7 +144,7 @@ export default {
       return sock.sendMessage(chatId, {
         text:
           `╭─⌈ 🤖 *ANTI-BOT ENABLED* ⌋\n` +
-          `├ *Mode:* ${mode.toUpperCase()}\n` +
+          `├─⊷ *Mode:* ${mode.toUpperCase()}\n` +
           `╰⊷ *Powered by ${BRAND()} TECH*`
       }, { quoted: msg });
     }
@@ -160,12 +162,16 @@ export default {
       text:
         `╭─⌈ 🤖 *ANTI-BOT* ⌋\n` +
         `│\n` +
-        `├ *${PREFIX}antibot on warn*\n` +
-        `├ *${PREFIX}antibot on delete*\n` +
-        `├ *${PREFIX}antibot on kick*\n` +
-        `├ *${PREFIX}antibot off*\n` +
-        `├ *${PREFIX}antibot status*\n` +
-        `│\n` +
+        `├─⊷ *${PREFIX}antibot on warn*\n` +
+        `│  └⊷ Warn sender & delete msg\n` +
+        `├─⊷ *${PREFIX}antibot on delete*\n` +
+        `│  └⊷ Silently delete bot msgs\n` +
+        `├─⊷ *${PREFIX}antibot on kick*\n` +
+        `│  └⊷ Delete msg & kick sender\n` +
+        `├─⊷ *${PREFIX}antibot off*\n` +
+        `│  └⊷ Disable protection\n` +
+        `├─⊷ *${PREFIX}antibot status*\n` +
+        `│  └⊷ View current settings\n` +
         `╰⊷ *Powered by ${BRAND()} TECH*`
     }, { quoted: msg });
   }
