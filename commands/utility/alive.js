@@ -9,65 +9,47 @@ export default {
   async execute(sock, m, args, PREFIX) {
     try {
       const jid = m.key.remoteJid;
-
-      function createFakeContact(message) {
-        return {
-          key: {
-            participant: "0@s.whatsapp.net",
-            remoteJid: "status@broadcast",
-            fromMe: false,
-            id: getBotName()
-          },
-          messageTimestamp: moment().unix(),
-          pushName: getBotName(),
-          message: {
-            contactMessage: {
-              vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:${getBotName()}\nitem1.TEL;waid=${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}:${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-            }
-          },
-          participant: "0@s.whatsapp.net"
-        };
-      }
-
-      const fkontak = createFakeContact(m);
+      const botName = getBotName();
 
       const uptime = process.uptime();
-      const hours = Math.floor(uptime / 3600);
+      const days    = Math.floor(uptime / 86400);
+      const hours   = Math.floor((uptime % 86400) / 3600);
       const minutes = Math.floor((uptime % 3600) / 60);
-      const seconds = Math.floor(uptime % 60);
 
-      const usedMemory = process.memoryUsage().heapUsed / 1024 / 1024;
-      const totalMemory = process.memoryUsage().heapTotal / 1024 / 1024;
-      const memoryPercent = ((usedMemory / totalMemory) * 100).toFixed(1);
-      const statusEmoji = memoryPercent < 60 ? "🟢" : memoryPercent < 80 ? "🟡" : "🔴";
+      let uptimeStr = '';
+      if (days > 0)    uptimeStr += `${days}days : `;
+      uptimeStr += `${hours}hrs : ${minutes}mins`;
 
-      const aliveText = `
-╭━「 *${getBotName()} ALIVE* 」━╮
-│  ${statusEmoji} *Status:* Online
-│  ⏱️ *Uptime:* ${hours}h ${minutes}m ${seconds}s
-│  💾 *Memory:* ${memoryPercent}%
-╰━━━━━━━━━━━━━╯
-_🐺 The pack survives together..._
-`;
+      const text =
+        `╭─⌈ 🐺 *${botName}* ⌋\n` +
+        `│ ✅ Status  : Online\n` +
+        `│ ⏱️ Uptime  : ${uptimeStr}\n` +
+        `╰⊷ *${botName} is alive!*`;
 
-      await sock.sendMessage(jid, {
-        text: aliveText
-      }, {
-        quoted: fkontak
-      });
+      const fkontak = {
+        key: {
+          participant: '0@s.whatsapp.net',
+          remoteJid:   'status@broadcast',
+          fromMe:      false,
+          id:          botName
+        },
+        messageTimestamp: moment().unix(),
+        pushName: botName,
+        message: {
+          contactMessage: {
+            vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:${botName}\nEND:VCARD`
+          }
+        },
+        participant: '0@s.whatsapp.net'
+      };
 
-      await sock.sendMessage(jid, {
-        react: { text: '🐺', key: m.key }
-      });
+      await sock.sendMessage(jid, { text }, { quoted: fkontak });
+      try { await sock.sendMessage(jid, { react: { text: '🐺', key: m.key } }); } catch {}
 
-    } catch (error) {
-      console.error("Alive command error:", error);
-
+    } catch (err) {
       await sock.sendMessage(m.key.remoteJid, {
-        text: `🐺 ${getBotName()} is alive!\n⚡ Status: Running`
-      }, {
-        quoted: m
-      });
+        text: `🐺 ${getBotName()} is alive!`
+      }, { quoted: m });
     }
   }
 };

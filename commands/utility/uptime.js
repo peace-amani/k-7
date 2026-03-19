@@ -10,70 +10,50 @@ export default {
   async execute(sock, m, args, PREFIX) {
     try {
       const jid = m.key.remoteJid;
+      const botName = getBotName();
 
-      function createFakeContact(message) {
-        return {
-          key: {
-            participant: "0@s.whatsapp.net",
-            remoteJid: "status@broadcast",
-            fromMe: false,
-            id: getBotName()
-          },
-          messageTimestamp: moment().unix(),
-          pushName: getBotName(),
-          message: {
-            contactMessage: {
-              vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:${getBotName()}\nitem1.TEL;waid=${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}:${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-            }
-          },
-          participant: "0@s.whatsapp.net"
-        };
-      }
-
-      const fkontak = createFakeContact(m);
-
-      const uptime = process.uptime();
-      const days = Math.floor(uptime / (3600 * 24));
-      const hours = Math.floor((uptime % (3600 * 24)) / 3600);
+      const uptime  = process.uptime();
+      const days    = Math.floor(uptime / 86400);
+      const hours   = Math.floor((uptime % 86400) / 3600);
       const minutes = Math.floor((uptime % 3600) / 60);
       const seconds = Math.floor(uptime % 60);
 
-      let timeString = "";
-      if (days > 0) timeString += `${days}d `;
-      if (hours > 0) timeString += `${hours}h `;
-      if (minutes > 0) timeString += `${minutes}m `;
-      timeString += `${seconds}s`;
+      let uptimeStr = '';
+      if (days > 0)    uptimeStr += `${days}days : `;
+      uptimeStr += `${hours}hrs : ${minutes}mins : ${seconds}secs`;
 
-      const uptimeText = `
-╭━「 *${getBotName()} UPTIME* 」━╮
-│  ⏱️ *Running:* ${timeString.trim()}
-│  📅 *Since:* ${new Date(Date.now() - uptime * 1000).toLocaleString()}
-╰━━━━━━━━━━━━━╯
-_🐺 The Wolf never sleeps..._
-`;
+      const text =
+        `╭─⌈ ⏱️ *${botName}* ⌋\n` +
+        `│ Uptime : ${uptimeStr}\n` +
+        `╰⊷ *${botName}*`;
 
-      await sock.sendMessage(jid, {
-        text: uptimeText
-      }, {
-        quoted: fkontak
-      });
+      const fkontak = {
+        key: {
+          participant: '0@s.whatsapp.net',
+          remoteJid:   'status@broadcast',
+          fromMe:      false,
+          id:          botName
+        },
+        messageTimestamp: moment().unix(),
+        pushName: botName,
+        message: {
+          contactMessage: {
+            vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:${botName}\nEND:VCARD`
+          }
+        },
+        participant: '0@s.whatsapp.net'
+      };
 
-      await sock.sendMessage(jid, {
-        react: { text: '⏱️', key: m.key }
-      });
+      await sock.sendMessage(jid, { text }, { quoted: fkontak });
+      try { await sock.sendMessage(jid, { react: { text: '⏱️', key: m.key } }); } catch {}
 
-    } catch (error) {
-      console.error("Uptime command error:", error);
-
-      const uptime = process.uptime();
-      const hours = Math.floor(uptime / 3600);
+    } catch (err) {
+      const uptime  = process.uptime();
+      const hours   = Math.floor(uptime / 3600);
       const minutes = Math.floor((uptime % 3600) / 60);
-
       await sock.sendMessage(m.key.remoteJid, {
-        text: `🐺 ${getBotName()}: ${hours}h ${minutes}m`
-      }, {
-        quoted: m
-      });
+        text: `⏱️ ${getBotName()}: ${hours}hrs : ${minutes}mins`
+      }, { quoted: m });
     }
   }
 };
