@@ -236,6 +236,7 @@ import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';
 import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
+import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
 import { setActiveCommand, clearActiveCommand, getActiveCommand, buildCommandButtons } from './lib/commandButtons.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
 import { migrateWarningsToSupabase } from './lib/warnings-store.js';
@@ -7382,6 +7383,10 @@ async function handleIncomingMessage(sock, msg) {
                         isPrefixless: isPrefixless,
                         DiskManager: DiskManager
                     });
+                    // Music mode: send a random short audio clip after every command response
+                    if (isMusicModeEnabled()) {
+                        sendMusicClip(sock, chatId).catch(() => {});
+                    }
                 } finally {
                     clearActiveCommand(chatId, senderJid);
                 }
