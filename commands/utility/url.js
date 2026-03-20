@@ -1,4 +1,5 @@
 import axios from "axios";
+import FormData from "form-data";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import fs from "fs";
 import path from "path";
@@ -335,122 +336,76 @@ async function uploadToImgBB(buffer, filename) {
     }
 }
 
-// Upload to Telegraph
+// Upload to Telegra.ph (images only, axios-based)
 async function uploadToTelegraph(buffer, filename) {
     try {
         console.log(`📤 Uploading to Telegraph: ${filename}`);
-        
-        const formData = new FormData();
-        const blob = new Blob([buffer], { type: getContentType(filename) });
-        formData.append('file', blob, filename);
-        
-        const response = await fetch(UPLOAD_SERVICES.TELEGRAPH.url, {
-            method: 'POST',
-            body: formData
+        const form = new FormData();
+        form.append('file', buffer, { filename, contentType: getContentType(filename) });
+        const response = await axios.post('https://telegra.ph/upload', form, {
+            headers: form.getHeaders(),
+            timeout: 20000
         });
-        
-        const data = await response.json();
-        const url = UPLOAD_SERVICES.TELEGRAPH.getUrl(data);
-        
-        if (url) {
-            return {
-                success: true,
-                url: url,
-                service: 'Telegra.ph',
-                permanent: true
-            };
+        const src = response.data?.[0]?.src;
+        if (src) {
+            return { success: true, url: `https://telegra.ph${src}`, service: 'Telegra.ph', permanent: true };
         }
-        
-        return {
-            success: false,
-            error: "Telegraph upload failed"
-        };
-        
+        return { success: false, error: 'Telegraph upload failed' };
     } catch (error) {
         console.error('Telegraph upload error:', error.message);
-        return {
-            success: false,
-            error: "Telegraph upload failed"
-        };
+        return { success: false, error: 'Telegraph upload failed' };
     }
 }
 
-// Upload to 0x0.st
-async function uploadToZeroXZero(buffer, filename) {
+// Upload to Catbox.moe (all files, permanent, up to 200MB — best for audio)
+async function uploadToCatbox(buffer, filename) {
     try {
-        console.log(`📤 Uploading to 0x0.st: ${filename}`);
-        
-        const formData = new FormData();
-        const blob = new Blob([buffer], { type: getContentType(filename) });
-        formData.append('file', blob, filename);
-        
-        const response = await fetch(UPLOAD_SERVICES.ZEROXZERO.url, {
-            method: 'POST',
-            body: formData
+        console.log(`📤 Uploading to Catbox.moe: ${filename}`);
+        const form = new FormData();
+        form.append('reqtype', 'fileupload');
+        form.append('userhash', '');
+        form.append('fileToUpload', buffer, { filename, contentType: getContentType(filename) });
+        const response = await axios.post('https://catbox.moe/user/api.php', form, {
+            headers: form.getHeaders(),
+            timeout: 60000,
+            maxContentLength: 200 * 1024 * 1024
         });
-        
-        const url = (await response.text()).trim();
-        
-        if (url && url.startsWith('http')) {
-            return {
-                success: true,
-                url: url,
-                service: '0x0.st',
-                permanent: false
-            };
+        const url = (response.data || '').trim();
+        if (url.startsWith('https://')) {
+            return { success: true, url, service: 'Catbox.moe', permanent: true };
         }
-        
-        return {
-            success: false,
-            error: "0x0.st upload failed"
-        };
-        
+        return { success: false, error: `Catbox error: ${url}` };
     } catch (error) {
-        console.error('0x0.st upload error:', error.message);
-        return {
-            success: false,
-            error: "0x0.st upload failed"
-        };
+        console.error('Catbox upload error:', error.message);
+        return { success: false, error: 'Catbox upload failed' };
     }
 }
 
-// Upload to File.io
-async function uploadToFileIO(buffer, filename) {
+// Upload to transfer.sh (all files, 14-day temp link)
+async function uploadToTransferSh(buffer, filename) {
     try {
-        console.log(`📤 Uploading to File.io: ${filename}`);
-        
-        const formData = new FormData();
-        const blob = new Blob([buffer], { type: getContentType(filename) });
-        formData.append('file', blob, filename);
-        
-        const response = await fetch(UPLOAD_SERVICES.FILEIO.url, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const text = await response.text();
-        const data = JSON.parse(text);
-        
-        if (data.success && data.link) {
-            return {
-                success: true,
-                url: data.link,
-                service: 'File.io',
-                permanent: false
-            };
+        console.log(`📤 Uploading to transfer.sh: ${filename}`);
+        const response = await axios.put(
+            `https://transfer.sh/${encodeURIComponent(filename)}`,
+            buffer,
+            {
+                headers: {
+                    'Content-Type': getContentType(filename),
+                    'Max-Days': '14',
+                    'User-Agent': 'Mozilla/5.0'
+                },
+                timeout: 60000,
+                maxContentLength: 200 * 1024 * 1024
+            }
+        );
+        const url = (response.data || '').trim();
+        if (url.startsWith('https://')) {
+            return { success: true, url, service: 'transfer.sh (14 days)', permanent: false };
         }
-        
-        return {
-            success: false,
-            error: "File.io upload failed"
-        };
-        
+        return { success: false, error: 'transfer.sh upload failed' };
     } catch (error) {
-        console.error('File.io upload error:', error.message);
-        return {
-            success: false,
-            error: "File.io upload failed"
-        };
+        console.error('transfer.sh upload error:', error.message);
+        return { success: false, error: 'transfer.sh upload failed' };
     }
 }
 
@@ -458,45 +413,48 @@ async function uploadToFileIO(buffer, filename) {
 async function uploadFile(buffer, filename) {
     const ext = path.extname(filename).toLowerCase();
     const fileSize = buffer.length;
-    
+    const isAudio = ['.mp3', '.m4a', '.ogg', '.wav', '.aac', '.flac'].includes(ext);
+    const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext);
+
     console.log(`📄 File: ${filename}, Size: ${formatFileSize(fileSize)}, Ext: ${ext}`);
-    
-    // Try ImgBB first for images
-    if (UPLOAD_SERVICES.IMGBB.supported.includes(ext) && 
-        fileSize <= UPLOAD_SERVICES.IMGBB.maxSize) {
-        
-        console.log('🔄 Trying ImgBB...');
-        const result = await uploadToImgBB(buffer, filename);
-        if (result.success) return result;
+
+    // For audio: go straight to Catbox (permanent) → transfer.sh (14 days)
+    if (isAudio) {
+        console.log('🔄 Trying Catbox.moe (audio)...');
+        const r1 = await uploadToCatbox(buffer, filename);
+        if (r1.success) return r1;
+
+        console.log('🔄 Trying transfer.sh (audio)...');
+        const r2 = await uploadToTransferSh(buffer, filename);
+        if (r2.success) return r2;
+
+        return { success: false, error: 'All audio upload services failed' };
     }
-    
-    // Try Telegraph for images (fallback)
-    if (UPLOAD_SERVICES.TELEGRAPH.supported.includes(ext) && 
-        fileSize <= UPLOAD_SERVICES.TELEGRAPH.maxSize) {
-        
-        console.log('🔄 Trying Telegraph...');
-        const result = await uploadToTelegraph(buffer, filename);
-        if (result.success) return result;
+
+    // For images: ImgBB → Telegraph → Catbox
+    if (isImage) {
+        if (fileSize <= UPLOAD_SERVICES.IMGBB.maxSize) {
+            console.log('🔄 Trying ImgBB...');
+            const r1 = await uploadToImgBB(buffer, filename);
+            if (r1.success) return r1;
+        }
+        if (fileSize <= UPLOAD_SERVICES.TELEGRAPH.maxSize) {
+            console.log('🔄 Trying Telegraph...');
+            const r2 = await uploadToTelegraph(buffer, filename);
+            if (r2.success) return r2;
+        }
     }
-    
-    // Try 0x0.st for any file
-    if (fileSize <= UPLOAD_SERVICES.ZEROXZERO.maxSize) {
-        console.log('🔄 Trying 0x0.st...');
-        const result = await uploadToZeroXZero(buffer, filename);
-        if (result.success) return result;
-    }
-    
-    // Try File.io as last resort
-    if (fileSize <= UPLOAD_SERVICES.FILEIO.maxSize) {
-        console.log('🔄 Trying File.io...');
-        const result = await uploadToFileIO(buffer, filename);
-        if (result.success) return result;
-    }
-    
-    return {
-        success: false,
-        error: 'All upload services failed'
-    };
+
+    // For everything else (video, docs, etc.): Catbox → transfer.sh
+    console.log('🔄 Trying Catbox.moe...');
+    const rc = await uploadToCatbox(buffer, filename);
+    if (rc.success) return rc;
+
+    console.log('🔄 Trying transfer.sh...');
+    const rt = await uploadToTransferSh(buffer, filename);
+    if (rt.success) return rt;
+
+    return { success: false, error: 'All upload services failed' };
 }
 
 // ============================================
