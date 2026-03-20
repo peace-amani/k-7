@@ -1,183 +1,108 @@
-import axios from "axios";
-import yts from "yt-search";
+import axios from 'axios';
+import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
-
-const WOLF_API = "https://apis.xwolf.space/download/mp4";
-const WOLF_STREAM = "https://apis.xwolf.space/download/stream/mp4";
-
-async function downloadAndValidate(downloadUrl, timeout = 120000) {
-  const response = await axios({
-    url: downloadUrl,
-    method: 'GET',
-    responseType: 'arraybuffer',
-    timeout,
-    maxRedirects: 5,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    },
-    validateStatus: (status) => status >= 200 && status < 400
-  });
-
-  const buffer = Buffer.from(response.data);
-  if (buffer.length < 5000) throw new Error('File too small, likely not video');
-
-  const headerStr = buffer.slice(0, 50).toString('utf8').toLowerCase();
-  if (headerStr.includes('<!doctype') || headerStr.includes('<html') || headerStr.includes('bad gateway')) {
-    throw new Error('Received HTML instead of video');
-  }
-
-  return buffer;
-}
+import { queryXWolfVideo, xwolfSearch, downloadMediaBuffer } from '../../lib/xwolfApi.js';
+import { queryKeithVideo } from '../../lib/keithApi.js';
 
 export default {
-  name: "ytv",
-  description: "Download YouTube videos",
-  category: "Downloader",
+  name: 'ytv',
+  description: 'Download YouTube videos',
+  category: 'Downloader',
+
   async execute(sock, m, args, prefix) {
     const jid = m.key.remoteJid;
+    const p = prefix || '.';
+    const quotedText = m.quoted?.text?.trim() || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim() || '';
+
+    let searchQuery = args.length > 0 ? args.join(' ') : quotedText;
+
+    if (!searchQuery) {
+      return sock.sendMessage(jid, {
+        text: `╭─⌈ 🎬 *YTV DOWNLOADER* ⌋\n│\n├─⊷ *${p}ytv <video name>*\n│  └⊷ Download video\n├─⊷ *${p}ytv <YouTube URL>*\n│  └⊷ Download from link\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+      }, { quoted: m });
+    }
+
+    console.log(`🎬 [YTV] Request: ${searchQuery}`);
+    await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      if (args.length === 0) {
-        await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎬 *YTV DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}ytv <video name>*\n│  └⊷ Download video\n├─⊷ *${prefix}ytv <YouTube URL>*\n│  └⊷ Download from link\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-        }, { quoted: m });
-        return;
-      }
-
-      const searchQuery = args.join(" ");
-      console.log(`🎬 [YTV] Request: ${searchQuery}`);
-
-      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
-
-      let videoUrl = '';
-      let videoTitle = '';
+      const isUrl = /^https?:\/\//i.test(searchQuery);
       let videoId = '';
-      
-      if (searchQuery.match(/(youtube\.com|youtu\.be)/i)) {
-        videoUrl = searchQuery;
-        videoId = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i)?.[1] || '';
-        
-        if (videoId) {
-          try {
-            const { videos } = await yts({ videoId });
-            if (videos && videos.length > 0) {
-              videoTitle = videos[0].title;
-            }
-          } catch (e) {}
+      let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
+
+      if (!isUrl) {
+        const items = await xwolfSearch(searchQuery, 5);
+        if (items.length) {
+          const top = items[0];
+          videoId = top.id;
+          videoInfo = {
+            title:        top.title       || searchQuery,
+            channelTitle: top.channelTitle || '',
+            duration:     top.duration    || '',
+            thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
+          };
+          searchQuery = `https://youtube.com/watch?v=${top.id}`;
         }
-        if (!videoTitle) videoTitle = "YouTube Video";
       } else {
-        try {
-          const { videos: ytResults } = await yts(searchQuery);
-          if (!ytResults || ytResults.length === 0) {
-            await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-            await sock.sendMessage(jid, { 
-              text: `❌ No videos found for "${searchQuery}"`
-            }, { quoted: m });
-            return;
-          }
-          videoUrl = ytResults[0].url;
-          videoTitle = ytResults[0].title;
-          videoId = ytResults[0].videoId;
-        } catch (searchError) {
-          console.error("❌ [YTV] Search error:", searchError);
-          await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-          await sock.sendMessage(jid, { 
-            text: `❌ Search failed. Try direct YouTube link.`
-          }, { quoted: m });
-          return;
-        }
+        videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
-      console.log(`🎬 [YTV] Found: ${videoTitle} - ${videoUrl}`);
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let videoBuffer = null;
-      let sourceUsed = '';
+      let result = await queryXWolfVideo(searchQuery);
+      if (!result.success) result = await queryKeithVideo(searchQuery);
 
-      try {
-        const wolfRes = await axios.get(`${WOLF_API}?url=${encodeURIComponent(videoUrl)}`, { timeout: 30000 });
-        const apiData = wolfRes.data;
-
-        const downloadSources = [];
-
-        if (apiData?.downloadUrl && apiData.downloadUrl !== 'In Processing...' && apiData.downloadUrl.startsWith('http')) {
-          downloadSources.push({ url: apiData.downloadUrl, label: 'Wolf Direct' });
-        }
-
-        if (apiData?.streamUrl) {
-          const streamUrl = apiData.streamUrl.replace('http://', 'https://');
-          downloadSources.push({ url: streamUrl, label: 'Wolf Stream' });
-        }
-
-        downloadSources.push({ url: `${WOLF_STREAM}?url=${encodeURIComponent(videoUrl)}`, label: 'Wolf Stream Q' });
-
-        for (const source of downloadSources) {
-          try {
-            console.log(`🎬 [YTV] Trying: ${source.label}`);
-            videoBuffer = await downloadAndValidate(source.url);
-            sourceUsed = source.label;
-            break;
-          } catch (err) {
-            console.log(`🎬 [YTV] ${source.label} failed: ${err.message}`);
-            continue;
-          }
-        }
-      } catch (err) {
-        console.log(`🎬 [YTV] WOLF API failed: ${err.message}`);
+      if (!result.success) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+        return sock.sendMessage(jid, { text: `❌ Video download failed. All services unavailable. Try again later.` }, { quoted: m });
       }
 
+      const { data, endpoint } = result;
+      const trackTitle = data.title || videoInfo.title || 'Video';
+      const quality    = data.quality || '360p';
+      const thumbUrl   = data.thumbnail || videoInfo.thumbnail;
+
+      console.log(`🎬 [YTV] Found via ${endpoint}: ${trackTitle}`);
+
+      const videoBuffer = await downloadMediaBuffer(data.download_url, 120000);
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        await sock.sendMessage(jid, { 
-          text: `❌ Video download failed. Try again later.`
-        }, { quoted: m });
-        return;
+        return sock.sendMessage(jid, { text: `❌ Failed to download video. Please try again.` }, { quoted: m });
       }
 
-      const fileSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
-
-      if (parseFloat(fileSizeMB) > 99) {
+      const sizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
+      if (parseFloat(sizeMB) > 99) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        await sock.sendMessage(jid, { 
-          text: `❌ Video too large: ${fileSizeMB}MB\nMax size: 99MB`
-        }, { quoted: m });
-        return;
+        return sock.sendMessage(jid, { text: `❌ Video too large: ${sizeMB}MB. Max 99MB.` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
-      if (videoId) {
+      if (thumbUrl) {
         try {
-          const thumbResponse = await axios.get(
-            `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            { responseType: 'arraybuffer', timeout: 10000 }
-          );
-          if (thumbResponse.status === 200) {
-            thumbnailBuffer = Buffer.from(thumbResponse.data);
-          }
-        } catch (e) {}
+          const tr = await axios.get(thumbUrl, { responseType: 'arraybuffer', timeout: 10000 });
+          if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
+        } catch {}
       }
 
-      const cleanTitle = videoTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
+      const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
 
       await sock.sendMessage(jid, {
-        video: videoBuffer,
-        mimetype: 'video/mp4',
-        caption: `🎬 ${videoTitle}\n📦 ${fileSizeMB}MB`,
-        fileName: `${cleanTitle}.mp4`,
+        video:     videoBuffer,
+        mimetype:  'video/mp4',
+        caption:   `🎬 *${trackTitle}*\n📹 *Quality:* ${quality}\n📦 *Size:* ${sizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
+        fileName:  `${cleanTitle}.mp4`,
         thumbnail: thumbnailBuffer,
         gifPlayback: false
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTV] Success: ${videoTitle} (${fileSizeMB}MB) [${sourceUsed}]`);
+      console.log(`✅ [YTV] Success: ${trackTitle} (${sizeMB}MB) via ${endpoint}`);
 
     } catch (error) {
-      console.error("❌ [YTV] Fatal error:", error);
+      console.error('❌ [YTV] Fatal error:', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-      await sock.sendMessage(jid, { 
-        text: `❌ Error: ${error.message}`
-      }, { quoted: m });
+      await sock.sendMessage(jid, { text: `❌ Error: ${error.message}` }, { quoted: m });
     }
-  },
+  }
 };
