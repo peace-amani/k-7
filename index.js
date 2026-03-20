@@ -4717,6 +4717,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             'vnext', 'nextvid', 'vidnext', 'nextvideo',
             'songdl', 'dlsong', 'downloadsong',
             'viddl', 'dlvid', 'downloadvid',
+            // tts — shows its own buttons after audio
+            'tts', 'say', 'speak',
         ]);
         sock.sendMessage = async (jid, content, options, ...rest) => {
             // ─── Status broadcast bypass ─────────────────────────────────────
