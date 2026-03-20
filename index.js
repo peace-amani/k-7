@@ -4700,7 +4700,24 @@ async function startBot(loginMode = 'auto', loginData = null) {
         }
         
         let _skipButtonWrap = false;
-        const _noWrapCommands = new Set(['menu', 'menu2', 'buttonmenu', 'aimenu', 'animemenu', 'automenu', 'downloadmenu', 'ephotomenu', 'funmenu', 'gamemenu', 'gitmenu', 'groupmenu', 'imagemenu', 'logomenu', 'mediamenu', 'musicmenu', 'ownermenu', 'photofunia', 'securitymenu', 'stalkermenu', 'sportsmenu', 'toolsmenu', 'valentinemenu', 'videomenu', 'menustyle', 'menuslide', 'slidemenu', 'cmds']);
+        const _noWrapCommands = new Set([
+            // menus — handle their own layout
+            'menu', 'menu2', 'buttonmenu', 'aimenu', 'animemenu', 'automenu', 'downloadmenu',
+            'ephotomenu', 'funmenu', 'gamemenu', 'gitmenu', 'groupmenu', 'imagemenu', 'logomenu',
+            'mediamenu', 'musicmenu', 'ownermenu', 'photofunia', 'securitymenu', 'stalkermenu',
+            'sportsmenu', 'toolsmenu', 'valentinemenu', 'videomenu', 'menustyle', 'menuslide',
+            'slidemenu', 'cmds',
+            // music / downloader commands — show their OWN buttons only after a search result
+            'song', 'music', 'audio', 'mp3', 'ytmusic',
+            'play', 'ytmp3doc', 'audiodoc', 'ytplay',
+            'video', 'vid',
+            'ytmp3',
+            'ytmp4',
+            'snext', 'nextsong', 'songnext', 'nextresult',
+            'vnext', 'nextvid', 'vidnext', 'nextvideo',
+            'songdl', 'dlsong', 'downloadsong',
+            'viddl', 'dlvid', 'downloadvid',
+        ]);
         sock.sendMessage = async (jid, content, options, ...rest) => {
             // ─── Status broadcast bypass ─────────────────────────────────────
             // status@broadcast must go straight to Baileys — font transforms
