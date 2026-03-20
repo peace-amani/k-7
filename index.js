@@ -5461,8 +5461,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const hasBtn = !!(c0?.interactiveResponseMessage || c0?.buttonsResponseMessage ||
                                           c0?.listResponseMessage || c0?.templateButtonReplyMessage);
                         const hasReaction = !!(c0?.reactionMessage);
-                        if (!hasBtn && !hasReaction) return;
-                        // fall through — let button responses and reactions be processed
+                        const normC0 = normalizeMessageContent(c0) || c0;
+                        const hasEdit = !!(normC0?.protocolMessage?.type === 14 || normC0?.editedMessage);
+                        if (!hasBtn && !hasReaction && !hasEdit) return;
+                        // fall through — let button responses, reactions, and edits be processed
                     } else {
                         // For non-fromMe append messages: check for fresh view-once
                         // (view-once can arrive as 'append' when delivered during reconnection/restart)
@@ -6274,6 +6276,38 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         };
                         if (detectViewOnceMedia(update.update.message)) {
                             handleViewOnceDetection(sock, updatedMsg).catch(() => {});
+                        }
+                    }
+                } catch {}
+
+                // Handle edited messages — try all known Baileys edit structures
+                try {
+                    const updMsg = update.update?.message;
+                    if (updMsg && updateChatJid !== 'status@broadcast') {
+                        // Structure 1: editedMessage at top level of update.message
+                        const editedWrapper = updMsg.editedMessage || updMsg.protocolMessage?.editedMessage;
+                        // Structure 2: protocolMessage type 14 in update.message
+                        const protoEdit = updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage : null;
+
+                        const editedContent = editedWrapper?.message || protoEdit?.editedMessage?.message;
+
+                        if (editedContent) {
+                            const editedText =
+                                editedContent.conversation ||
+                                editedContent.extendedTextMessage?.text ||
+                                editedContent.imageMessage?.caption ||
+                                editedContent.videoMessage?.caption || '';
+
+                            if (editedText) {
+                                console.log(`[EDIT] Message edited → "${editedText}" — re-processing`);
+                                const syntheticMsg = {
+                                    key: update.key,
+                                    message: editedContent,
+                                    messageTimestamp: Math.floor(Date.now() / 1000),
+                                    pushName: update.pushName || ''
+                                };
+                                sock.ev.emit('messages.upsert', { messages: [syntheticMsg], type: 'notify' });
+                            }
                         }
                     }
                 } catch {}
