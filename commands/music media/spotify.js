@@ -137,8 +137,8 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { xcasperSpotify } from '../../lib/xcasperApi.js';
 
-// Updated API endpoint to v3
 const GIFTED_API = 'https://api.giftedtech.co.ke/api/download/spotifydlv3';
 
 async function downloadAndValidate(url) {
@@ -182,29 +182,42 @@ export default {
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      // Call the updated API
-      const apiRes = await axios.get(GIFTED_API, {
-        params: { apikey: 'gifted', url: query },
-        timeout: 30000
-      });
+      let title = '', duration = 'N/A', thumbnail = '', audioBuffer = null;
 
-      // Updated response validation based on new API structure
-      if (!apiRes.data?.success || !apiRes.data?.result?.download?.mp3) {
-        throw new Error('No download link returned from Spotify API');
+      // Primary: GiftedTech API
+      try {
+        const apiRes = await axios.get(GIFTED_API, {
+          params: { apikey: 'gifted', url: query },
+          timeout: 30000
+        });
+        if (apiRes.data?.success && apiRes.data?.result?.download?.mp3) {
+          const { metadata, download } = apiRes.data.result;
+          title     = metadata?.title || '';
+          thumbnail = metadata?.cover || '';
+          console.log(`🎵 [SPOTIFY] GiftedTech found: ${title}`);
+          audioBuffer = await downloadAndValidate(download.mp3);
+        }
+      } catch (e) {
+        console.log(`[SPOTIFY] GiftedTech failed: ${e.message}`);
       }
 
-      // Extract data from new response structure
-      const { metadata, download } = apiRes.data.result;
-      const title = metadata.title;
-      // Note: New API doesn't provide duration directly, you might need to calculate it later if needed
-      const duration = 'N/A'; // Placeholder as duration not provided
-      const thumbnail = metadata.cover;
-      const download_url = download.mp3;
+      // Fallback: xcasper sportify
+      if (!audioBuffer) {
+        console.log('[SPOTIFY] Trying xcasper...');
+        const xcRes = await xcasperSpotify(query);
+        if (xcRes) {
+          audioBuffer = xcRes.buf;
+          title     = title     || xcRes.title;
+          thumbnail = thumbnail || xcRes.thumbnail;
+          duration  = xcRes.duration || duration;
+          console.log(`🎵 [SPOTIFY] xcasper found: ${title}`);
+        }
+      }
+
+      if (!audioBuffer) throw new Error('All Spotify sources failed. Please try again later.');
 
       console.log(`🎵 [SPOTIFY] Found: ${title}`);
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
-
-      const audioBuffer = await downloadAndValidate(download_url);
       const fileSizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
 
       if (parseFloat(fileSizeMB) > 50) {

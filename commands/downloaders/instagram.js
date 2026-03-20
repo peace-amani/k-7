@@ -7,6 +7,7 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
+import { xcasperInstagram } from '../../lib/xcasperApi.js';
 
 const _requireIg = createRequire(import.meta.url);
 let giftedBtnsIg;
@@ -145,17 +146,31 @@ async function downloadInstagram(url) {
       try {
         const xwolfUrl = `https://apis.xwolf.space/api/download/instagram?url=${encodeURIComponent(url)}`;
         const response = await axios.get(xwolfUrl, { timeout: 15000 });
-        
         if (response.data?.result?.url) {
           mediaUrl = response.data.result.url;
           isVideo = mediaUrl.includes('.mp4') || isVideo;
+          console.log('✅ xWolf API success');
         } else if (response.data?.url) {
           mediaUrl = response.data.url;
           isVideo = mediaUrl.includes('.mp4') || isVideo;
+          console.log('✅ xWolf API success');
         }
-        console.log('✅ xWolf API success');
       } catch (e) {
         console.log('xWolf API failed:', e.message);
+      }
+    }
+
+    // Try xcasper ig → ig2 as final fallback
+    if (!mediaUrl) {
+      try {
+        const xcRes = await xcasperInstagram(url);
+        if (xcRes) {
+          mediaUrl = xcRes.mediaUrl;
+          isVideo  = xcRes.isVideo;
+          console.log('✅ xcasper Instagram success');
+        }
+      } catch (e) {
+        console.log('xcasper Instagram failed:', e.message);
       }
     }
 

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
+import { xcasperAudio } from '../../lib/xcasperApi.js';
 
 export default {
   name: 'yta3',
@@ -50,7 +51,8 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      const audioBuffer = await streamXWolf(searchQuery, 'mp3');
+      let audioBuffer = await streamXWolf(searchQuery, 'mp3');
+      if (!audioBuffer) audioBuffer = await xcasperAudio(searchQuery);
       if (!audioBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });

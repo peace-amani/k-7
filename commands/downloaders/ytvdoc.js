@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
+import { xcasperVideo } from '../../lib/xcasperApi.js';
 
 export default {
   name: 'ytvdoc',
@@ -48,7 +49,8 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      const videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
+      let videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
+      if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
