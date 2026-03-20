@@ -366,19 +366,20 @@ function clearConversation(userId) {
   ).catch(() => {});
 }
 
-function buildContextPrompt(conversation, newQuery) {
-  let context = `You are W.O.L.F (Wise Operational Learning Framework), an elite AI assistant created by WolfTech. Your name is W.O.L.F and you must always identify yourself as W.O.L.F when asked who you are. You are intelligent, conversational, and helpful. You remember the conversation context and respond naturally like a real chat partner. Keep responses concise but thorough.\n\nCRITICAL IDENTITY RULES:\n- Your name is W.O.L.F. Always refer to yourself as W.O.L.F.\n- You were created by WolfTech. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, etc).\n- If asked what you are, say: "I'm W.O.L.F (Wise Operational Learning Framework), an AI assistant by WolfTech."\n- Never say "As an AI language model" - instead say "As W.O.L.F" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are W.O.L.F.\n\n`;
+function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F') {
+  const n = botName;
+  let context = `You are ${n}, an elite AI assistant created by WolfTech. Your name is ${n} and you must always identify yourself as ${n} when asked who you are. You are intelligent, conversational, and helpful. You remember the conversation context and respond naturally like a real chat partner. Keep responses SHORT and CONCISE — aim for 2-3 sentences maximum unless the question genuinely requires more detail.\n\nCRITICAL IDENTITY RULES:\n- Your name is ${n}. Always refer to yourself as ${n}.\n- You were created by WolfTech. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, etc).\n- If asked what you are, say: "I'm ${n}, an AI assistant by WolfTech."\n- Never say "As an AI language model" - instead say "As ${n}" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are ${n}.\n\n`;
 
   if (conversation.messages.length > 0) {
     context += `Previous conversation:\n`;
-    const recentMessages = conversation.messages.slice(-10);
+    const recentMessages = conversation.messages.slice(-6);
     for (const msg of recentMessages) {
-      context += `${msg.role === 'user' ? 'Human' : 'W.O.L.F'}: ${msg.content}\n`;
+      context += `${msg.role === 'user' ? 'Human' : n}: ${msg.content}\n`;
     }
     context += `\n`;
   }
 
-  context += `Human: ${newQuery}\nW.O.L.F:`;
+  context += `Human: ${newQuery}\n${n}:`;
   return context;
 }
 
@@ -417,8 +418,8 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
   return null;
 }
 
-async function getAIResponse(query, conversation, preferredModel = 'gpt') {
-  const contextPrompt = buildContextPrompt(conversation, query);
+async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F') {
+  const contextPrompt = buildContextPrompt(conversation, query, botName);
 
   let result = await queryAI(preferredModel, contextPrompt);
   if (result) return { response: result, model: preferredModel };
@@ -435,33 +436,61 @@ async function getAIResponse(query, conversation, preferredModel = 'gpt') {
   return null;
 }
 
-function cleanAIResponse(text) {
+function cleanAIResponse(text, botName = 'W.O.L.F') {
   if (!text) return '';
+  const n = botName;
+  const nEscaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
   text = text.replace(/\[\d+\]/g, '');
   text = text.replace(/Human:.*$/gm, '');
-  text = text.replace(/W\.O\.L\.F:/g, '');
+  // Strip any "BotName:" prefix the AI echoed back
+  text = text.replace(new RegExp(`^${nEscaped}:\\s*`, 'gim'), '');
   text = text.replace(/^(Assistant|AI|Bot|Claude|GPT|Grok|Copilot|Bard):\s*/gim, '');
 
-  text = text.replace(/\b(ChatGPT|GPT-?[34o5]?|GPT|OpenAI)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Claude|Anthropic)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Copilot|Microsoft Copilot)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Google Bard|Bard|Gemini)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Grok|xAI)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Blackbox|Blackbox AI)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(Perplexity|Perplexity AI)\b/gi, 'W.O.L.F');
-  text = text.replace(/\b(LLaMA|Meta AI|Mistral)\b/gi, 'W.O.L.F');
-  text = text.replace(/\bI'?m an AI (language )?model\b/gi, "I'm W.O.L.F");
-  text = text.replace(/\bAs an AI (language )?model\b/gi, 'As W.O.L.F');
+  text = text.replace(/\b(ChatGPT|GPT-?[34o5]?|GPT|OpenAI)\b/gi, n);
+  text = text.replace(/\b(Claude|Anthropic)\b/gi, n);
+  text = text.replace(/\b(Copilot|Microsoft Copilot)\b/gi, n);
+  text = text.replace(/\b(Google Bard|Bard|Gemini)\b/gi, n);
+  text = text.replace(/\b(Grok|xAI)\b/gi, n);
+  text = text.replace(/\b(Blackbox|Blackbox AI)\b/gi, n);
+  text = text.replace(/\b(Perplexity|Perplexity AI)\b/gi, n);
+  text = text.replace(/\b(LLaMA|Meta AI|Mistral)\b/gi, n);
+  text = text.replace(/\bI'?m an AI (language )?model\b/gi, `I'm ${n}`);
+  text = text.replace(/\bAs an AI (language )?model\b/gi, `As ${n}`);
   text = text.replace(/\bmade by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'made by WolfTech');
   text = text.replace(/\bcreated by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'created by WolfTech');
   text = text.replace(/\bdeveloped by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'developed by WolfTech');
   text = text.replace(/\bbuilt by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'built by WolfTech');
   text = text.replace(/\btrained by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'trained by WolfTech');
 
-  text = text.replace(/(W\.O\.L\.F[\s,]*){2,}/g, 'W.O.L.F ');
+  // Collapse repeated bot name
+  text = text.replace(new RegExp(`(${nEscaped}[\\s,]*){2,}`, 'g'), `${n} `);
 
   text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
   return text.trim();
+}
+
+function trimResponse(text, maxChars = 700) {
+  if (!text || text.length <= maxChars) return text;
+
+  // Try to cut at a sentence boundary within the limit
+  const chunk = text.slice(0, maxChars + 100);
+  // Match sentence-ending punctuation followed by space or newline
+  const sentenceEnd = /[.!?](?:\s|$)/g;
+  let lastGoodCut = -1;
+  let match;
+  while ((match = sentenceEnd.exec(chunk)) !== null) {
+    if (match.index + 1 <= maxChars) lastGoodCut = match.index + 1;
+  }
+
+  if (lastGoodCut > 50) {
+    return text.slice(0, lastGoodCut).trim() + ' _..._';
+  }
+
+  // Fallback: hard cut at word boundary
+  const hardCut = text.slice(0, maxChars);
+  const lastSpace = hardCut.lastIndexOf(' ');
+  return (lastSpace > 50 ? hardCut.slice(0, lastSpace) : hardCut).trim() + ' _..._';
 }
 
 export function getChatbotConfig() {
@@ -658,12 +687,13 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   }
 
   const config = loadConfig();
+  const botName = config.chatbotName || 'W.O.L.F';
   const conversation = loadConversation(senderJid);
 
   try {
     await sock.sendPresenceUpdate('composing', chatId);
 
-    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt');
+    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt', botName);
 
     if (!aiResult) {
       await sock.sendMessage(chatId, {
@@ -672,7 +702,8 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       return true;
     }
 
-    const cleanedResponse = cleanAIResponse(aiResult.response);
+    const cleanedResponse = cleanAIResponse(aiResult.response, botName);
+    const finalResponse = trimResponse(cleanedResponse);
 
     conversation.messages.push({ role: 'user', content: userText });
     conversation.messages.push({ role: 'assistant', content: cleanedResponse });
@@ -683,17 +714,10 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
     config.stats.modelsUsed[aiResult.model] = (config.stats.modelsUsed[aiResult.model] || 0) + 1;
     saveConfig(config);
 
-    let responseText = '';
-    if (cleanedResponse.length > 2000) {
-      responseText = `🐺 ${cleanedResponse.substring(0, 2000)}\n\n_... (trimmed)_`;
-    } else {
-      responseText = `🐺 ${cleanedResponse}`;
-    }
-
-    await sock.sendMessage(chatId, { text: responseText }, { quoted: msg });
+    await sock.sendMessage(chatId, { text: `🐺 ${finalResponse}` }, { quoted: msg });
     return true;
   } catch (error) {
-    console.error('[W.O.L.F] Chat error:', error.message);
+    console.error(`[${botName}] Chat error:`, error.message);
     return false;
   }
 }
@@ -723,16 +747,19 @@ export default {
         ? `│ 📋 Whitelist: ${allowedGroups.length} groups, ${allowedDMs.length} DMs\n`
         : '';
 
+      const chatbotName = config.chatbotName || 'W.O.L.F';
       const helpText =
-        `╭─⌈ 🐺 *W.O.L.F CHATBOT* ⌋\n` +
+        `╭─⌈ 🐺 *${chatbotName} CHATBOT* ⌋\n` +
         `│ ${modeEmoji[config.mode] || '🔴'} Status: ${config.mode.toUpperCase()}\n` +
         `│ ${currentModel.icon} Model: ${currentModel.name}\n` +
+        `│ 🏷️ Name: ${chatbotName}\n` +
         whitelistInfo +
         `├─⊷ *${PREFIX}chatbot on*\n│  └⊷ Enable everywhere\n` +
         `├─⊷ *${PREFIX}chatbot off*\n│  └⊷ Disable chatbot\n` +
         `├─⊷ *${PREFIX}chatbot groups*\n│  └⊷ Groups only\n` +
         `├─⊷ *${PREFIX}chatbot dms*\n│  └⊷ DMs only\n` +
         `├─⊷ *${PREFIX}chatbot both*\n│  └⊷ All chats\n` +
+        `├─⊷ *${PREFIX}chatbot name <name>*\n│  └⊷ Set chatbot name\n` +
         `├─⊷ *${PREFIX}chatbot model*\n│  └⊷ Switch AI model\n` +
         `├─⊷ *${PREFIX}chatbot stats*\n│  └⊷ View stats\n` +
         `├─⊷ *${PREFIX}chatbot clear*\n│  └⊷ Reset history\n` +
@@ -859,8 +886,10 @@ export default {
         }
       }
 
+      const cbName = config.chatbotName || 'W.O.L.F';
       const settingsText =
-        `🐺 *W.O.L.F Settings*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🐺 *${cbName} Settings*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🏷️ *Name:* ${cbName}\n` +
         `${modeEmoji[config.mode] || '🔴'} *Mode:* ${config.mode.toUpperCase()}\n` +
         `${model.icon} *Model:* ${model.name}\n` +
         `🔄 *Auto-Fallback:* Enabled\n` +
@@ -1014,6 +1043,26 @@ export default {
       saveConfig(config);
       return sock.sendMessage(jid, {
         text: `🐺 *W.O.L.F*\n\n🗑️ All DMs removed from whitelist!\n_W.O.L.F will respond based on mode setting._`
+      }, { quoted: m });
+    }
+
+    if (subCommand === 'name') {
+      const newName = args.slice(1).join(' ').trim();
+      if (!newName) {
+        const currentName = config.chatbotName || 'W.O.L.F';
+        return sock.sendMessage(jid, {
+          text: `🐺 *Chatbot Name*\n\nCurrent: *${currentName}*\n\nTo change it:\n\`${PREFIX}chatbot name <new name>\`\n\nExample: \`${PREFIX}chatbot name ARIA\``
+        }, { quoted: m });
+      }
+      if (newName.length > 30) {
+        return sock.sendMessage(jid, {
+          text: `❌ Name too long! Maximum 30 characters.`
+        }, { quoted: m });
+      }
+      config.chatbotName = newName;
+      saveConfig(config);
+      return sock.sendMessage(jid, {
+        text: `✅ *Chatbot name updated!*\n\n🤖 Now responds as: *${newName}*\n\n_The bot knows its new name and will introduce itself correctly._`
       }, { quoted: m });
     }
 
