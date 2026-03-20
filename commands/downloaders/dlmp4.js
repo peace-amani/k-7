@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { xwolfSearch, streamXWolf, xwolfDownloadHd } from '../../lib/xwolfApi.js';
+import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
+
+const XWOLF_BASE = 'https://apis.xwolf.space/download';
 
 export default {
   name: 'dlmp4',
@@ -27,81 +29,88 @@ export default {
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      const isUrl = /^https?:\/\//i.test(searchQuery);
-      let videoBuffer = null;
-      let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
-
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      if (!isUrl) {
-        // PRIMARY: xwolf /download/hd — accepts query string directly, returns videoUrl
-        const hdResult = await xwolfDownloadHd(searchQuery);
-        if (hdResult) {
-          videoBuffer = hdResult.buffer;
-          if (hdResult.title) videoInfo.title = hdResult.title;
-          if (hdResult.thumbnail) videoInfo.thumbnail = hdResult.thumbnail;
-        }
+      const isUrl = /^https?:\/\//i.test(searchQuery);
+      let videoSource = null; // { url } or Buffer
+      let trackTitle = searchQuery;
+      let thumbnail = '';
+      let quality = '360p';
 
-        // FALLBACK: search then streamXWolf → xcasperVideo
-        if (!videoBuffer) {
+      // PRIMARY: xwolf /download/dlmp4?q=<query> — search + download in one step
+      if (!isUrl) {
+        try {
+          const r = await axios.get(`${XWOLF_BASE}/dlmp4`, {
+            params: { q: searchQuery },
+            timeout: 60000
+          });
+          const d = r.data;
+          if (d?.success && d?.downloadUrl) {
+            console.log(`[xwolf/dlmp4] ✅ got URL: ${d.title}`);
+            trackTitle = d.title || searchQuery;
+            quality = d.quality || '360p';
+            if (d.videoId) thumbnail = `https://img.youtube.com/vi/${d.videoId}/hqdefault.jpg`;
+            videoSource = { url: d.downloadUrl };
+          }
+        } catch (e) {
+          console.log(`[xwolf/dlmp4] failed: ${e.message}`);
+        }
+      }
+
+      // FALLBACK: search → streamXWolf → xcasperVideo (buffer-based)
+      if (!videoSource) {
+        let ytUrl = searchQuery;
+        if (!isUrl) {
           const items = await xwolfSearch(searchQuery, 5);
           if (items.length) {
             const top = items[0];
-            videoInfo = {
-              title:        top.title       || searchQuery,
-              channelTitle: top.channelTitle || '',
-              duration:     top.duration    || '',
-              thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
-            };
-            const ytUrl = `https://youtube.com/watch?v=${top.id}`;
-            videoBuffer = await streamXWolf(ytUrl, 'mp4', 150000);
-            if (!videoBuffer) videoBuffer = await xcasperVideo(ytUrl);
+            trackTitle = top.title || searchQuery;
+            thumbnail = `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`;
+            ytUrl = `https://youtube.com/watch?v=${top.id}`;
           }
+        } else {
+          const vid = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+          if (vid) thumbnail = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
         }
-      } else {
-        // Direct URL: streamXWolf → xcasperVideo
-        const videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
-        if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
+        let buf = await streamXWolf(ytUrl, 'mp4', 150000);
+        if (!buf) buf = await xcasperVideo(ytUrl);
+        if (buf) videoSource = buf;
       }
 
-      if (!videoBuffer) {
+      if (!videoSource) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
       }
 
-      const trackTitle = videoInfo.title || 'Video';
-      const quality    = '360p';
-      const thumbUrl   = videoInfo.thumbnail;
-
-      const sizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
-      if (parseFloat(sizeMB) > 99) {
-        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Video too large: ${sizeMB}MB. Max 99MB.` }, { quoted: m });
-      }
-
+      // Build thumbnail
       let thumbnailBuffer = null;
-      if (thumbUrl) {
+      if (thumbnail) {
         try {
-          const tr = await axios.get(thumbUrl, { responseType: 'arraybuffer', timeout: 10000 });
+          const tr = await axios.get(thumbnail, { responseType: 'arraybuffer', timeout: 10000 });
           if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
         } catch {}
       }
 
       const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
+      const isBuffer = Buffer.isBuffer(videoSource);
+      const sizeMB = isBuffer ? (videoSource.length / 1024 / 1024).toFixed(1) : '?';
+
+      if (isBuffer && parseFloat(sizeMB) > 99) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+        return sock.sendMessage(jid, { text: `❌ Video too large: ${sizeMB}MB. Max 99MB.` }, { quoted: m });
+      }
 
       await sock.sendMessage(jid, {
-        video:     videoBuffer,
-        mimetype:  'video/mp4',
-        caption:   `🎬 *${trackTitle}*\n📹 *Quality:* ${quality}\n📦 *Size:* ${sizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
-        fileName:  `${cleanTitle}.mp4`,
-        thumbnail: thumbnailBuffer,
+        video:       isBuffer ? videoSource : videoSource,
+        mimetype:    'video/mp4',
+        caption:     `🎬 *${trackTitle}*\n📹 *Quality:* ${quality}${isBuffer ? `\n📦 *Size:* ${sizeMB}MB` : ''}\n\n🐺 *Downloaded by ${getBotName()}*`,
+        fileName:    `${cleanTitle}.mp4`,
+        thumbnail:   thumbnailBuffer,
         gifPlayback: false
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [DLMP4] Success: ${trackTitle} (${sizeMB}MB)`);
+      console.log(`✅ [DLMP4] Success: ${trackTitle}`);
 
     } catch (error) {
       console.error('❌ [DLMP4] Fatal error:', error.message);
