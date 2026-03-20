@@ -18,19 +18,29 @@ export default {
 │  • tiktokinfo
 │  • instagram
 │  • facebook
+│  • fbsearch
 │  • snapchat
 │
 ╰─⊷
 
-╭─⊷ *🎬 YOUTUBE*
+╭─⊷ *🎬 YOUTUBE — VIDEO*
 │
-│  • yts
-│  • ytplay
-│  • ytmp3
-│  • ytv
-│  • ytmp4
-│  • ytvdoc
-│  • playlist
+│  • yts          → search YouTube
+│  • ytv          → download video
+│  • ytmp4        → download video (MP4)
+│  • ytvdoc       → download video as doc
+│  • dlmp4        → download video by name
+│  • playlist     → download playlist
+│
+╰─⊷
+
+╭─⊷ *🎵 YOUTUBE — AUDIO*
+│
+│  • ytplay       → search & play audio
+│  • ytmp3        → download audio (MP3)
+│  • yta3         → download audio (fallback)
+│  • ytplaydoc    → download audio as doc
+│  • dlmp3        → download audio by name
 │
 ╰─⊷
 
@@ -38,15 +48,16 @@ export default {
 │
 │  • xvideos
 │  • xnxx
+│  • porn
 │
 ╰─⊷
 
 ╭─⊷ *📦 OTHER*
 │
-│  • apk
-│  • mp3
-│  • mp4
-│  • mediafire
+│  • mp3          → audio downloader
+│  • mp4          → video downloader
+│  • apk          → APK downloader
+│  • mediafire    → MediaFire downloader
 │
 ╰─⊷`;
 
