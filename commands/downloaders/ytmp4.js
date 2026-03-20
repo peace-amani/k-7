@@ -11,6 +11,40 @@ const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
+const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download';
+const GIFTED_ENDS = ['ytv', 'dlmp4', 'ytmp4'];
+
+async function giftedFallback(ytUrl) {
+  for (const ep of GIFTED_ENDS) {
+    try {
+      const res = await axios.get(`${GIFTED_BASE}/${ep}`, {
+        params: { apikey: 'gifted', url: ytUrl },
+        timeout: 30000
+      });
+      if (res.data?.success && res.data?.result?.download_url) {
+        return { data: res.data.result, endpoint: ep };
+      }
+    } catch {}
+  }
+  return null;
+}
+
+async function downloadBuffer(url, timeout = 120000) {
+  const res = await axios({
+    url, method: 'GET', responseType: 'arraybuffer', timeout,
+    maxRedirects: 5,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    validateStatus: s => s >= 200 && s < 400
+  });
+  const buf = Buffer.from(res.data);
+  if (buf.length < 5000) throw new Error('File too small, likely not video');
+  const hdr = buf.slice(0, 50).toString('utf8').toLowerCase();
+  if (hdr.includes('<!doctype') || hdr.includes('<html') || hdr.includes('bad gateway')) {
+    throw new Error('Received HTML instead of video');
+  }
+  return buf;
+}
+
 export default {
   name: 'ytmp4',
   description: 'Download YouTube videos as MP4',
@@ -89,6 +123,19 @@ export default {
 
       let videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
       if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
+
+      // Gifted fallback — handles VEVO and other content xcasper/xwolf can't reach
+      if (!videoBuffer) {
+        console.log(`[YTMP4] xcasper failed, trying Gifted fallback...`);
+        const gifted = await giftedFallback(searchQuery);
+        if (gifted) {
+          if (gifted.data.title) videoInfo.title = gifted.data.title;
+          if (gifted.data.thumbnail) videoInfo.thumbnail = gifted.data.thumbnail;
+          videoBuffer = await downloadBuffer(gifted.data.download_url);
+          console.log(`[YTMP4] Gifted/${gifted.endpoint} success`);
+        }
+      }
+
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
