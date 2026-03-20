@@ -782,16 +782,17 @@ export default {
       config.mode = subCommand;
       saveConfig(config);
 
+      const n = config.chatbotName || 'W.O.L.F';
       const modeDescriptions = {
-        on: '🟢 W.O.L.F is now *ACTIVE* everywhere!',
-        off: '🔴 W.O.L.F is now *DISABLED*.',
-        groups: '👥 W.O.L.F is now active in *GROUPS ONLY*.',
-        dms: '💬 W.O.L.F is now active in *DMs ONLY*.',
-        both: '🌐 W.O.L.F is now active in *ALL CHATS*.'
+        on: `🟢 *${n}* is now *ACTIVE* everywhere!`,
+        off: `🔴 *${n}* is now *DISABLED*.`,
+        groups: `👥 *${n}* is now active in *GROUPS ONLY*.`,
+        dms: `💬 *${n}* is now active in *DMs ONLY*.`,
+        both: `🌐 *${n}* is now active in *ALL CHATS*.`
       };
 
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${modeDescriptions[subCommand]}\n\n🤖 *Model:* ${(AI_MODELS[config.preferredModel] || AI_MODELS.gpt).name}\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `🐺 *${n}*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${modeDescriptions[subCommand]}\n\n🤖 *Model:* ${(AI_MODELS[config.preferredModel] || AI_MODELS.gpt).name}\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`
       }, { quoted: m });
     }
 
@@ -799,7 +800,8 @@ export default {
       const modelName = (args[1] || '').toLowerCase();
 
       if (!modelName) {
-        let modelList = `🐺 *W.O.L.F - AI Models*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        const _cn = config.chatbotName || 'W.O.L.F';
+        let modelList = `🐺 *${_cn} - AI Models*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         for (const [key, model] of Object.entries(AI_MODELS)) {
           const isActive = key === (config.preferredModel || 'gpt');

@@ -7236,57 +7236,6 @@ async function handleIncomingMessage(sock, msg) {
         
         if (!textMsg) return;
 
-        if (isWolfEnabled() && isWolfTrigger(textMsg) && !msg.key.fromMe) {
-            const isOwnerW = jidManager.isOwner(msg);
-            let isSudoW = jidManager.isSudo(msg);
-            if (isOwnerW || isSudoW) {
-                try {
-                    const currentPrefixForWolf = getCurrentPrefix();
-                    const executeWolfCommand = async (cmdName, cmdArgs) => {
-                        const cmd = commands.get(cmdName);
-                        if (!cmd) return;
-                        if (cmd.ownerOnly && !isOwnerW && !isSudoW) {
-                            await sock.sendMessage(chatId, { text: '❌ *Owner Only Command*' }, { quoted: msg });
-                            return;
-                        }
-                        setActiveCommand(chatId, cmdName, cmdArgs, senderJid);
-                        try {
-                            await cmd.execute(sock, msg, cmdArgs, currentPrefixForWolf, {
-                                OWNER_NUMBER: OWNER_CLEAN_NUMBER,
-                                OWNER_JID: OWNER_CLEAN_JID,
-                                OWNER_LID: OWNER_LID,
-                                BOT_NAME: getCurrentBotName(),
-                                VERSION,
-                                isOwner: () => isOwnerW,
-                                isSudo: () => isSudoW || jidManager.isSudo(msg),
-                                jidManager,
-                                store,
-                                statusDetector,
-                                updatePrefix: updatePrefixImmediately,
-                                getCurrentPrefix,
-                                rateLimiter,
-                                memberDetector,
-                                antiViewOnceSystem,
-                                isPrefixless,
-                                DiskManager
-                            });
-                        } finally {
-                            clearActiveCommand(chatId, senderJid);
-                        }
-                    };
-                    const handled = await handleWolfAI(sock, msg, commands, executeWolfCommand, textMsg);
-                    if (handled) {
-                        const wolfDisplay = getDisplayNumber(senderJid);
-                        const wolfLocTag = isGroup ? `[${chatId.split('@')[0].substring(0, 10)}]` : '[DM]';
-                        const wolfPreview = textMsg.length > 50 ? textMsg.substring(0, 50) + '…' : textMsg;
-                        UltraCleanLogger.info(`🐺 Wolf AI: ${wolfDisplay} ${wolfLocTag} → "${wolfPreview}"`);
-                        return;
-                    }
-                } catch (wolfErr) {
-                    UltraCleanLogger.error(`🐺 Wolf AI error: ${wolfErr.message}`);
-                }
-            }
-        }
         
         const currentPrefix = getCurrentPrefix();
         
@@ -7345,6 +7294,52 @@ async function handleIncomingMessage(sock, msg) {
                 const preview = textMsg.length > 60 ? textMsg.substring(0, 60) + '…' : textMsg;
                 UltraCleanLogger.ownerMessage(`${ownerDisplay} ${ownerLocTag} → "${preview}"`);
             }
+
+            // Wolf AI: prefixless DM assistant — only for owner/sudo, only in DMs (not groups)
+            const _wolfIsDM = !isGroup && chatId !== 'status@broadcast';
+            if (_wolfIsDM && isWolfEnabled()) {
+                const _isOwnerW = jidManager.isOwner(msg);
+                const _isSudoW = jidManager.isSudo(msg);
+                if (_isOwnerW || _isSudoW) {
+                    try {
+                        const _wolfPrefix = getCurrentPrefix();
+                        const _executeWolfCmd = async (cmdName, cmdArgs) => {
+                            const cmd = commands.get(cmdName);
+                            if (!cmd) return;
+                            if (cmd.ownerOnly && !_isOwnerW && !_isSudoW) {
+                                await sock.sendMessage(chatId, { text: '❌ *Owner Only Command*' }, { quoted: msg });
+                                return;
+                            }
+                            setActiveCommand(chatId, cmdName, cmdArgs, senderJid);
+                            try {
+                                await cmd.execute(sock, msg, cmdArgs, _wolfPrefix, {
+                                    OWNER_NUMBER: OWNER_CLEAN_NUMBER,
+                                    OWNER_JID: OWNER_CLEAN_JID,
+                                    OWNER_LID: OWNER_LID,
+                                    BOT_NAME: getCurrentBotName(),
+                                    VERSION,
+                                    isOwner: () => _isOwnerW,
+                                    isSudo: () => _isSudoW || jidManager.isSudo(msg),
+                                    jidManager, store, statusDetector,
+                                    updatePrefix: updatePrefixImmediately,
+                                    getCurrentPrefix, rateLimiter, memberDetector,
+                                    antiViewOnceSystem, isPrefixless, DiskManager
+                                });
+                            } finally {
+                                clearActiveCommand(chatId, senderJid);
+                            }
+                        };
+                        const _wolfHandled = await handleWolfAI(sock, msg, commands, _executeWolfCmd, textMsg);
+                        if (_wolfHandled) {
+                            UltraCleanLogger.info(`🐺 Wolf AI: ${getDisplayNumber(senderJid)} [DM] → "${textMsg.length > 50 ? textMsg.substring(0, 50) + '…' : textMsg}"`);
+                            return;
+                        }
+                    } catch (_wolfErr) {
+                        UltraCleanLogger.error(`🐺 Wolf AI error: ${_wolfErr.message}`);
+                    }
+                }
+            }
+
             if (isChatbotActiveForChat(chatId)) {
                 if (chatId !== 'status@broadcast' && !msg.key.fromMe) {
                     handleChatbotMessage(sock, msg, commands).catch(() => {});
