@@ -106,7 +106,7 @@ export default {
             case 'test': {
                 await reply('🎵 Sending a test clip...');
                 try {
-                    await sendMusicClip(sock, chatId);
+                    await sendMusicClip(sock, chatId, msg);
                 } catch (e) {
                     return reply(`❌ Failed to send test clip: ${e.message}`);
                 }

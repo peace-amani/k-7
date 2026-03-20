@@ -7383,9 +7383,9 @@ async function handleIncomingMessage(sock, msg) {
                         isPrefixless: isPrefixless,
                         DiskManager: DiskManager
                     });
-                    // Music mode: send a random short audio clip after every command response
+                    // Music mode: send a random short audio clip as a reply to the triggering message
                     if (isMusicModeEnabled()) {
-                        sendMusicClip(sock, chatId).catch(() => {});
+                        sendMusicClip(sock, chatId, msg).catch(() => {});
                     }
                 } finally {
                     clearActiveCommand(chatId, senderJid);
