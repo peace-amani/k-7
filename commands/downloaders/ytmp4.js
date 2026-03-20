@@ -4,7 +4,7 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
-import { xwolfSearch, streamXWolf, xwolfDownloadMp4 } from '../../lib/xwolfApi.js';
+import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
 
 const require = createRequire(import.meta.url);
@@ -88,7 +88,6 @@ export default {
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
       let videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
-      if (!videoBuffer) videoBuffer = await xwolfDownloadMp4(searchQuery);
       if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
