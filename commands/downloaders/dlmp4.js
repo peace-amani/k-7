@@ -37,23 +37,23 @@ export default {
       let thumbnail = '';
       let quality = '360p';
 
-      // PRIMARY: xwolf /download/dlmp4?q=<query> — search + download in one step
+      // PRIMARY: xwolf /download/hd?q=<query> — search + download in one step
       if (!isUrl) {
         try {
-          const r = await axios.get(`${XWOLF_BASE}/dlmp4`, {
+          const r = await axios.get(`${XWOLF_BASE}/hd`, {
             params: { q: searchQuery },
             timeout: 60000
           });
           const d = r.data;
           if (d?.success && d?.downloadUrl) {
-            console.log(`[xwolf/dlmp4] ✅ got URL: ${d.title}`);
+            console.log(`[xwolf/hd] ✅ got URL: ${d.title}`);
             trackTitle = d.title || searchQuery;
             quality = d.quality || '360p';
             if (d.videoId) thumbnail = `https://img.youtube.com/vi/${d.videoId}/hqdefault.jpg`;
             videoSource = { url: d.downloadUrl };
           }
         } catch (e) {
-          console.log(`[xwolf/dlmp4] failed: ${e.message}`);
+          console.log(`[xwolf/hd] failed: ${e.message}`);
         }
       }
 
