@@ -1,47 +1,15 @@
 import { createRequire } from 'module';
 import axios from 'axios';
-import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
+import { queryXWolfAudio, xwolfSearch, downloadMediaBuffer } from '../../lib/xwolfApi.js';
 import { queryKeithAudio } from '../../lib/keithApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
-
-const GIFTED_BASE_DEFAULT = 'https://api.giftedtech.co.ke/api/download';
-const AUDIO_ENDPOINTS = ['ytmp3', 'yta', 'dlmp3'];
-
-async function queryAPI(url, endpoints, base) {
-  const GIFTED_BASE = base || globalThis._apiOverrides?.['ytmp3'] || GIFTED_BASE_DEFAULT;
-  for (const endpoint of endpoints) {
-    try {
-      const params = { apikey: 'gifted', url };
-      if (endpoint === 'ytmp3') params.quality = '128kbps';
-      const res = await axios.get(`${GIFTED_BASE}/${endpoint}`, { params, timeout: 25000 });
-      if (res.data?.success && res.data?.result?.download_url) {
-        return { success: true, data: res.data.result, endpoint };
-      }
-    } catch {}
-  }
-  return { success: false };
-}
-
-async function checkSizeMB(url) {
-  try {
-    const res = await axios.head(url, {
-      timeout: 10000,
-      maxRedirects: 5,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
-    const len = parseInt(res.headers['content-length'] || '0', 10);
-    return len > 0 ? len / (1024 * 1024) : null;
-  } catch {
-    return null;
-  }
-}
 
 export default {
   name: 'ytmp3',
@@ -53,7 +21,7 @@ export default {
     const p = prefix || '.';
     const quotedText = m.quoted?.text?.trim() || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim() || '';
 
-    const searchQuery = args.length > 0 ? args.join(' ') : quotedText;
+    let searchQuery = args.length > 0 ? args.join(' ') : quotedText;
 
     if (!searchQuery) {
       return sock.sendMessage(jid, {
@@ -65,81 +33,85 @@ export default {
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      let videos = [];
-      let videoUrl = searchQuery;
+      const isUrl = /^https?:\/\//i.test(searchQuery);
+      let videoId = '';
+      let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
 
-      if (!searchQuery.match(/(youtube\.com|youtu\.be)/i)) {
-        const result = await yts(searchQuery);
-        if (result?.videos?.length) {
-          videos = result.videos.slice(0, 5);
-          videoUrl = videos[0].url;
+      if (!isUrl) {
+        const items = await xwolfSearch(searchQuery, 5);
+        if (items.length) {
+          const top = items[0];
+          videoId = top.id;
+          videoInfo = {
+            title:        top.title       || searchQuery,
+            channelTitle: top.channelTitle || '',
+            duration:     top.duration    || '',
+            thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
+          };
+          searchQuery = `https://youtube.com/watch?v=${top.id}`;
+
+          if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
+            const videos = items.map(v => ({
+              url: `https://youtube.com/watch?v=${v.id}`,
+              title: v.title,
+              author: v.channelTitle || '',
+              duration: v.duration || '',
+              videoId: v.id,
+              thumbnail: `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`
+            }));
+            setMusicSession(jid, { videos, index: 0, type: 'audio' });
+            const buttons = [
+              { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download MP3', id: `${p}songdl` }) }
+            ];
+            if (videos.length > 1) {
+              buttons.push({ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '➡️ Next Result', id: `${p}snext` }) });
+            }
+            try {
+              const msgOpts = {
+                title: videoInfo.title.substring(0, 60),
+                text: `🎵 *${videoInfo.title}*\n👤 ${videoInfo.channelTitle || 'Unknown'}\n⏱️ ${videoInfo.duration || 'N/A'}\n\n_Result 1 of ${videos.length}_`,
+                footer: `🐺 ${getBotName()}`,
+                interactiveButtons: buttons
+              };
+              if (videoInfo.thumbnail) msgOpts.image = { url: videoInfo.thumbnail };
+              await giftedBtns.sendInteractiveMessage(sock, jid, msgOpts);
+              await sock.sendMessage(jid, { react: { text: '🎵', key: m.key } });
+              return;
+            } catch {}
+          }
         }
       } else {
-        const videoId = videoUrl.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        videos = [{ url: videoUrl, title: 'Audio', author: { name: '' }, timestamp: '', videoId, thumbnail: videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '' }];
-      }
-
-      if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage && videos.length) {
-        const v = videos[0];
-        const thumbUrl = v.thumbnail || (v.videoId ? `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg` : null);
-
-        setMusicSession(jid, {
-          videos: videos.map(vd => ({
-            url: vd.url,
-            title: vd.title,
-            author: vd.author?.name || '',
-            duration: vd.timestamp || '',
-            videoId: vd.videoId || '',
-            thumbnail: vd.thumbnail || (vd.videoId ? `https://i.ytimg.com/vi/${vd.videoId}/hqdefault.jpg` : '')
-          })),
-          index: 0,
-          type: 'audio'
-        });
-
-        const buttons = [
-          { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download MP3', id: `${p}songdl` }) }
-        ];
-        if (videos.length > 1) {
-          buttons.push({ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '➡️ Next Result', id: `${p}snext` }) });
-        }
-
-        try {
-          const msgOpts = {
-            title: v.title.substring(0, 60),
-            text: `🎵 *${v.title}*\n👤 ${v.author?.name || 'Unknown'}\n⏱️ ${v.timestamp || 'N/A'}\n\n_Result 1 of ${videos.length}_`,
-            footer: `🐺 ${getBotName()}`,
-            interactiveButtons: buttons
-          };
-          if (thumbUrl) msgOpts.image = { url: thumbUrl };
-          await giftedBtns.sendInteractiveMessage(sock, jid, msgOpts);
-          await sock.sendMessage(jid, { react: { text: '🎵', key: m.key } });
-          return;
-        } catch (e) {
-          console.log('[YTMP3] Button mode failed, falling back to download:', e?.message);
-        }
+        videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let result = await queryAPI(videoUrl, AUDIO_ENDPOINTS);
-      if (!result.success) result = await queryKeithAudio(videoUrl);
+      let result = await queryXWolfAudio(searchQuery);
+      if (!result.success) result = await queryKeithAudio(searchQuery);
+
       if (!result.success) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ MP3 download failed. All services unavailable. Try again later.` }, { quoted: m });
       }
 
       const { data, endpoint } = result;
-      const v0 = videos[0] || {};
-      const trackTitle = data.title || v0.title || 'Audio';
-      const quality = data.quality || '128kbps';
-      const thumbUrl = data.thumbnail || v0.thumbnail || (v0.videoId ? `https://i.ytimg.com/vi/${v0.videoId}/hqdefault.jpg` : null);
+      const trackTitle = data.title || videoInfo.title || 'Audio';
+      const quality    = data.quality || '192kbps';
+      const thumbUrl   = data.thumbnail || videoInfo.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
 
       console.log(`🎵 [YTMP3] Found via ${endpoint}: ${trackTitle}`);
 
-      const sizeMB = await checkSizeMB(data.download_url);
-      if (sizeMB !== null && sizeMB > 50) {
+      const audioBuffer = await downloadMediaBuffer(data.download_url);
+      if (!audioBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ MP3 too large: ${sizeMB.toFixed(1)}MB\nMax size: 50MB` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Failed to download audio. Please try again.` }, { quoted: m });
+      }
+
+      const sizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
+      if (parseFloat(sizeMB) > 50) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+        return sock.sendMessage(jid, { text: `❌ MP3 too large: ${sizeMB}MB. Max 50MB.` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
@@ -151,28 +123,28 @@ export default {
       }
 
       const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
-      const sizeLabel = sizeMB !== null ? `${sizeMB.toFixed(1)}MB` : quality;
+      const sizeLabel  = `${sizeMB}MB`;
 
       await sock.sendMessage(jid, {
-        audio: { url: data.download_url },
+        audio:    audioBuffer,
         mimetype: 'audio/mpeg',
-        ptt: false,
+        ptt:      false,
         fileName: `${cleanTitle}.mp3`,
         contextInfo: {
           externalAdReply: {
-            title: trackTitle.substring(0, 60),
-            body: `🎵 ${sizeLabel} | Downloaded by ${getBotName()}`,
-            mediaType: 2,
-            thumbnail: thumbnailBuffer,
-            sourceUrl: videoUrl,
-            mediaUrl: videoUrl,
+            title:               trackTitle.substring(0, 60),
+            body:                `🎵 ${sizeLabel} | ${quality} | Downloaded by ${getBotName()}`,
+            mediaType:           2,
+            thumbnail:           thumbnailBuffer,
+            sourceUrl:           searchQuery,
+            mediaUrl:            searchQuery,
             renderLargerThumbnail: true
           }
         }
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTMP3] Success: ${trackTitle} via ${endpoint}`);
+      console.log(`✅ [YTMP3] Success: ${trackTitle} via ${endpoint} (${sizeLabel})`);
 
     } catch (error) {
       console.error('❌ [YTMP3] Error:', error.message);

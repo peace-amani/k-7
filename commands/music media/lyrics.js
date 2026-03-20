@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { xwolfLyrics } from '../../lib/xwolfApi.js';
 
 export default {
     name: "lyrics",
@@ -44,10 +45,9 @@ export default {
                 (result.artist ? `├─⊷ 👤 *${result.artist}*\n` : '') +
                 `│\n╰───\n\n`;
 
-            // WhatsApp has a 65,536 char limit; lyrics.ovh can be very long
-            const maxLen   = 4000;
-            const lyrics   = result.lyrics.trim();
-            const trimmed  = lyrics.length > maxLen
+            const maxLen  = 4000;
+            const lyrics  = result.lyrics.trim();
+            const trimmed = lyrics.length > maxLen
                 ? lyrics.substring(0, maxLen) + `\n\n📜 _(lyrics trimmed — search full version online)_`
                 : lyrics;
 
@@ -64,10 +64,9 @@ export default {
     }
 };
 
-// ── API chain: try each source until one succeeds ────────────────────
-
 async function fetchLyrics(query) {
     const sources = [
+        () => xwolfLyrics(query),
         () => fromPopCat(query),
         () => fromLyricsOvh(query),
         () => fromLyrist(query),
@@ -82,7 +81,6 @@ async function fetchLyrics(query) {
     return null;
 }
 
-// Source 1 — PopCat public API (returns title, artist, lyrics)
 async function fromPopCat(query) {
     const { data } = await axios.get(
         `https://api.popcat.xyz/lyrics?title=${encodeURIComponent(query)}`,
@@ -96,7 +94,6 @@ async function fromPopCat(query) {
     };
 }
 
-// Source 2 — lyrics.ovh (needs artist + title split)
 async function fromLyricsOvh(query) {
     const { title, artist } = splitQuery(query);
     const { data } = await axios.get(
@@ -107,7 +104,6 @@ async function fromLyricsOvh(query) {
     return { title, artist, lyrics: data.lyrics };
 }
 
-// Source 3 — lyrist (vercel, no key needed)
 async function fromLyrist(query) {
     const { title, artist } = splitQuery(query);
     const url = artist && artist !== 'Unknown'
@@ -122,7 +118,6 @@ async function fromLyrist(query) {
     };
 }
 
-// Smart query splitter: "title by artist" or "artist - title" or plain title
 function splitQuery(query) {
     const byMatch  = query.match(/^(.+?)\s+by\s+(.+)$/i);
     if (byMatch) return { title: byMatch[1].trim(), artist: byMatch[2].trim() };
