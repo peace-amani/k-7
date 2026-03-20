@@ -1,5 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
-import { isWolfEnabled, setWolfEnabled, getWolfStats } from '../../lib/wolfai.js';
+import { isWolfEnabled, setWolfEnabled, getWolfStats, getWolfName, setWolfName } from '../../lib/wolfai.js';
 
 export default {
   name: "wolf",
@@ -14,16 +14,35 @@ export default {
 
     if (sub === 'on' || sub === 'enable') {
       setWolfEnabled(true);
+      const wn = getWolfName();
       await sock.sendMessage(jid, {
-        text: `🐺 *Wolf AI Activated*\n\nI'm now listening! Just start any message with *"wolf"* to talk to me.\n\nExamples:\n• _wolf show me the menu_\n• _wolf play Bohemian Rhapsody_\n• _wolf what is quantum physics_\n• _hey wolf how are you_\n• _wolf restart the bot_`
+        text: `🐺 *${wn} Activated*\n\nJust DM me anything — I'm listening!\n\nExamples:\n• _play Bohemian Rhapsody_\n• _what is quantum physics_\n• _show the menu_\n• _turn on antilink_`
       }, { quoted: m });
       return;
     }
 
     if (sub === 'off' || sub === 'disable') {
       setWolfEnabled(false);
+      const wn = getWolfName();
       await sock.sendMessage(jid, {
-        text: `🐺 *Wolf AI Deactivated*\n\nI'll stop listening for "wolf" messages. Use *${PREFIX}wolf on* to reactivate.`
+        text: `🐺 *${wn} Deactivated*\n\nUse *${PREFIX}wolf on* to reactivate.`
+      }, { quoted: m });
+      return;
+    }
+
+    if (sub === 'name') {
+      const newName = args.slice(1).join(' ').trim();
+      if (!newName) {
+        const current = getWolfName();
+        await sock.sendMessage(jid, {
+          text: `🐺 Current AI name: *${current}*\n\nTo change it: *${PREFIX}wolf name <new name>*`
+        }, { quoted: m });
+        return;
+      }
+      const old = getWolfName();
+      setWolfName(newName);
+      await sock.sendMessage(jid, {
+        text: `🐺 AI name changed from *${old}* to *${newName}*.\n\nAll future responses will use the new name.`
       }, { quoted: m });
       return;
     }
@@ -31,8 +50,9 @@ export default {
     if (sub === 'status' || sub === 'stats') {
       const stats = getWolfStats();
       await sock.sendMessage(jid, {
-        text: `🐺 *Wolf AI Status*\n\n` +
+        text: `🐺 *${stats.name} Status*\n\n` +
           `• *Status:* ${stats.enabled ? '✅ Active' : '❌ Disabled'}\n` +
+          `• *Name:* ${stats.name}\n` +
           `• *AI Models:* ${stats.models} available\n` +
           `• *Conversations:* ${stats.conversations} stored\n` +
           `• *Access:* Owner & Sudo only\n\n` +
@@ -52,7 +72,7 @@ export default {
             fs.unlinkSync(path.join(convDir, file));
           }
           await sock.sendMessage(jid, {
-            text: `🐺 *Conversations Cleared*\n\nCleared ${files.length} conversation(s). Wolf AI memory has been reset.`
+            text: `🐺 *Conversations Cleared*\n\nCleared ${files.length} conversation(s). Memory has been reset.`
           }, { quoted: m });
         } else {
           await sock.sendMessage(jid, { text: `🐺 No conversations to clear.` }, { quoted: m });
@@ -65,21 +85,19 @@ export default {
 
     const stats = getWolfStats();
     await sock.sendMessage(jid, {
-      text: `🐺 *Wolf AI — ${botName}'s JARVIS*\n\n` +
+      text: `🐺 *${stats.name} — ${botName}'s AI Assistant*\n\n` +
         `*Status:* ${stats.enabled ? '✅ Active' : '❌ Disabled'}\n` +
-        `*AI Models:* ${stats.models} fallback models\n` +
+        `*Name:* ${stats.name}\n` +
+        `*AI Models:* ${stats.models} available\n` +
         `*Conversations:* ${stats.conversations} active\n` +
         `*Access:* Owner & Sudo only\n\n` +
         `*Commands:*\n` +
-        `• *${PREFIX}wolf on* — Activate Wolf AI\n` +
-        `• *${PREFIX}wolf off* — Deactivate Wolf AI\n` +
+        `• *${PREFIX}wolf on* — Activate\n` +
+        `• *${PREFIX}wolf off* — Deactivate\n` +
+        `• *${PREFIX}wolf name <name>* — Change AI name\n` +
         `• *${PREFIX}wolf status* — Show stats\n` +
         `• *${PREFIX}wolf clear* — Reset all conversations\n\n` +
-        `When active, just say *"wolf"* followed by anything:\n` +
-        `• _wolf show menu_\n` +
-        `• _hey wolf play a song_\n` +
-        `• _wolf explain black holes_\n` +
-        `• _yo wolf tell me a joke_`
+        `When active, just DM anything — I'll respond!`
     }, { quoted: m });
   },
 };
