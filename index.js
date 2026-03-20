@@ -233,7 +233,7 @@ import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudo
 import supabaseDb, { setConfigBotId, isUsingWasm } from './lib/database.js';
 import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
-import { isWolfTrigger, handleWolfAI, isWolfEnabled } from './lib/wolfai.js';
+import WolfAI from './lib/wolfai.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';
 import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
 import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
@@ -7297,7 +7297,7 @@ async function handleIncomingMessage(sock, msg) {
 
             // Wolf AI: prefixless DM assistant — only for owner/sudo, only in DMs (not groups)
             const _wolfIsDM = !isGroup && chatId !== 'status@broadcast';
-            if (_wolfIsDM && isWolfEnabled()) {
+            if (_wolfIsDM && WolfAI.isEnabled()) {
                 const _isOwnerW = jidManager.isOwner(msg);
                 const _isSudoW = jidManager.isSudo(msg);
                 if (_isOwnerW || _isSudoW) {
@@ -7329,7 +7329,7 @@ async function handleIncomingMessage(sock, msg) {
                                 clearActiveCommand(chatId, senderJid);
                             }
                         };
-                        const _wolfHandled = await handleWolfAI(sock, msg, commands, _executeWolfCmd, textMsg);
+                        const _wolfHandled = await WolfAI.handle(sock, msg, commands, _executeWolfCmd, textMsg);
                         if (_wolfHandled) {
                             UltraCleanLogger.info(`🐺 Wolf AI: ${getDisplayNumber(senderJid)} [DM] → "${textMsg.length > 50 ? textMsg.substring(0, 50) + '…' : textMsg}"`);
                             return;
