@@ -7383,8 +7383,23 @@ async function handleIncomingMessage(sock, msg) {
                         isPrefixless: isPrefixless,
                         DiskManager: DiskManager
                     });
-                    // Music mode: send a random short audio clip as a reply to the triggering message
-                    if (isMusicModeEnabled()) {
+                    // Music mode: skip for commands that already send audio/video to avoid clutter
+                    const MUSIC_SKIP_CMDS = new Set([
+                        'song','music','audio','mp3','ytmusic',
+                        'play','ytmp3doc','audiodoc','ytplay',
+                        'video','vid','viddl','dlvid','downloadvid',
+                        'videodoc','vnext','nextvid','vidnext','nextvideo',
+                        'snext','nextsong','songnext','nextresult',
+                        'songdl','dlsong','downloadsong',
+                        'spotify','spot','spdl','spotifydl','spotid',
+                        'shazam','whatsong','findsong','identify','musicid',
+                        'lyrics','lyric','ly',
+                        'musicmenu','mmenu','musichelp','musiccmds',
+                        'musicmode','mm','mmode','musicbot',
+                        'dlmp3','dlmp4','mp4',
+                        'tiktok','instagram','facebook','pinterest',
+                    ]);
+                    if (isMusicModeEnabled() && !MUSIC_SKIP_CMDS.has(commandName)) {
                         sendMusicClip(sock, chatId, msg).catch(() => {});
                     }
                 } finally {

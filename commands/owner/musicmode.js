@@ -89,24 +89,41 @@ export default {
                     return reply(
                         `╭─⌈ 🎵 *ADD SONG* ⌋\n│\n` +
                         `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ e.g. alan walker faded\n` +
-                        `├─⊷ *${PREFIX}musicmode add NF the search*\n│  └⊷ Only 30s previews are added\n│\n` +
+                        `├─⊷ *${PREFIX}musicmode add <audio url>*\n│  └⊷ Reply audio with *${PREFIX}url* to get link\n│\n` +
                         `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                     );
                 }
+
+                const isUrl = /^https?:\/\//i.test(query);
+
+                if (isUrl) {
+                    // Direct URL — add without iTunes validation
+                    const added = addMusicSong(query);
+                    if (!added) return reply(`⚠️ That URL is already in the pool.`);
+                    return reply(
+                        `╭─⌈ ✅ *CLIP ADDED* ⌋\n│\n` +
+                        `├─⊷ Direct audio URL saved\n│  └⊷ Will play as-is in music mode\n` +
+                        `├─⊷ Pool size: *${getMusicSongs().length}*\n│\n` +
+                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    );
+                }
+
+                // Song name — validate via iTunes
                 const check = await verifyShortClip(query);
                 if (!check.ok) {
                     if (check.reason === 'toolong') {
                         return reply(
                             `╭─⌈ ⚠️ *SONG TOO LONG* ⌋\n│\n` +
                             `├─⊷ *${check.artistName} - ${check.trackName}*\n│  └⊷ Full track is too long for music mode\n` +
-                            `├─⊷ Music mode only plays 30s clips\n│  └⊷ Use *${PREFIX}trim* to cut a clip first\n│\n` +
+                            `├─⊷ Music mode only plays 30s clips\n│  └⊷ Use *${PREFIX}trim* to cut a short clip\n` +
+                            `├─⊷ Then reply the clip with *${PREFIX}url*\n│  └⊷ And add the link here\n│\n` +
                             `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                         );
                     }
                     return reply(
                         `╭─⌈ ❌ *SONG NOT FOUND* ⌋\n│\n` +
-                        `├─⊷ Could not find a preview for:\n│  └⊷ *${query}*\n` +
-                        `├─⊷ Try a different song name\n│  └⊷ e.g. alan walker faded\n│\n` +
+                        `├─⊷ No preview found for:\n│  └⊷ *${query}*\n` +
+                        `├─⊷ Try a different name\n│  └⊷ e.g. alan walker faded\n│\n` +
                         `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                     );
                 }

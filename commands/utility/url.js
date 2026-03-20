@@ -574,11 +574,14 @@ export default {
                     if (quoted.documentMessage?.fileName) {
                         originalName = quoted.documentMessage.fileName;
                     } else if (quoted.imageMessage) {
-                        originalName = 'image';
+                        originalName = 'image.jpg';
                     } else if (quoted.videoMessage) {
-                        originalName = 'video';
+                        originalName = 'video.mp4';
                     } else if (quoted.audioMessage) {
-                        originalName = 'audio';
+                        const mime = quoted.audioMessage.mimetype || '';
+                        if (mime.includes('ogg')) originalName = 'audio.ogg';
+                        else if (mime.includes('mp4') || mime.includes('m4a')) originalName = 'audio.m4a';
+                        else originalName = 'audio.mp3';
                     }
                     
                     filename = generateUniqueFilename(originalName);
@@ -606,12 +609,17 @@ export default {
             }
             
             const { url, service, permanent, thumb, width, height } = uploadResult;
-            
+
+            const isAudioFile = ['.mp3', '.m4a', '.ogg', '.wav', '.aac'].some(e => filename.endsWith(e));
+            const audioHint = isAudioFile
+                ? `\n│\n├─⊷ *Music Mode Tip*\n│  └⊷ Run: *.musicmode add ${url}*`
+                : '';
+
             const successCaption = `╭─⌈ 📤 *URL UPLOAD* ⌋\n` +
                 `├─⊷ *Status:* Uploaded ✅\n` +
                 `├─⊷ *Size:* ${width && height ? `${width} × ${height} • ` : ''}${fileSizeMB.toFixed(2)} MB\n` +
                 `├─⊷ *Service:* ${service}\n` +
-                `├─⊷ *URL:* ${url}\n` +
+                `├─⊷ *URL:* ${url}${audioHint}\n` +
                 `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
             try {
