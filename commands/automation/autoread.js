@@ -499,6 +499,12 @@ if (!fs.existsSync(settingsFile)) {
     fs.writeFileSync(settingsFile, JSON.stringify(initialSettings, null, 2));
 }
 
+// Expose initial state to globalThis so status endpoints always read live values
+try {
+    const _initAutoread = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    globalThis._autoreadEnabled = !!(_initAutoread?.enabled);
+} catch { globalThis._autoreadEnabled = false; }
+
 // Load settings
 function loadSettings() {
     try {
@@ -521,6 +527,7 @@ function loadSettings() {
 function saveSettings(settings) {
     try {
         fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+        globalThis._autoreadEnabled = !!(settings?.enabled);
     } catch (error) {
         console.error('Error saving autoread settings:', error);
     }

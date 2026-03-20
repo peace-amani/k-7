@@ -787,6 +787,7 @@ async function reloadConfigCaches() {
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
         _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
+        globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
         _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
 
         // Reload font, antilink & antibug configs with the correct bot ID (they were
@@ -3043,6 +3044,7 @@ class AntiViewOnceSystem {
             supabaseDb.getConfig('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG).then(config => {
                 try {
                     _cache_antiviewonce_config = config;
+                    globalThis._antiviewonceEnabled = !!(config?.enabled);
                     this.config = config;
                     UltraCleanLogger.info('🔧 Loaded anti-viewonce config from DB');
                 } catch {}
@@ -3057,6 +3059,7 @@ class AntiViewOnceSystem {
     saveConfig(config) {
         try {
             _cache_antiviewonce_config = config;
+            globalThis._antiviewonceEnabled = !!(config?.enabled);
             supabaseDb.setConfig('antiviewonce_config', config).then(() => {
                 UltraCleanLogger.info('💾 Anti-viewonce config saved');
             }).catch(err => {
@@ -4497,6 +4500,7 @@ async function runDataMigrations() {
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
         _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
+        globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
         _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
 
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
@@ -6641,6 +6645,7 @@ function loadAntiViewOnceConfig() {
 function saveAntiViewOnceConfig(config) {
     try {
         _cache_antiviewonce_config = config;
+        globalThis._antiviewonceEnabled = !!(config?.enabled);
         supabaseDb.setConfig('antiviewonce_config', config).catch(err => {
             console.log('⚠️ Anti-viewonce config save error:', err.message);
         });

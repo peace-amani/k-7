@@ -65,6 +65,7 @@ async function loadData() {
             antideleteState.settings = { ...antideleteState.settings, ...savedSettings };
             if (typeof savedSettings.enabled === 'boolean') {
                 antideleteState.enabled = savedSettings.enabled;
+                globalThis._antideleteEnabled = antideleteState.enabled;
             }
             if (savedSettings.mode && (savedSettings.mode === 'private' || savedSettings.mode === 'public')) {
                 antideleteState.mode = savedSettings.mode;
@@ -1004,6 +1005,7 @@ export default {
         switch (command) {
             case 'public':
                 antideleteState.enabled = true;
+                globalThis._antideleteEnabled = true;
                 antideleteState.mode = 'public';
                 await saveData();
                 await sock.sendMessage(chatId, {
@@ -1015,6 +1017,7 @@ export default {
             case 'on':
             case 'enable':
                 antideleteState.enabled = true;
+                globalThis._antideleteEnabled = true;
                 antideleteState.mode = 'private';
                 await saveData();
                 await sock.sendMessage(chatId, {
@@ -1025,6 +1028,7 @@ export default {
             case 'off':
             case 'disable':
                 antideleteState.enabled = false;
+                globalThis._antideleteEnabled = false;
                 await saveData();
                 await sock.sendMessage(chatId, {
                     text: `╭─⌈ ❌ *ANTIDELETE: OFF* ⌋\n├─⊷ Antidelete is now disabled\n│  └⊷ Deleted messages will not be tracked\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
