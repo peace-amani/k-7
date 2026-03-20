@@ -5477,10 +5477,15 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     const m0 = messages?.[0];
                     if (m0?.key?.fromMe && m0?.message) {
                         const c0 = m0.message;
-                        const hasBtn = !!(c0?.interactiveResponseMessage || c0?.buttonsResponseMessage ||
-                                          c0?.listResponseMessage || c0?.templateButtonReplyMessage);
-                        const hasReaction = !!(c0?.reactionMessage);
                         const normC0 = normalizeMessageContent(c0) || c0;
+                        // Check both raw and normalised — some devices wrap responses in viewOnce/envelope
+                        const hasBtn = !!(
+                            c0?.interactiveResponseMessage || normC0?.interactiveResponseMessage ||
+                            c0?.buttonsResponseMessage    || normC0?.buttonsResponseMessage    ||
+                            c0?.listResponseMessage       || normC0?.listResponseMessage       ||
+                            c0?.templateButtonReplyMessage|| normC0?.templateButtonReplyMessage
+                        );
+                        const hasReaction = !!(c0?.reactionMessage || normC0?.reactionMessage);
                         const hasEdit = !!(normC0?.protocolMessage?.type === 14 || normC0?.editedMessage);
                         if (!hasBtn && !hasReaction && !hasEdit) return;
                         // fall through — let button responses, reactions, and edits be processed
