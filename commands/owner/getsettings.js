@@ -97,11 +97,13 @@ function getAutoDownloadStatusState() {
 }
 
 function getAutoreactStatusState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/autoReactConfig.json'));
+    const mgr = globalThis._autoReactManager;
+    const data = mgr ? mgr.config : safeReadJSON(path.join(__dirname, '../../data/autoReactConfig.json'));
     if (!data || !data.enabled) return 'OFF';
-    const emoji = data.fixedEmoji || data.emoji || '';
     const mode = data.mode || 'fixed';
-    return `ON (${mode}${emoji ? ' ' + emoji : ''})`;
+    if (mode === 'random') return 'ON (random)';
+    const emoji = data.fixedEmoji || data.emoji || '';
+    return `ON (fixed${emoji ? ' ' + emoji : ''})`;
 }
 
 function getAnticallState() {

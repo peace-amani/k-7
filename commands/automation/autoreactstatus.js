@@ -345,6 +345,7 @@ class AutoReactManager {
 }
 
 const autoReactManager = new AutoReactManager();
+globalThis._autoReactManager = autoReactManager;
 
 export async function handleAutoReact(sock, statusKey) {
     autoReactManager.enqueue(sock, statusKey);
