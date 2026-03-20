@@ -5900,6 +5900,18 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             const normalizedUpsertContent = normalizeMessageContent(msg.message) || msg.message;
             const upsertProtoMsg = normalizedUpsertContent?.protocolMessage;
+
+            // Handle edited messages (WhatsApp protocol type 14)
+            if (upsertProtoMsg && upsertProtoMsg.type === 14) {
+                const editedContent = upsertProtoMsg.editedMessage?.message;
+                if (!editedContent) return; // no content, ignore
+                // Overwrite msg.message with the edited content and let it fall through
+                // to the normal command pipeline as if it were a fresh message
+                msg.message = editedContent;
+                console.log(`[EDIT] Edited message detected — reprocessing as command`);
+                // fall through — do NOT return
+            }
+
             if (upsertProtoMsg && (upsertProtoMsg.type === 0 || upsertProtoMsg.type === 4)) {
                 const revokedMsgId = upsertProtoMsg.key?.id;
                 if (revokedMsgId) {
