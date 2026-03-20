@@ -61,15 +61,24 @@
 
 
 // ====== SILENT WOLFBOT - ULTIMATE CLEAN EDITION (SPEED OPTIMIZED) ======
+// This is the main entry point for the entire bot.
+// All WhatsApp communication flows through here via the Baileys library.
+//
+// High-level flow:
+//   main() → startBot() → Baileys socket created → event listeners registered
+//   → messages.upsert fires → handleIncomingMessage() routes each message
+//   → command found in `commands` Map → cmd.execute() runs the actual feature
+//
+// Key library files this file talks to:
+//   lib/wolfai.js       — Wolf AI DM assistant (natural language command execution)
+//   lib/botname.js      — reads/writes the bot's display name
+//   lib/commandButtons.js — wraps outgoing messages with interactive buttons
+//   lib/supabase.js     — database (stores config, session, media, etc.)
+//   commands/**/*.js    — every user-facing command (.ping, .song, .tts, etc.)
+//
 // Features: Real-time prefix changes, UltimateFix, Status Detection, Auto-Connect
 // SUPER CLEAN TERMINAL - Zero spam, Zero session noise, Rate limit protection
-// Date: 2024 | Version: 1.1.5 (PREFIXLESS & NEW MEMBER DETECTION)
-// New: Session ID authentication from process.env.SESSION_ID
-// New: WOLF-BOT session format support (WOLF-BOT:eyJ...)
-// New: Professional success messaging like WOLFBOT
-// New: Prefixless mode support
-// New: Group new member detection with terminal notifications
-// New: Anti-ViewOnce system integrated (Private/Auto modes)
+// Version: 1.1.5 | Modes: public / silent / groups / dms / buttons / channel
 
 // ====== PERFORMANCE OPTIMIZATIONS APPLIED ======
 // 1. Reduced mandatory delays from 1000ms to 100ms
@@ -78,7 +87,12 @@
 // 4. Faster command parsing
 // 5. All original features preserved 100%
 
-// ====== ULTIMATE CONSOLE INTERCEPTOR (OPTIMIZED) ======
+// ====== SECTION 1: CONSOLE INTERCEPTOR ======
+// Baileys (the WhatsApp library) prints a lot of low-level debug noise.
+// We capture console.log/warn/error BEFORE Baileys loads so we can filter
+// or prettify every line.  The raw originals are kept in `originalConsoleMethods`
+// so UltraCleanLogger can still write to the terminal without going through
+// the filter again (which would cause infinite recursion).
 //Silent Wolf
 
 const originalConsoleMethods = {
@@ -208,7 +222,10 @@ function setupProcessFilter() {
     };
 }
 
-// Set environment variables
+// ====== SECTION 2: ENVIRONMENT SETUP ======
+// Silence every verbose logging library before any WhatsApp code loads.
+// Without this, Baileys + pino would flood the terminal with encryption
+// handshake details, session entries, and signal protocol messages.
 process.env.DEBUG = '';
 process.env.NODE_ENV = 'production';
 process.env.BAILEYS_LOG_LEVEL = 'fatal';
@@ -217,7 +234,21 @@ process.env.BAILEYS_DISABLE_LOG = 'true';
 process.env.DISABLE_BAILEYS_LOG = 'true';
 process.env.PINO_DISABLE = 'true';
 
-// Import modules
+// ====== SECTION 3: IMPORTS ======
+// Node.js built-ins first, then npm packages, then our own lib files.
+//
+// Key lib files explained:
+//   sudo-store.js     — manages the sudo (trusted helper) phone number list
+//   database.js       — Supabase/SQLite DB wrapper; stores all persistent config
+//   authState.js      — reads/writes WhatsApp session credentials from DB
+//   botname.js        — returns the current bot display name (e.g. "Silent Wolf")
+//   wolfai.js         — Wolf AI assistant: handles natural-language DM commands
+//   buttonMode.js     — toggle that wraps every bot reply with interactive buttons
+//   channelMode.js    — makes the bot appear to forward from a WA channel/newsletter
+//   musicMode.js      — Music Mode: auto-sends music clips in enabled groups
+//   commandButtons.js — tracks which command is active per chat; builds button lists
+//   fontTransformer.js — converts reply text to fancy Unicode fonts
+//   platformDetect.js — detects Heroku / Railway / Replit / local
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
@@ -246,6 +277,20 @@ import { applyFont as _applyFont } from './lib/fontTransformer.js';
 const msgRetryCounterCache = new NodeCache({ stdTTL: 600 });
 globalThis.msgRetryCounterCache_ref = msgRetryCounterCache;
 
+// ====== SECTION 4: LID / PHONE NUMBER RESOLUTION SYSTEM ======
+// WhatsApp now issues "LID" (Linked Device ID) identifiers for some accounts.
+// A LID looks like  12345@lid  instead of the usual  44779000000@s.whatsapp.net.
+// Many features (sudo checks, kick, block) need the real phone number, not the LID.
+//
+// How this works:
+//   1. lidPhoneCache/phoneLidCache — in-memory maps that store LID ↔ phone pairs
+//   2. cacheLidPhone()   — adds a new mapping to both caches
+//   3. resolvePhoneFromLid() — given a LID JID, returns the phone number (or null)
+//   4. resolveSenderFromGroup() — fetches group metadata to find the phone for a LID
+//   5. autoScanGroupsForSudo() — called once at startup; scans all groups to build
+//      LID↔phone mappings for every sudo user (so sudo commands work from any device)
+//
+// All JID helpers (cleanJid, normalizeJid, etc.) live in the JidManager class below.
 let currentSock = null;
 
 const lidPhoneCache = new Map();
@@ -644,7 +689,22 @@ async function autoScanGroupsForSudo(sock) {
     }
 }
 
-// Import automation handlers
+// ====== SECTION 5: AUTOMATION & GROUP HANDLER IMPORTS ======
+// These are imported at the top level (not lazily) so the first event that
+// fires doesn't stall waiting for a dynamic import() to resolve from disk.
+// Each module is a feature that plugs directly into the messages.upsert handler:
+//   autoreactstatus   — auto-reacts to WhatsApp statuses with a chosen emoji
+//   channelreact      — reacts to posts in WA channels/newsletters
+//   reactowner        — reacts to owner messages (custom emoji)
+//   reactdev          — reacts to dev messages
+//   autoviewstatus    — silently marks statuses as viewed
+//   autodownloadstatus— saves every status to the owner's DM
+//   antidemote        — kicks admins who demote the bot
+//   antibug/antilink/antispam/antibot — group protection systems
+//   antidelete        — re-sends deleted messages to the owner
+//   antideletestatus  — same thing but for deleted WA statuses
+//   welcome/goodbye   — sends a message when members join/leave a group
+//   joinapproval      — posts a note when the bot approves a join request
 import { handleAutoReact } from './commands/automation/autoreactstatus.js';
 import { handleChannelReact, discoverNewsletters, channelReactManager } from './commands/channel/channelreact.js';
 import { handleReactOwner } from './commands/automation/reactowner.js';
@@ -677,9 +737,13 @@ import { initStatusAntidelete, statusAntideleteStoreMessage, statusAntideleteHan
 import { initStatusReplyListener } from './lib/statusReplyListener.js';
 
 // Import W.O.L.F chatbot system
+// chatbot.js handles group chatbot mode (responds to all messages in a group, any user)
+// This is separate from Wolf AI, which is the owner-only DM assistant in wolfai.js
 import { isChatbotActiveForChat, handleChatbotMessage } from './commands/ai/chatbot.js';
 
-// ====== ENVIRONMENT SETUP ======
+// ====== SECTION 6: ENVIRONMENT & GLOBAL CONSTANTS ======
+// Loads .env file so variables like SESSION_ID and BOT_PREFIX are available via process.env.
+// Also sets __filename / __dirname (not available natively in ES module files).
 dotenv.config({ path: './.env' });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -687,6 +751,18 @@ const __dirname = dirname(__filename);
 
 
 // ====== CONFIGURATION ======
+// ====== SECTION 7: BOT IDENTITY & FILE PATH CONSTANTS ======
+// These are the single source of truth for the bot's name, version, and all
+// the JSON files it reads/writes for persistent config.
+//
+// BOT_NAME:       display name shown in menus, connection messages, etc.
+//                 Read from lib/botname.js; changed with the .setbotname command.
+// DEFAULT_PREFIX: the command trigger character (default: ".").
+//                 Read from BOT_PREFIX or PREFIX env var, then from the DB cache.
+//                 Changed at runtime with .setprefix; stored in prefix_config.json / DB.
+// SESSION_DIR:    folder that holds WhatsApp session credentials (creds.json, keys, etc.)
+// *_FILE paths:   legacy JSON file locations; bot now mirrors these into the Supabase DB
+//                 via the config cache system below (runDataMigrations()).
 const SESSION_DIR = './session';
 try {
     const _bnFile = path.join(__dirname, 'bot_name.json');
@@ -725,6 +801,22 @@ let _cache_antiviewonce_config = null;
 let _cache_antiviewonce_history = null;
 let _cache_antiviewonce_captured_count = 0;
 
+// ====== SECTION 8: CONFIG CACHE SYSTEM ======
+// Every piece of persistent state (owner number, prefix, bot mode, whitelist, etc.)
+// is kept in Supabase/SQLite via lib/database.js.  Reading from DB on every message
+// would be too slow, so we keep an in-memory cache of each config value.
+//
+//   _cache_*        — the in-memory snapshot of each DB key
+//   _loadConfigCache(key) — fetches from DB once; used at startup and after reconnect
+//   _saveConfigCache(key) — writes to DB without blocking (fire-and-forget)
+//   reloadConfigCaches()  — re-fetches ALL caches after reconnect or bot_id change
+//   updateBotModeCache()  — called by commands/owner/mode.js when .mode is changed;
+//                           updates both the in-memory variable AND the DB in one step
+//
+// Why this matters for commands:
+//   Commands don't touch the DB directly — they call global helpers like
+//   `global.updateBotModeCache()` or `globalThis._saveAntilinkConfig()` which
+//   write through the cache to the DB automatically.
 async function _loadConfigCache(key, defaultValue) {
     try {
         const val = await supabaseDb.getConfig(key, defaultValue);
@@ -828,6 +920,13 @@ async function reloadConfigCaches() {
     } catch {}
 }
 
+// ====== SECTION 9: SPEED & RATE-LIMIT CONSTANTS ======
+// AUTO_CONNECT_ON_LINK  — if true, triggers the .connect flow whenever a new user
+//   messages the bot for the first time (auto-links them as owner).
+// AUTO_CONNECT_ON_START — triggers the same .connect flow when the bot first boots.
+// RATE_LIMIT_ENABLED    — throttles duplicate commands to prevent WhatsApp bans.
+//   MIN_COMMAND_DELAY   — minimum ms between two identical commands from the same user.
+//   STICKER_DELAY       — extra wait between sticker sends to avoid rate-limiting.
 // Auto-connect features
 const AUTO_CONNECT_ON_LINK = true;
 const AUTO_CONNECT_ON_START = true;
@@ -855,7 +954,31 @@ function silenceBaileysCompletely() {
 }
 silenceBaileysCompletely();
 
-// ====== CLEAN CONSOLE SETUP ======
+// ====== SECTION 10: ULTRA CLEAN LOGGER ======
+// This is the only logging system used throughout the entire bot.  It replaces
+// Node's built-in console.log/warn/error so Baileys' internal debug spam never
+// reaches the terminal.
+//
+// How it works:
+//   silenceBaileysCompletely() — overrides pino's transport before Baileys loads
+//   setupProcessFilter()       — intercepts process.stdout/stderr at the stream level
+//   _logSuppressSet            — exact substrings that are dropped (WhatsApp crypto keys, etc.)
+//   _systemPatterns            — regex list; matches are buffered and printed as a
+//                                single aggregated summary every 25 seconds instead of
+//                                flooding the terminal with hundreds of individual lines.
+//
+// UltraCleanLogger static methods:
+//   .info()    — cyan info line
+//   .success() — green success line
+//   .warning() — yellow warning line
+//   .error()   — red error line
+//   .command() — shows when a command fires (e.g. "▶ music · .play")
+//   .group()   — group-event line (magenta)
+//   .member()  — join/leave line (cyan)
+//   .antiviewonce() — anti-view-once events (magenta)
+//
+// All command files call UltraCleanLogger (imported via lib/logger.js alias) so
+// their output blends cleanly into the same filtered stream.
 console.clear();
 setupProcessFilter();
 
@@ -1178,7 +1301,22 @@ const DEFAULT_ANTIVIEWONCE_CONFIG = {
     maxHistory: 500
 };
 
-// ====== DYNAMIC PREFIX SYSTEM ======
+// ====== SECTION 19a: DYNAMIC PREFIX SYSTEM ======
+// The prefix is the trigger character that starts every command (default: ".").
+// It can be changed live with .setprefix <char> or removed entirely for prefixless mode.
+//
+// How it works:
+//   prefixCache    — the current prefix string (single char or empty string)
+//   isPrefixless   — if true, every incoming message is treated as a potential command
+//   prefixHistory  — last 10 changes (for debugging with .prefixinfo)
+//
+//   loadPrefixFromFiles()    — reads from prefix_config.json (or falls back to DEFAULT_PREFIX)
+//   updatePrefixImmediately() — called by .setprefix; updates cache + saves to file + DB
+//   global.prefix / global.CURRENT_PREFIX — kept in sync for commands that need it
+//
+// The prefix is also checked in handleIncomingMessage() (Section 22) before any
+// command is dispatched — if isPrefixless=false and the message doesn't start with
+// prefixCache, the message is skipped silently (unless chatbot/wolf AI handles it).
 let prefixCache = DEFAULT_PREFIX;
 let prefixHistory = [];
 let isPrefixless = false;
@@ -1379,6 +1517,24 @@ setInterval(() => {
     }
 }, 5000);
 
+// ====== SECTION 11: DISK MANAGER ======
+// Replit's free tier has limited disk space.  DiskManager watches the available
+// space and automatically cleans up temp files so the bot never crashes due to
+// a full disk.
+//
+// WARNING_MB (200 MB) — logs a warning when free space falls below this.
+// CRITICAL_MB (80 MB) — triggers an emergency cleanup of ./tmp, sticker caches,
+//   old media downloads, and excess session files.
+//
+// Cleanup targets (runCleanupAsync):
+//   ./tmp/*              — ffmpeg/yt-dlp temp files from music downloads
+//   ./data/stickers/*    — sticker cache older than 24 hours
+//   ./session/app-*.json — excess Baileys key files (keeps newest 30)
+//   ./*.(mp3|mp4|…)      — stray media files in the root directory
+//
+// DiskManager.start() is called once in main() and sets two recurring timers:
+//   CHECK_INTERVAL (3 min)   — checks free space, warns/cleans as needed
+//   CLEANUP_INTERVAL (10 min) — proactive background cleanup regardless of space
 const DiskManager = {
     WARNING_MB: 200,
     CRITICAL_MB: 80,
@@ -1766,7 +1922,28 @@ async function safeWriteFileAsync(filePath, data) {
 // Utility functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ====== JID/LID HANDLING SYSTEM ======
+// ====== SECTION 12: JID MANAGER ======
+// JidManager is a utility class that normalises every kind of WhatsApp JID
+// into a consistent format so the rest of the bot never has to deal with edge cases.
+//
+// JID formats the bot encounters:
+//   44779000000@s.whatsapp.net  — standard user JID
+//   44779000000:5@s.whatsapp.net — multi-device sub-device (strip the ":5" part)
+//   12345@lid                   — Linked Device ID (needs LID→phone resolution above)
+//   1234567890-1234567@g.us     — group JID (never normalised as a phone)
+//
+// Key methods:
+//   cleanJid(jid)    — strips device suffix, returns "44779…@s.whatsapp.net"
+//   cleanNumber(jid) — returns the bare phone number string  "44779000000"
+//   isGroup(jid)     — returns true if the JID ends in @g.us
+//   isUser(jid)      — returns true if the JID ends in @s.whatsapp.net or @lid
+//   toUserJid(num)   — converts "44779000000" → "44779000000@s.whatsapp.net"
+//   isOwner(jid)     — compares jid against OWNER_JID / OWNER_NUMBER
+//   isSudo(jid)      — checks the sudo list from lib/database.js
+//   resolveNumber(jid) — handles LID→phone if needed, then returns clean number
+//
+// jidManager instance (bottom of this section) is used everywhere in index.js;
+// commands that need isOwner/isSudo import the helper from lib/permissions.js.
 class JidManager {
     constructor() {
         this.ownerJids = new Set();
@@ -2090,7 +2267,24 @@ class JidManager {
 
 const jidManager = new JidManager();
 
-// ====== NEW MEMBER DETECTION SYSTEM ======
+// ====== SECTION 13: NEW MEMBER DETECTOR ======
+// Watches group-participants.update events (add/remove/promote/demote) and
+// is the trigger point for the welcome, goodbye, and anti-demote features.
+//
+// Flow when someone joins a group:
+//   1. handleGroupUpdate() fires for action "add" or "invite"
+//   2. Looks up cached group metadata to get the group name
+//   3. Checks isWelcomeEnabled() → if yes, calls sendWelcomeMessage()
+//   4. Calls isJoinApprovalEnabled() → if yes, posts an approval note
+//   5. Caches the new member's JID so duplicate events are ignored
+//
+// Flow when someone leaves / is removed:
+//   1. handleGroupUpdate() fires for action "remove"
+//   2. Checks isGoodbyeEnabled() → if yes, calls sendGoodbyeMessage()
+//
+// Flow when an admin is demoted:
+//   1. Fires for action "demote"
+//   2. Delegates to antidemoteHandler() from commands/group/antidemote.js
 class NewMemberDetector {
     constructor() {
         this.enabled = true;
@@ -2571,7 +2765,22 @@ const memberDetector = new NewMemberDetector();
 
 
 
-// ====== ULTIMATE FIX SYSTEM ======
+// ====== SECTION 14: ULTIMATE FIX SYSTEM ======
+// Watches for connection drops, stalls, and QR loops and automatically
+// restarts the bot to maintain 24/7 uptime on Replit.
+//
+// How it works:
+//   trackActivity()   — called on every incoming message to reset the watchdog timer
+//   checkHealth()     — runs every 90 seconds; if no activity for > 5 minutes it
+//                       calls triggerRestart() which does a clean sock.end() → reconnect
+//   onConnected()     — called when Baileys fires "connection.update" with open=true;
+//                       resets retry counters and marks the connection as stable
+//   onDisconnected()  — called on close/logout events; decides whether to reconnect
+//                       or give up (MAX_RETRY_ATTEMPTS = 10)
+//
+// Interaction with commands:
+//   The .restart command (commands/owner/restart.js) calls triggerRestart() directly.
+//   The .fix command routes through UltimateFixSystem.triggerRestart() as well.
 class UltimateFixSystem {
     constructor() {
         this.fixedJids = new Set();
@@ -3450,7 +3659,20 @@ let antiViewOnceSystem = null;
 let antideleteInitDone = false;
 let statusAntideleteInitDone = false;
 
-// ====== RATE LIMIT PROTECTION ======
+// ====== SECTION 15: RATE LIMIT PROTECTION ======
+// Prevents the bot from being banned by WhatsApp for sending too many messages
+// too quickly.  Every command call passes through rateLimiter.check() before
+// the command is executed.
+//
+// How it works:
+//   check(jid, command) — returns true if the user+command combo is within limits.
+//                         Returns false (and optionally warns the user) if they are
+//                         firing commands too fast.
+//   Limits tracked per user:
+//     - global burst: max 10 commands/10 seconds from any single JID
+//     - per-command: cooldown varies by category (e.g. sticker=3 s, music=5 s)
+//   Media commands (music, sticker, download) get longer cooldowns because they
+//   generate heavy traffic that WhatsApp's servers are sensitive to.
 class RateLimitProtection {
     constructor() {
         this.commandTimestamps = new Map();
@@ -3549,7 +3771,21 @@ class RateLimitProtection {
 
 const rateLimiter = new RateLimitProtection();
 
-// ====== STATUS DETECTOR ======
+// ====== SECTION 16: STATUS DETECTOR ======
+// Detects incoming WhatsApp Status updates (Stories) posted by contacts and
+// drives the auto-react, auto-view, and auto-download-status features.
+//
+// A Status message arrives as a regular message in the special JID "status@broadcast".
+// StatusDetector.isStatus(msg) returns true for those, letting the main
+// messages.upsert handler route them to the correct automation handlers instead of
+// trying to run them through the normal command pipeline.
+//
+// autoView   → handleAutoView()   in commands/automation/autoviewstatus.js
+// autoReact  → handleAutoReact()  in commands/automation/autoreactstatus.js
+// autoSave   → handleAutoDownloadStatus() in commands/automation/autodownloadstatus.js
+//
+// All three features are toggled independently with their respective commands
+// (.autoview on/off, .autoreact on/off, .autodownload on/off).
 class StatusDetector {
     constructor() {
         this.detectionEnabled = true;
@@ -3883,6 +4119,20 @@ function getViewOnceFromCache(chatId, messageId) {
     return viewOnceCache.get(key) || null;
 }
 
+// ====== SECTION 17: MESSAGE STORE ======
+// A small in-memory store that keeps the last N messages per chat so that
+// quoted-reply commands (e.g. .sticker, .delete, .antidelete) can find the
+// original message object that Baileys no longer sends on its own.
+//
+// Why it's needed:
+//   When a user replies to a message, Baileys only gives you a quoted stub, not
+//   the full message.  MessageStore.get(chatId, msgId) reconstructs the full
+//   object from our local cache.
+//
+// store.messages — Map<chatId, LRU-array of recent message objects>
+// store.bind(ev) — hooks into the Baileys event emitter to capture every
+//                  messages.upsert and messages.update event automatically.
+// store.loadMessage(chatId, id) — public helper used by command handlers.
 class MessageStore {
     constructor() {
         this.messages = new Map();
@@ -3929,6 +4179,23 @@ class MessageStore {
     }
 }
 
+// ====== SECTION 18: COMMAND LOADER ======
+// commands Map  — the single registry of every command the bot knows.
+//   Key:   command name string (e.g. "play", "sticker", "kick")
+//   Value: { execute(sock, msg, args, extra){…}, description, aliases, category, … }
+//
+// commandCategories Map — groups command names by folder name (music, owner, group, …)
+//   Used by the .menu command (commands/utility/menu.js) to build the category list.
+//
+// loadCommandsFromFolder(folderPath, category):
+//   - Reads every .js file in the given commands/ sub-folder
+//   - Dynamic import() loads the module and calls registerCommands() if it exists,
+//     or reads the default export directly for simpler single-command files
+//   - Aliases are registered alongside the primary name
+//   - Called for every sub-folder at startup (see the loadAllCommands() block below)
+//
+// After loading, global.commandsMap = commands so any lib file can look up commands.
+// Wolf AI uses this to answer questions like "what does .play do?" (lookupCommand).
 const commands = new Map();
 const commandCategories = new Map();
 
@@ -4526,7 +4793,32 @@ const _dbInitPromise = initDatabase().then(() => {
     process.exit(1);
 });
 
-// ====== MAIN BOT FUNCTION ======
+// ====== SECTION 19: startBot() — CORE CONNECTION FUNCTION ======
+// This is where Baileys is initialised and the WhatsApp connection is made.
+// It is called once at startup and again on every reconnect.
+//
+// High-level flow:
+//   1. Close any existing socket cleanly (sock.ev.removeAllListeners, ws.close)
+//   2. Load auth state from SQLite via useSQLiteAuthState() in lib/database.js
+//   3. Call makeWASocket() with custom options:
+//        - logger: ultraSilentLogger (no Baileys noise in the terminal)
+//        - auth: the SQLite auth state
+//        - browser: ['WolfBot', 'Safari', '1.0.0']
+//        - msgRetryCounterCache: shared NodeCache
+//   4. Override sock.sendMessage() to apply the current font style automatically
+//      (see Section 20 below) and capture outgoing messages for MessageStore
+//   5. Register all Baileys event handlers:
+//        connection.update     → reconnect logic, UltimateFixSystem
+//        creds.update          → save auth state to SQLite
+//        messages.upsert       → main message handler (Section 21)
+//        group-participants.update → NewMemberDetector (Section 13)
+//        contacts.update       → update contactNames map (for display names)
+//   6. Once connected (open), call reloadConfigCaches() then autoScanGroupsForSudo()
+//
+// loginMode options:
+//   'auto'    — tries QR code, falls back to pairing code if QR fails
+//   'qr'      — always shows QR code for scanning
+//   'pairing' — sends pairing code to loginData.phone via WhatsApp
 async function startBot(loginMode = 'auto', loginData = null) {
     try {
         if (connectionStableTimer) { clearTimeout(connectionStableTimer); connectionStableTimer = null; }
@@ -4688,6 +4980,18 @@ async function startBot(loginMode = 'auto', loginData = null) {
             maxRetries: 3,
         });
         
+        // ====== SECTION 20: sock.sendMessage() OVERRIDE ======
+        // Wraps Baileys' native sendMessage so every outgoing text automatically
+        // has the currently selected font style applied (e.g. bold, italic, monospace).
+        //
+        // The override also:
+        //   - Stores outgoing messages in MessageStore so the bot can reference its
+        //     own previous messages (needed for things like .delete on bot replies)
+        //   - Injects button payloads when BOT_MODE === 'buttons'
+        //   - Falls back to plain text if font transformation fails (never crashes)
+        //
+        // Font is changed with .font <style> (commands/owner/font.js).
+        // The current font config is stored in globalThis._fontConfig.
         const originalSendMessage = sock.sendMessage.bind(sock);
         
         let _giftedBtns = null;
@@ -5457,6 +5761,21 @@ async function startBot(loginMode = 'auto', loginData = null) {
             }
         });
 
+        // ====== SECTION 21: messages.upsert EVENT HANDLER ======
+        // This is the hot path — it fires for every new message WhatsApp delivers.
+        // "upsert" means either a brand-new message or a revision of an existing one.
+        //
+        // Routing logic (in order):
+        //   1. Skip if type !== 'notify' (only process new delivered messages)
+        //   2. Store the message in MessageStore for reply commands
+        //   3. Pass to antideleteStoreMessage() so deletion can be detected later
+        //   4. If chatId === 'status@broadcast' → Status pipeline (autoView/autoReact/autoSave)
+        //   5. trackActivity() → resets the UltimateFixSystem watchdog timer
+        //   6. If anti-viewonce is enabled and message is view-once → antiViewOnceSystem.handle()
+        //   7. Call handleIncomingMessage(sock, msg) for all real messages (Section 22)
+        //
+        // Everything after step 7 is a fast return — handleIncomingMessage owns the
+        // full command dispatch pipeline.
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
             // TRACE: log ALL view-once arrivals (no fromMe filter) to show exact delivery type
             try {
@@ -7057,6 +7376,33 @@ function extractTextFromMessage(messageObj) {
            content.documentWithCaptionMessage?.message?.documentMessage?.caption || '';
 }
 
+// ====== SECTION 22: handleIncomingMessage() — COMMAND DISPATCH PIPELINE ======
+// Called once per message from messages.upsert (Section 21).
+// This is the brain of the bot — it decides what to do with every message.
+//
+// Pipeline steps (in order):
+//   1.  Extract chatId, senderJid, and the clean message text (getMessageText)
+//   2.  Resolve LID → phone if the sender has a @lid JID
+//   3.  Determine isOwner, isSudo, isGroup, isFromMe
+//   4.  Check BOT_MODE (public / silent / groups / dms / buttons):
+//         silent → only owner/sudo commands work
+//         groups → only respond in groups
+//         dms    → only respond in DMs
+//   5.  Check if sender is blocked (blocked_users list) → silently ignore
+//   6.  Check whitelist (if enabled) → only respond to whitelisted chats
+//   7.  Wolf AI DM check: if message is in owner/sudo DM AND wolf AI is enabled →
+//         WolfAI.handle() (lib/wolfai.js) takes over; command execution may follow
+//   8.  Group chatbot check: if isChatbotActiveForChat(chatId) → handleChatbotMessage
+//   9.  Prefix detection:
+//         isPrefixless=false → message must start with prefixCache (e.g. ".")
+//         isPrefixless=true  → any message is a potential command
+//  10.  Parse command name and args from the message text
+//  11.  Look up command in the commands Map → call command.execute(sock, msg, args, extra)
+//  12.  If command not found → handleDefaultCommand() for built-in fallbacks
+//
+// The "extra" object passed to every command contains:
+//   sock, msg, chatId, senderJid, isOwner, isSudo, isGroup, args,
+//   reply(text), react(emoji), download(url), prefix, botName, …
 async function handleIncomingMessage(sock, msg) {
     const startTime = Date.now();
     
@@ -7938,8 +8284,27 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 
 
 
-// ====== MAIN APPLICATION ======
-// ====== MAIN APPLICATION ======
+// ====== SECTION 23: main() — APPLICATION ENTRY POINT ======
+// main() is the very first thing that runs when Node.js starts the file.
+// It wires together everything that was declared in the sections above.
+//
+// Startup sequence:
+//   1. DiskManager.start()          — starts disk-space watchdog timers
+//   2. supabaseDb.initialize()      — opens / migrates the SQLite database
+//   3. runDataMigrations()          — copies legacy JSON files into SQLite
+//   4. loadAllCommands()            — imports every command file (Section 18)
+//   5. setupWebServer()             — starts the keep-alive HTTP server on port 8080
+//                                     (prevents Replit from sleeping the repl)
+//   6. setupHerokuKeepAlive()       — sends a self-ping every 25 minutes if running on Heroku
+//   7. Session detection:
+//        a. If ./session/creds.json exists → startBot('auto') with existing session
+//        b. Else if SESSION_ID env var set → decode and write session files, then startBot()
+//        c. Else → startBot('auto') to show a QR code for first-time login
+//   8. startBot() returns a connected `sock`; events fire from that point forward
+//
+// Process signals:
+//   SIGTERM / SIGINT — caught to do a clean sock.end() before shutdown
+//   uncaughtException / unhandledRejection — logged; bot restarts via main() after 8 s
 async function main() {
     try {
         // ====== WEB SERVER — must bind to PORT before anything else (Heroku boot timeout) ======
