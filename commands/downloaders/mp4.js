@@ -2,16 +2,16 @@ import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { proxyFetch } from '../../lib/proxyFetch.js';
+import { xwolfSearch } from '../../lib/xwolfApi.js';
+import { xcasperVideo } from '../../lib/xcasperApi.js';
 
-const XCASPER_BASE  = 'https://apis.xcasper.space/api/downloader';
-const GIFTED_BASE   = 'https://api.giftedtech.co.ke/api/download';
-const GIFTED_ENDS   = ['ytv', 'dlmp4', 'ytmp4'];
+const XCASPER_BASE = 'https://apis.xcasper.space/api/downloader';
 
 // ── xcasper ytmp6 (PRIMARY) ────────────────────────────────────
-async function xcasperYtmp6(url) {
+async function xcasperYtmp6(ytUrl) {
     try {
         const res = await axios.get(`${XCASPER_BASE}/ytmp6`, {
-            params: { url },
+            params: { url: ytUrl },
             timeout: 30000
         });
         const d = res.data;
@@ -25,54 +25,17 @@ async function xcasperYtmp6(url) {
             console.log(`[mp4/ytmp6] buffer too small: ${buf?.length || 0}`);
             return null;
         }
-        // Validate MP4 magic bytes (bytes 4-7: ftyp / moov)
         const sig = buf.slice(4, 8).toString('ascii');
         if (!['ftyp', 'free', 'moov', 'mdat'].includes(sig)) {
             console.log(`[mp4/ytmp6] not MP4 bytes (sig="${sig}"), skipping`);
             return null;
         }
-        const mb = (buf.byteLength / 1024 / 1024).toFixed(1);
-        console.log(`[mp4/ytmp6] ✅ ${mb}MB valid MP4`);
+        console.log(`[mp4/ytmp6] ✅ ${(buf.byteLength / 1024 / 1024).toFixed(1)}MB`);
         return { buf, title: d.title || '', quality: d.quality || '360p', thumbnail: d.thumbnail || '' };
     } catch (e) {
         console.log(`[mp4/ytmp6] error: ${e.message}`);
         return null;
     }
-}
-
-// ── Gifted fallback chain ─────────────────────────────────────
-async function giftedFallback(input) {
-    for (const ep of GIFTED_ENDS) {
-        try {
-            const res = await axios.get(`${GIFTED_BASE}/${ep}`, {
-                params: { apikey: 'gifted', url: input },
-                timeout: 30000
-            });
-            if (res.data?.success && res.data?.result?.download_url) {
-                return { data: res.data.result, endpoint: ep };
-            }
-        } catch {}
-    }
-    return null;
-}
-
-async function downloadBuffer(url, timeout = 120000) {
-    const res = await axios({
-        url,
-        method: 'GET',
-        responseType: 'arraybuffer',
-        timeout,
-        maxRedirects: 5,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        validateStatus: s => s >= 200 && s < 400
-    });
-    const buf = Buffer.from(res.data);
-    if (buf.length < 5000) throw new Error('File too small, likely not video');
-    const hdr = buf.slice(0, 50).toString('utf8').toLowerCase();
-    if (hdr.includes('<!doctype') || hdr.includes('<html') || hdr.includes('bad gateway')) {
-        throw new Error('Received HTML instead of video');
-    }
-    return buf;
 }
 
 export default {
@@ -84,6 +47,7 @@ export default {
 
     async execute(sock, m, args, prefix) {
         const jid = m.key.remoteJid;
+        const p = prefix || '.';
         const quotedText = m.quoted?.text?.trim()
             || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim()
             || '';
@@ -91,7 +55,7 @@ export default {
 
         if (!searchQuery) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🎬 *MP4 DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}mp4 <video name or URL>*\n│  └⊷ Download video\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🎬 *MP4 DOWNLOADER* ⌋\n│\n├─⊷ *${p}mp4 <video name or URL>*\n│  └⊷ Download video\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
         }
 
@@ -100,40 +64,52 @@ export default {
 
         try {
             const isUrl = /^https?:\/\//i.test(searchQuery);
-            let videoBuffer, title, quality, thumbnail, source;
+            let ytUrl = searchQuery;
+            let trackTitle = searchQuery;
+            let thumbnail = '';
 
-            // ── PRIMARY: xcasper ytmp6 (YouTube URLs only) ──
-            if (isUrl && /youtube\.com|youtu\.be/i.test(searchQuery)) {
-                const r = await xcasperYtmp6(searchQuery);
-                if (r?.buf) {
-                    videoBuffer = r.buf;
-                    title       = r.title;
-                    quality     = r.quality;
-                    thumbnail   = r.thumbnail;
-                    source      = 'ytmp6';
+            // ── Step 1: resolve name → YouTube URL ──
+            if (!isUrl) {
+                const items = await xwolfSearch(searchQuery, 3);
+                if (items.length) {
+                    const top = items[0];
+                    trackTitle = top.title || searchQuery;
+                    thumbnail  = `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`;
+                    ytUrl      = `https://youtube.com/watch?v=${top.id}`;
+                    console.log(`[MP4] Resolved: "${trackTitle}" → ${ytUrl}`);
+                } else {
+                    console.log(`[MP4] xwolfSearch returned no results for "${searchQuery}"`);
                 }
+            } else {
+                const vid = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+                if (vid) thumbnail = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
             }
 
-            // ── FALLBACK: Gifted API chain ──
-            if (!videoBuffer) {
-                console.log(`[MP4] xcasper ytmp6 skipped/failed, trying Gifted...`);
-                const r = await giftedFallback(searchQuery);
-                if (!r) {
-                    await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-                    return sock.sendMessage(jid, {
-                        text: `❌ *Download Failed*\n\nAll video services are currently unavailable. Try again later.`
-                    }, { quoted: m });
-                }
-                title     = r.data.title;
-                quality   = r.data.quality;
-                thumbnail = r.data.thumbnail;
-                source    = r.endpoint;
+            await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-                console.log(`🎬 [MP4] Found via Gifted/${source}: ${title}`);
-                await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
-                videoBuffer = await downloadBuffer(r.data.download_url);
-            } else {
-                await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
+            // ── Step 2: PRIMARY — xcasper ytmp6 ──
+            let videoBuffer = null;
+            let quality = '360p';
+
+            const r6 = await xcasperYtmp6(ytUrl);
+            if (r6?.buf) {
+                videoBuffer = r6.buf;
+                quality     = r6.quality;
+                if (r6.title)     trackTitle = r6.title;
+                if (r6.thumbnail) thumbnail  = r6.thumbnail;
+            }
+
+            // ── Step 3: FALLBACK — xcasperVideo (yt-video → ytmp5 → ytmp6) ──
+            if (!videoBuffer) {
+                console.log(`[MP4] ytmp6 failed, trying xcasperVideo fallback...`);
+                videoBuffer = await xcasperVideo(ytUrl);
+            }
+
+            if (!videoBuffer) {
+                await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+                return sock.sendMessage(jid, {
+                    text: `❌ *Download Failed*\n\nCould not download the video. Try again later.`
+                }, { quoted: m });
             }
 
             const fileSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
@@ -150,19 +126,19 @@ export default {
                 } catch {}
             }
 
-            const cleanTitle = (title || 'video').replace(/[^\w\s.-]/gi, '').substring(0, 50);
+            const cleanTitle = (trackTitle || 'video').replace(/[^\w\s.-]/gi, '').substring(0, 50);
 
             await sock.sendMessage(jid, {
-                video:    videoBuffer,
-                mimetype: 'video/mp4',
-                caption:  `🎬 *${title || 'Video'}*\n📹 *Quality:* ${quality || 'HD'}\n📦 *Size:* ${fileSizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
-                fileName: `${cleanTitle}.mp4`,
-                thumbnail: thumbnailBuffer,
+                video:       videoBuffer,
+                mimetype:    'video/mp4',
+                caption:     `🎬 *${trackTitle || 'Video'}*\n📹 *Quality:* ${quality}\n📦 *Size:* ${fileSizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
+                fileName:    `${cleanTitle}.mp4`,
+                thumbnail:   thumbnailBuffer,
                 gifPlayback: false
             }, { quoted: m });
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-            console.log(`✅ [MP4] Success: ${title} (${fileSizeMB}MB) via ${source}`);
+            console.log(`✅ [MP4] Success: ${trackTitle} (${fileSizeMB}MB)`);
 
         } catch (error) {
             console.error('❌ [MP4] Error:', error.message);
