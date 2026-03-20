@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
+import { xwolfSearch, streamXWolf, xwolfDownloadMp4 } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
 
 export default {
@@ -29,28 +29,43 @@ export default {
     try {
       const isUrl = /^https?:\/\//i.test(searchQuery);
       let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
+      let candidates = [];
 
       if (!isUrl) {
-        const items = await xwolfSearch(searchQuery, 1);
-        if (items.length) {
-          const top = items[0];
-          videoInfo = {
-            title:        top.title       || searchQuery,
-            channelTitle: top.channelTitle || '',
-            duration:     top.duration    || '',
-            thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
-          };
-          searchQuery = `https://youtube.com/watch?v=${top.id}`;
-        }
+        const items = await xwolfSearch(searchQuery, 5);
+        candidates = items.map(v => ({
+          url:   `https://youtube.com/watch?v=${v.id}`,
+          title: v.title || searchQuery,
+          channelTitle: v.channelTitle || '',
+          duration:     v.duration    || '',
+          thumbnail:    `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`
+        }));
       } else {
         const videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        candidates = [{
+          url: searchQuery,
+          title: searchQuery,
+          channelTitle: '',
+          duration: '',
+          thumbnail: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
+        }];
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
-      if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
+      let videoBuffer = null;
+      for (const candidate of candidates) {
+        const url = candidate.url;
+        videoBuffer = await streamXWolf(url, 'mp4', 60000);
+        if (!videoBuffer) videoBuffer = await xwolfDownloadMp4(url);
+        if (!videoBuffer) videoBuffer = await xcasperVideo(url);
+        if (videoBuffer) {
+          videoInfo = candidate;
+          break;
+        }
+        console.log(`[DLMP4] ${url} failed, trying next candidate...`);
+      }
+
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
