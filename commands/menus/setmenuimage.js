@@ -284,6 +284,17 @@ export default {
 
       try { invalidateMenuImageCache(); } catch {}
 
+      // Persist the source info so ?getsettings can show the real source
+      try {
+        const dataDir = path.join(__dirname, '../../data');
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+        const sourceUrl = hasUrl ? args[0] : (hasReplyPerson ? 'Profile pic' : null);
+        fs.writeFileSync(
+          path.join(dataDir, 'menuimage.json'),
+          JSON.stringify({ url: sourceUrl || sourceLabel, updatedAt: new Date().toISOString() }, null, 2)
+        );
+      } catch {}
+
       await sock.sendMessage(jid, { react: { text: "✅", key: m.key } });
 
       console.log(`✅ Menu image updated successfully by owner ${cleaned.cleanNumber}`);

@@ -68,49 +68,49 @@ function getFooter() {
 
 function getAutotypingState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/autotyping/config.json'));
-    if (!data || !data.mode || data.mode === 'off') return '🔴 OFF';
-    return `🟢 ON (${data.mode})`;
+    if (!data || !data.mode || data.mode === 'off') return 'OFF';
+    return `ON (${data.mode})`;
 }
 
 function getAutorecordingState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/autorecording/config.json'));
-    if (!data || !data.mode || data.mode === 'off') return '🔴 OFF';
-    return `🟢 ON (${data.mode})`;
+    if (!data || !data.mode || data.mode === 'off') return 'OFF';
+    return `ON (${data.mode})`;
 }
 
 function getAutoreadState() {
     const data = safeReadJSON(path.join(__dirname, '../../autoread_settings.json'));
-    if (!data || !data.enabled) return '🔴 OFF';
-    return `🟢 ON (${data.mode || 'both'})`;
+    if (!data || !data.enabled) return 'OFF';
+    return `ON (${data.mode || 'both'})`;
 }
 
 function getAutoViewStatusState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/autoViewConfig.json'));
-    if (!data) return '🔴 OFF';
-    return data.enabled ? '🟢 ON' : '🔴 OFF';
+    if (!data) return 'OFF';
+    return data.enabled ? 'ON' : 'OFF';
 }
 
 function getAutoDownloadStatusState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/autoDownloadStatusConfig.json'));
-    if (!data || !data.enabled) return '🔴 OFF';
-    return `🟢 ON (${data.mode || 'private'})`;
+    if (!data || !data.enabled) return 'OFF';
+    return `ON (${data.mode || 'private'})`;
 }
 
 function getAutoreactStatusState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/autoReactConfig.json'));
-    if (!data || !data.enabled) return '🔴 OFF';
+    if (!data || !data.enabled) return 'OFF';
     const emoji = data.fixedEmoji || data.emoji || '';
     const mode = data.mode || 'fixed';
-    return `🟢 ON (${mode}${emoji ? ' ' + emoji : ''})`;
+    return `ON (${mode}${emoji ? ' ' + emoji : ''})`;
 }
 
 function getAnticallState() {
     const data = safeReadJSON(path.join(__dirname, '../../anticall.json'));
-    if (!data) return '🔴 OFF';
+    if (!data) return 'OFF';
     const settings = data.settings || {};
     const first = Object.values(settings).find(s => s?.enabled);
-    if (!first) return '🔴 OFF';
-    return `🟢 ON (${first.mode || 'decline'})`;
+    if (!first) return 'OFF';
+    return `ON (${first.mode || 'decline'})`;
 }
 
 function getAnticallMessage() {
@@ -125,53 +125,53 @@ function getAnticallMessage() {
 
 function getAntiViewOnceState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/antiviewonce/config.json'));
-    if (!data) return '🔴 OFF';
+    if (!data) return 'OFF';
     if (data.gc && data.pm) {
         const gc = data.gc.enabled ? data.gc.mode.toUpperCase() : 'OFF';
         const pm = data.pm.enabled ? data.pm.mode.toUpperCase() : 'OFF';
-        if (gc === 'OFF' && pm === 'OFF') return '🔴 OFF';
-        return `🟢 GC: ${gc} | PM: ${pm}`;
+        if (gc === 'OFF' && pm === 'OFF') return 'OFF';
+        return `GC: ${gc} | PM: ${pm}`;
     }
-    if (!data.enabled || data.mode === 'off') return '🔴 OFF';
-    return `🟢 ${(data.mode || 'private').toUpperCase()}`;
+    if (!data.enabled || data.mode === 'off') return 'OFF';
+    return (data.mode || 'private').toUpperCase();
 }
 
 function getAntibugState() {
     const cfg = globalThis._antibugConfig;
-    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    if (!cfg || typeof cfg !== 'object') return 'Not configured';
     const enabled = Object.values(cfg).filter(v => v?.enabled);
-    if (enabled.length === 0) return '🔴 OFF';
-    return `🟢 ${enabled.length} group(s)`;
+    if (enabled.length === 0) return 'OFF';
+    return `${enabled.length} group(s)`;
 }
 
 function getAntilinkState() {
     const cfg = globalThis._antilinkConfig;
-    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    if (!cfg || typeof cfg !== 'object') return 'Not configured';
     const enabled = Object.values(cfg).filter(v => v?.enabled);
-    if (enabled.length === 0) return '🔴 OFF';
-    return `🟢 ${enabled.length} group(s)`;
+    if (enabled.length === 0) return 'OFF';
+    return `${enabled.length} group(s)`;
 }
 
 function getAntispamState() {
     const cfg = globalThis._antispamConfig;
-    if (!cfg || typeof cfg !== 'object') return '⚪ Not configured';
+    if (!cfg || typeof cfg !== 'object') return 'Not configured';
     const enabled = Object.values(cfg).filter(v => v?.enabled);
-    if (enabled.length === 0) return '🔴 OFF';
-    return `🟢 ${enabled.length} group(s)`;
+    if (enabled.length === 0) return 'OFF';
+    return `${enabled.length} group(s)`;
 }
 
 function getOnlinePresenceState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/presence/config.json'));
-    if (!data || !data.enabled) return '🔴 OFF';
-    return `🟢 ON (${data.mode || 'online'})`;
+    if (!data || !data.enabled) return 'OFF';
+    return `ON (${data.mode || 'online'})`;
 }
 
 function getDispState() {
     const data = safeReadJSON(path.join(__dirname, '../../disp_settings.json'));
-    if (!data) return '🔴 OFF';
+    if (!data) return 'OFF';
     const groups = Object.keys(data).filter(k => data[k]?.enabled);
-    if (groups.length === 0) return '🔴 OFF';
-    return `🟢 ${groups.length} group(s)`;
+    if (groups.length === 0) return 'OFF';
+    return `${groups.length} group(s)`;
 }
 
 async function getWelcomeStatus() {
@@ -265,58 +265,58 @@ export default {
             const welcomeStatus = await getWelcomeStatus();
             const goodbyeStatus = await getGoodbyeStatus();
 
-            let antidelete = '⚪ Unknown';
+            let antidelete = 'Unknown';
             try {
                 const adCfg = await db.getConfig('antidelete_settings', null);
                 if (adCfg && typeof adCfg.enabled === 'boolean') {
-                    antidelete = adCfg.enabled ? `🟢 ${(adCfg.mode || 'private').toUpperCase()}` : '🔴 OFF';
+                    antidelete = adCfg.enabled ? (adCfg.mode || 'private').toUpperCase() : 'OFF';
                 } else {
-                    antidelete = '🔴 OFF';
+                    antidelete = 'OFF';
                 }
             } catch {}
 
-            let antidemote = '⚪ Not configured';
+            let antidemote = 'Not configured';
             try {
                 const adm = await db.getConfig('antidemote_config', null);
                 if (adm && typeof adm === 'object') {
                     const en = Object.values(adm).filter(v => v?.enabled);
-                    antidemote = en.length ? `🟢 ${en.length} group(s)` : '🔴 OFF';
+                    antidemote = en.length ? `${en.length} group(s)` : 'OFF';
                 }
             } catch {}
 
-            let antipromote = '⚪ Not configured';
+            let antipromote = 'Not configured';
             try {
                 const apm = safeReadJSON(path.join(__dirname, '../../data/antipromote/config.json'))
                     || await db.getConfig('antipromote_config', null);
                 if (apm && typeof apm === 'object') {
                     const en = Object.values(apm).filter(v => v?.enabled);
-                    antipromote = en.length ? `🟢 ${en.length} group(s)` : '🔴 OFF';
+                    antipromote = en.length ? `${en.length} group(s)` : 'OFF';
                 }
             } catch {}
 
-            let antideleteStatusDisplay = '🔴 OFF';
+            let antideleteStatusDisplay = 'OFF';
             try {
                 const adsInfo = getStatusAntideleteInfo();
                 if (adsInfo.enabled) {
-                    antideleteStatusDisplay = `🟢 ${(adsInfo.mode || 'private').toUpperCase()}`;
+                    antideleteStatusDisplay = (adsInfo.mode || 'private').toUpperCase();
                 }
             } catch {}
 
-            let antieditDisplay = '🔴 OFF';
+            let antieditDisplay = 'OFF';
             try {
                 const aeInfo = getAntieditInfo();
                 if (aeInfo.gc.enabled || aeInfo.pm.enabled) {
                     const gcMode = aeInfo.gc.enabled ? aeInfo.gc.mode.toUpperCase() : 'OFF';
                     const pmMode = aeInfo.pm.enabled ? aeInfo.pm.mode.toUpperCase() : 'OFF';
-                    antieditDisplay = `🟢 GC: ${gcMode} | PM: ${pmMode}`;
+                    antieditDisplay = `GC: ${gcMode} | PM: ${pmMode}`;
                 }
             } catch {}
 
-            let readReceipts = '⚪ Not set';
+            let readReceipts = 'Not set';
             try {
                 const rrPref = await db.getConfig('read_receipts_pref', null);
-                if (rrPref?.mode === 'all') readReceipts = '🟢 ON';
-                else if (rrPref?.mode === 'none') readReceipts = '🔴 OFF';
+                if (rrPref?.mode === 'all') readReceipts = 'ON';
+                else if (rrPref?.mode === 'none') readReceipts = 'OFF';
             } catch {}
 
             const platform = detectPlatform();
