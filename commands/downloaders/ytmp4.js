@@ -4,8 +4,7 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
-import { queryXWolfVideo, xwolfSearch, downloadMediaBuffer } from '../../lib/xwolfApi.js';
-import { queryKeithVideo } from '../../lib/keithApi.js';
+import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -87,26 +86,14 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let result = await queryXWolfVideo(searchQuery);
-      if (!result.success) result = await queryKeithVideo(searchQuery);
-
-      if (!result.success) {
-        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Video download failed. All services unavailable. Try again later.` }, { quoted: m });
-      }
-
-      const { data, endpoint } = result;
-      const trackTitle = data.title || videoInfo.title || 'Video';
-      const quality    = data.quality || '360p';
-      const thumbUrl   = data.thumbnail || videoInfo.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
-
-      console.log(`🎬 [YTMP4] Found via ${endpoint}: ${trackTitle}`);
-
-      const videoBuffer = await downloadMediaBuffer(data.download_url, 120000);
+      const videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Failed to download video. Please try again.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
       }
+      const trackTitle = videoInfo.title || 'Video';
+      const quality    = '360p';
+      const thumbUrl   = videoInfo.thumbnail;
 
       const sizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(1);
       if (parseFloat(sizeMB) > 99) {
@@ -135,7 +122,7 @@ export default {
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTMP4] Success: ${trackTitle} (${sizeLabel}) via ${endpoint}`);
+      console.log(`✅ [YTMP4] Success: ${trackTitle} (${sizeLabel}) via /stream`);
 
     } catch (error) {
       console.error('❌ [YTMP4] Fatal error:', error.message);

@@ -4,8 +4,7 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
-import { queryXWolfAudio, xwolfSearch, downloadMediaBuffer } from '../../lib/xwolfApi.js';
-import { queryKeithAudio } from '../../lib/keithApi.js';
+import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -107,26 +106,14 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let result = await queryXWolfAudio(searchQuery);
-      if (!result.success) result = await queryKeithAudio(searchQuery);
-
-      if (!result.success) {
-        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ All download services are currently unavailable. Please try again later.` }, { quoted: m });
-      }
-
-      const { data, endpoint } = result;
-      const trackTitle = data.title || videoInfo.title || 'Audio';
-      const quality    = data.quality || '192kbps';
-      const thumbUrl   = data.thumbnail || videoInfo.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
-
-      console.log(`🎵 [PLAY] Found via ${endpoint}: ${trackTitle}`);
-
-      const audioBuffer = await downloadMediaBuffer(data.download_url);
+      const audioBuffer = await streamXWolf(searchQuery, 'mp3');
       if (!audioBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Failed to download audio. Please try again.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
       }
+      const trackTitle = videoInfo.title || 'Audio';
+      const quality    = '192kbps';
+      const thumbUrl   = videoInfo.thumbnail;
 
       const sizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
       if (parseFloat(sizeMB) > 50) {
@@ -178,7 +165,7 @@ export default {
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [PLAY] Success: "${trackTitle}" via ${endpoint} (${sizeLabel})`);
+      console.log(`✅ [PLAY] Success: "${trackTitle}" (${sizeLabel})`);
 
     } catch (error) {
       console.error('❌ [PLAY] ERROR:', error.message);
