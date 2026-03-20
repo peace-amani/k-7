@@ -84,11 +84,7 @@ export default {
         return sock.sendMessage(jid, { text: `❌ *Upload Failed:* ${result.error}` }, { quoted: m });
       }
 
-      const successText = `╭─⌈ 📸 *IMGBB UPLOAD* ⌋\n` +
-        `├─⊷ *Status:* Uploaded ✅\n` +
-        `├─⊷ *Size:* ${result.width || '?'} × ${result.height || '?'} • ${fileSizeMB.toFixed(2)} MB\n` +
-        `├─⊷ *URL:* ${result.url}\n` +
-        `╰─── *${getBotName()}* ───`;
+      const successText = result.url;
 
       try {
         const { createRequire } = await import('module');
@@ -117,10 +113,7 @@ export default {
         });
       } catch (btnErr) {
         console.log("[IMGBB] Buttons failed:", btnErr.message);
-        await sock.sendMessage(jid, {
-          image: imageBuffer,
-          caption: successText
-        });
+        await sock.sendMessage(jid, { text: successText }, { quoted: m });
       }
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });

@@ -566,19 +566,11 @@ export default {
                 return sock.sendMessage(jid, { text: `❌ *Upload Failed:* ${uploadResult.error}` }, { quoted: m });
             }
             
-            const { url, service, permanent, thumb, width, height } = uploadResult;
+            const { url, thumb } = uploadResult;
 
             const isAudioFile = ['.mp3', '.m4a', '.ogg', '.wav', '.aac'].some(e => filename.endsWith(e));
-            const audioHint = isAudioFile
-                ? `\n│\n├─⊷ *Music Mode Tip*\n│  └⊷ Run: *.musicmode add ${url}*`
-                : '';
-
-            const successCaption = `╭─⌈ 📤 *URL UPLOAD* ⌋\n` +
-                `├─⊷ *Status:* Uploaded ✅\n` +
-                `├─⊷ *Size:* ${width && height ? `${width} × ${height} • ` : ''}${fileSizeMB.toFixed(2)} MB\n` +
-                `├─⊷ *Service:* ${service}\n` +
-                `├─⊷ *URL:* ${url}${audioHint}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            const audioHint = isAudioFile ? `\n\n_Tip: use *?musicmode add ${url}* to add to music mode_` : '';
+            const successCaption = `${url}${audioHint}`;
 
             try {
                 const { createRequire } = await import('module');
@@ -606,15 +598,7 @@ export default {
                 });
             } catch (btnErr) {
                 console.log('[URL] Buttons failed:', btnErr.message);
-                if (getContentType(filename).startsWith('image/')) {
-                    try {
-                        await sock.sendMessage(jid, { image: buffer, caption: successCaption });
-                    } catch (sendError) {
-                        await sock.sendMessage(jid, { text: successCaption }, { quoted: m });
-                    }
-                } else {
-                    await sock.sendMessage(jid, { text: successCaption }, { quoted: m });
-                }
+                await sock.sendMessage(jid, { text: successCaption }, { quoted: m });
             }
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
