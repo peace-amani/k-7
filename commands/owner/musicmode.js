@@ -5,9 +5,28 @@ import {
     addMusicSong,
     removeMusicSong,
     resetMusicSongs,
+    clearMusicSongs,
     sendMusicClip,
 } from '../../lib/musicMode.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import axios from 'axios';
+
+async function verifyShortClip(query) {
+    try {
+        const res = await axios.get('https://itunes.apple.com/search', {
+            params: { term: query, entity: 'song', limit: 5, media: 'music' },
+            timeout: 8000
+        });
+        const results = (res.data?.results || []).filter(r => r.previewUrl);
+        if (!results.length) return { ok: false, reason: 'notfound' };
+        const track = results[0];
+        const trackDuration = track.trackTimeMillis || 0;
+        if (trackDuration > 60000) return { ok: false, reason: 'toolong', trackName: track.trackName, artistName: track.artistName };
+        return { ok: true, trackName: track.trackName, artistName: track.artistName };
+    } catch {
+        return { ok: false, reason: 'error' };
+    }
+}
 
 export default {
     name: 'musicmode',
@@ -22,9 +41,7 @@ export default {
 
         const isOwner = extra?.isOwner?.() || false;
         const isSudo  = extra?.isSudo?.()  || false;
-        if (!isOwner && !isSudo) {
-            return reply('❌ Owner only command.');
-        }
+        if (!isOwner && !isSudo) return reply('❌ Owner only command.');
 
         const sub = (args[0] || '').toLowerCase();
 
@@ -32,12 +49,11 @@ export default {
             case 'on':
             case 'enable': {
                 setMusicMode(true, chatId);
+                const count = getMusicSongs().length;
                 return reply(
-                    `╭─⌈ 🎵 *MUSIC MODE ENABLED* ⌋\n│\n` +
-                    `├─⊷ Every bot response will be\n│  └⊷ Followed by a 30s song preview\n` +
-                    `├─⊷ Songs in pool: *${getMusicSongs().length}*\n│  └⊷ Alan Walker, NF & more\n` +
-                    `├─⊷ *${PREFIX}musicmode off*\n│  └⊷ Disable music mode\n` +
-                    `├─⊷ *${PREFIX}musicmode test*\n│  └⊷ Send a test clip now\n│\n` +
+                    `╭─⌈ 🎵 *MUSIC MODE* ⌋\n│\n` +
+                    `├─⊷ Status: *ENABLED* ✅\n` +
+                    `├─⊷ Songs in pool: *${count}*\n│  └⊷ ${count ? 'Alan Walker, NF & more' : 'Pool is empty — add songs first'}\n│\n` +
                     `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 );
             }
@@ -46,32 +62,21 @@ export default {
             case 'disable': {
                 setMusicMode(false, chatId);
                 return reply(
-                    `╭─⌈ 🔇 *MUSIC MODE DISABLED* ⌋\n│\n` +
-                    `├─⊷ Bot responses are now silent\n│  └⊷ No audio clips will be sent\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-                );
-            }
-
-            case 'status': {
-                const on = isMusicModeEnabled();
-                const songs = getMusicSongs();
-                return reply(
-                    `╭─⌈ 🎵 *MUSIC MODE STATUS* ⌋\n│\n` +
-                    `├─⊷ *Status:* ${on ? 'ENABLED ✅' : 'DISABLED ❌'}\n` +
-                    `├─⊷ *Songs in pool:* ${songs.length}\n│  └⊷ 30s iTunes previews with vocals\n│\n` +
-                    `├─⊷ *${PREFIX}musicmode on/off*\n│  └⊷ Toggle music mode\n` +
-                    `├─⊷ *${PREFIX}musicmode list*\n│  └⊷ View all songs\n` +
-                    `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ Add a song to the pool\n` +
-                    `├─⊷ *${PREFIX}musicmode remove <number>*\n│  └⊷ Remove a song by number\n` +
-                    `├─⊷ *${PREFIX}musicmode reset*\n│  └⊷ Restore default songs\n` +
-                    `├─⊷ *${PREFIX}musicmode test*\n│  └⊷ Send a test clip now\n│\n` +
+                    `╭─⌈ 🔇 *MUSIC MODE* ⌋\n│\n` +
+                    `├─⊷ Status: *DISABLED* ❌\n│  └⊷ No audio clips will be sent\n│\n` +
                     `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 );
             }
 
             case 'list': {
                 const songs = getMusicSongs();
-                if (!songs.length) return reply('No songs in the pool.');
+                if (!songs.length) {
+                    return reply(
+                        `╭─⌈ 🎵 *MUSIC POOL* ⌋\n│\n` +
+                        `├─⊷ Pool is currently empty\n│  └⊷ Use *${PREFIX}musicmode add <song>*\n│\n` +
+                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    );
+                }
                 let text = `╭─⌈ 🎵 *MUSIC POOL (${songs.length})* ⌋\n│\n`;
                 songs.forEach((s, i) => { text += `├─⊷ ${i + 1}. ${s}\n`; });
                 text += `│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
@@ -84,52 +89,67 @@ export default {
                     return reply(
                         `╭─⌈ 🎵 *ADD SONG* ⌋\n│\n` +
                         `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ e.g. alan walker faded\n` +
-                        `├─⊷ *${PREFIX}musicmode add <artist song>*\n│  └⊷ e.g. NF the search\n│\n` +
+                        `├─⊷ *${PREFIX}musicmode add NF the search*\n│  └⊷ Only 30s previews are added\n│\n` +
+                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    );
+                }
+                const check = await verifyShortClip(query);
+                if (!check.ok) {
+                    if (check.reason === 'toolong') {
+                        return reply(
+                            `╭─⌈ ⚠️ *SONG TOO LONG* ⌋\n│\n` +
+                            `├─⊷ *${check.artistName} - ${check.trackName}*\n│  └⊷ Full track is too long for music mode\n` +
+                            `├─⊷ Music mode only plays 30s clips\n│  └⊷ Use *${PREFIX}trim* to cut a clip first\n│\n` +
+                            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        );
+                    }
+                    return reply(
+                        `╭─⌈ ❌ *SONG NOT FOUND* ⌋\n│\n` +
+                        `├─⊷ Could not find a preview for:\n│  └⊷ *${query}*\n` +
+                        `├─⊷ Try a different song name\n│  └⊷ e.g. alan walker faded\n│\n` +
                         `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                     );
                 }
                 const added = addMusicSong(query);
+                if (!added) return reply(`⚠️ *"${query}"* is already in the pool.`);
                 return reply(
-                    added
-                        ? `╭─⌈ ✅ *SONG ADDED* ⌋\n│\n├─⊷ *${query}*\n│  └⊷ Added to the music pool\n├─⊷ Pool size: *${getMusicSongs().length}*\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-                        : `⚠️ *"${query}"* is already in the pool.`
+                    `╭─⌈ ✅ *SONG ADDED* ⌋\n│\n` +
+                    `├─⊷ *${check.artistName} - ${check.trackName}*\n│  └⊷ Added as: _${query}_\n` +
+                    `├─⊷ Pool size: *${getMusicSongs().length}*\n│\n` +
+                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                );
+            }
+
+            case 'clear': {
+                clearMusicSongs();
+                return reply(
+                    `╭─⌈ 🗑️ *POOL CLEARED* ⌋\n│\n` +
+                    `├─⊷ All songs removed from pool\n│  └⊷ Music mode will stay silent\n` +
+                    `├─⊷ Use *${PREFIX}musicmode add <song>*\n│  └⊷ To add songs back\n│\n` +
+                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 );
             }
 
             case 'remove': {
                 const idx = parseInt(args[1]) - 1;
-                if (isNaN(idx)) {
-                    return reply(
-                        `╭─⌈ 🎵 *REMOVE SONG* ⌋\n│\n` +
-                        `├─⊷ *${PREFIX}musicmode remove <number>*\n│  └⊷ Use the list to find the number\n` +
-                        `├─⊷ *${PREFIX}musicmode list*\n│  └⊷ View song numbers\n│\n` +
-                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-                    );
-                }
+                if (isNaN(idx)) return reply(`❌ Usage: *${PREFIX}musicmode remove <number>* — use *${PREFIX}musicmode list* to see numbers.`);
                 const removed = removeMusicSong(idx);
                 return reply(
                     removed
-                        ? `╭─⌈ ✅ *SONG REMOVED* ⌋\n│\n├─⊷ *${removed}*\n│  └⊷ Removed from pool\n├─⊷ Remaining: *${getMusicSongs().length}*\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        ? `✅ *"${removed}"* removed. Pool now has *${getMusicSongs().length}* song(s).`
                         : `❌ Invalid number. Use *${PREFIX}musicmode list* to see valid numbers.`
                 );
             }
 
             case 'reset': {
                 resetMusicSongs();
-                return reply(
-                    `╭─⌈ 🔄 *POOL RESET* ⌋\n│\n` +
-                    `├─⊷ Song pool restored to defaults\n│  └⊷ Alan Walker, NF & similar\n` +
-                    `├─⊷ Total songs: *${getMusicSongs().length}*\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-                );
+                return reply(`🔄 Pool restored to defaults. *${getMusicSongs().length}* songs loaded.`);
             }
 
             case 'test': {
-                await reply(
-                    `╭─⌈ 🎵 *TESTING MUSIC MODE* ⌋\n│\n` +
-                    `├─⊷ Fetching a 30s preview...\n│  └⊷ This may take a few seconds\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-                );
+                const songs = getMusicSongs();
+                if (!songs.length) return reply(`⚠️ Pool is empty. Add songs first with *${PREFIX}musicmode add <song>*`);
+                await reply(`⏳ Fetching a 30s preview...`);
                 try {
                     await sendMusicClip(sock, chatId, msg);
                 } catch (e) {
@@ -143,15 +163,12 @@ export default {
                 return reply(
                     `╭─⌈ 🎵 *MUSIC MODE* ⌋\n│\n` +
                     `├─⊷ *Status:* ${on ? 'ON ✅' : 'OFF ❌'}\n` +
-                    `├─⊷ Plays a random 30s song preview\n│  └⊷ As a reply after every response\n│\n` +
+                    `├─⊷ Plays a 30s song preview\n│  └⊷ As reply after every response\n│\n` +
                     `├─⊷ *${PREFIX}musicmode on*\n│  └⊷ Enable music mode\n` +
                     `├─⊷ *${PREFIX}musicmode off*\n│  └⊷ Disable music mode\n` +
-                    `├─⊷ *${PREFIX}musicmode status*\n│  └⊷ View current status\n` +
-                    `├─⊷ *${PREFIX}musicmode list*\n│  └⊷ View all songs in pool\n` +
-                    `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ e.g. alan walker faded\n` +
-                    `├─⊷ *${PREFIX}musicmode remove <number>*\n│  └⊷ Remove a song by number\n` +
-                    `├─⊷ *${PREFIX}musicmode reset*\n│  └⊷ Restore default songs\n` +
-                    `├─⊷ *${PREFIX}musicmode test*\n│  └⊷ Send a test clip now\n│\n` +
+                    `├─⊷ *${PREFIX}musicmode list*\n│  └⊷ View songs in pool\n` +
+                    `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ Add a 30s song to the pool\n` +
+                    `├─⊷ *${PREFIX}musicmode clear*\n│  └⊷ Clear all songs from pool\n│\n` +
                     `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 );
             }
