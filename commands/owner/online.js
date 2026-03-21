@@ -3,6 +3,14 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 
 const PRESENCE_FILE = './data/presence/config.json';
 
+// How often (in ms) to re-assert 'available' when online mode is ON.
+const ONLINE_INTERVAL_MS  = 2 * 60 * 1000;   // 2 minutes
+
+// How often (in ms) to re-assert 'unavailable' when online mode is OFF.
+// Needs to be more frequent than Baileys' own internal presence pings so
+// we consistently override any accidental 'available' leaks.
+const OFFLINE_INTERVAL_MS = 30 * 1000;        // 30 seconds
+
 function ensureDir() {
     if (!fs.existsSync('./data/presence')) {
         fs.mkdirSync('./data/presence', { recursive: true });
@@ -22,6 +30,41 @@ function loadConfig() {
 function saveConfig(config) {
     ensureDir();
     fs.writeFileSync(PRESENCE_FILE, JSON.stringify(config, null, 2));
+}
+
+// Start the "always online" interval — sends 'available' every 2 minutes.
+function startOnlineInterval(sock, config) {
+    stopAllPresenceIntervals();
+    global.PRESENCE_INTERVAL = setInterval(async () => {
+        try { await sock.sendPresenceUpdate('available'); } catch {}
+    }, ONLINE_INTERVAL_MS);
+    // Send immediately so the user appears online right away
+    sock.sendPresenceUpdate('available').catch(() => {});
+}
+
+// Start the "keep offline" counter-interval — sends 'unavailable' every
+// 30 seconds to override any internal Baileys presence leaks.
+// Without this, Baileys' own connection keepalives reset the user to
+// 'Online' even after a one-shot 'unavailable' call.
+function startOfflineInterval(sock) {
+    stopAllPresenceIntervals();
+    global.PRESENCE_OFF_INTERVAL = setInterval(async () => {
+        try { await sock.sendPresenceUpdate('unavailable'); } catch {}
+    }, OFFLINE_INTERVAL_MS);
+    // Send immediately
+    sock.sendPresenceUpdate('unavailable').catch(() => {});
+}
+
+// Clear both intervals so no stale timers run after a toggle.
+function stopAllPresenceIntervals() {
+    if (global.PRESENCE_INTERVAL) {
+        clearInterval(global.PRESENCE_INTERVAL);
+        global.PRESENCE_INTERVAL = null;
+    }
+    if (global.PRESENCE_OFF_INTERVAL) {
+        clearInterval(global.PRESENCE_OFF_INTERVAL);
+        global.PRESENCE_OFF_INTERVAL = null;
+    }
 }
 
 export default {
@@ -53,16 +96,7 @@ export default {
                 config.startedAt = new Date().toISOString();
                 saveConfig(config);
 
-                clearInterval(global.PRESENCE_INTERVAL);
-                global.PRESENCE_INTERVAL = setInterval(async () => {
-                    try {
-                        await sock.sendPresenceUpdate('available');
-                    } catch {}
-                }, (config.interval || 2) * 60000);
-
-                try {
-                    await sock.sendPresenceUpdate('available');
-                } catch {}
+                startOnlineInterval(sock, config);
 
                 await sock.sendMessage(chatId, {
                     text:
@@ -90,12 +124,11 @@ export default {
                 config.enabled = false;
                 saveConfig(config);
 
-                clearInterval(global.PRESENCE_INTERVAL);
-                global.PRESENCE_INTERVAL = null;
-
-                try {
-                    await sock.sendPresenceUpdate('unavailable');
-                } catch {}
+                // Start the counter-interval so offline status is actively maintained.
+                // A single 'unavailable' call is not enough — Baileys' internal keepalives
+                // can reset you to 'Online' within seconds. The interval keeps asserting
+                // 'unavailable' every 30 seconds to stay truly offline.
+                startOfflineInterval(sock);
 
                 await sock.sendMessage(chatId, {
                     text:
@@ -115,30 +148,18 @@ export default {
             }
 
             default: {
+                // No arg — toggle current state
                 config.enabled = !config.enabled;
                 saveConfig(config);
 
                 if (config.enabled) {
-                    clearInterval(global.PRESENCE_INTERVAL);
-                    global.PRESENCE_INTERVAL = setInterval(async () => {
-                        try {
-                            await sock.sendPresenceUpdate('available');
-                        } catch {}
-                    }, (config.interval || 2) * 60000);
-
-                    try {
-                        await sock.sendPresenceUpdate('available');
-                    } catch {}
+                    startOnlineInterval(sock, config);
                 } else {
-                    clearInterval(global.PRESENCE_INTERVAL);
-                    global.PRESENCE_INTERVAL = null;
-                    try {
-                        await sock.sendPresenceUpdate('unavailable');
-                    } catch {}
+                    startOfflineInterval(sock);
                 }
 
                 const status = config.enabled ? '✅ ENABLED' : '❌ DISABLED';
-                const emoji = config.enabled ? '🟢' : '🔴';
+                const emoji  = config.enabled ? '🟢' : '🔴';
 
                 await sock.sendMessage(chatId, {
                     text:
@@ -146,7 +167,9 @@ export default {
                         `│\n` +
                         `│ ✧ *Status:* ${status}\n` +
                         `│\n` +
-                        `│ ${config.enabled ? '👁️ You appear always online\n│ 🔒 Last seen is hidden' : '📱 Normal presence restored'}\n` +
+                        `│ ${config.enabled
+                            ? '👁️ You appear always online\n│ 🔒 Last seen is hidden'
+                            : '📱 Normal presence restored'}\n` +
                         `│\n` +
                         `│ • \`${PREFIX}online ${config.enabled ? 'off' : 'on'}\` - Toggle\n` +
                         `│ • \`${PREFIX}privacy\` - View all settings\n` +

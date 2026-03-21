@@ -3,7 +3,7 @@ import { getBotName } from '../../lib/botname.js';
 
 export default {
   name: 'uptime',
-  aliases: ['runtime', 'online'],
+  aliases: ['runtime'],
   description: 'Check how long the bot has been running',
   category: 'utility',
 
