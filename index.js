@@ -265,6 +265,7 @@ import supabaseDb, { setConfigBotId, isUsingWasm } from './lib/database.js';
 import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import WolfAI from './lib/wolfai.js';
+import { markConnectionOpen, isReplayMessage, getDrainStats } from './lib/quickConnect.js';
 import { isButtonModeEnabled } from './lib/buttonMode.js';
 import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
 import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
@@ -5219,6 +5220,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 isConnected = true;
                 connectionOpenTime = Date.now();
                 globalThis._botConnectionOpenTime = connectionOpenTime;
+                markConnectionOpen(); // start the replay-drain window
                 updateWebStatus({ connected: true, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown' });
                 if (connectionStableTimer) clearTimeout(connectionStableTimer);
                 connectionStableTimer = setTimeout(() => {
@@ -5777,6 +5779,14 @@ async function startBot(loginMode = 'auto', loginData = null) {
         // Everything after step 7 is a fast return — handleIncomingMessage owns the
         // full command dispatch pipeline.
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            // ── QuickConnect replay guard — MUST be first ──────────────────────
+            // When reconnecting with an old session WhatsApp replays thousands of
+            // missed messages in a burst.  Drop them here before anything else runs
+            // so the event loop stays clear for new (live) messages.
+            // isReplayMessage() is a no-op after the 45-second drain window.
+            const _qcMsg = messages?.[0];
+            if (_qcMsg && isReplayMessage(_qcMsg)) return;
+
             // TRACE: log ALL view-once arrivals (no fromMe filter) to show exact delivery type
             try {
                 const _t0 = messages?.[0];
