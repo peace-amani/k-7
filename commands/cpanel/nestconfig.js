@@ -1,197 +1,151 @@
-// ====== commands/cpanel/nestconfig.js ======
-// Configure the Pterodactyl Nest / Egg / Node settings used when creating
-// new servers with .createpanel.
-//
-// Sub-commands:
-//   nestconfig                     — show current config
-//   nestconfig show                — same as above
-//   nestconfig nests               — list all nests from the API
-//   nestconfig eggs <nestId>       — list eggs inside a nest
-//   nestconfig nodes               — list all nodes
-//   nestconfig locations           — list all locations
-//   nestconfig nest     <id>       — set the active nest ID
-//   nestconfig egg      <id>       — set the active egg ID
-//   nestconfig node     <id>       — set the active node ID
-//   nestconfig location <id>       — set the active location ID
-//   nestconfig cpu      <percent>  — CPU limit (e.g. 100 = 1 core)
-//   nestconfig ram      <mb>       — RAM in MB
-//   nestconfig disk     <mb>       — Disk in MB
-//   nestconfig dbs      <n>        — Max databases per server
-//   nestconfig backups  <n>        — Max backups per server
-//   nestconfig startup  <cmd>      — Startup command override
-//   nestconfig image    <img>      — Docker image override
-//
-// Owner only.
-
 import {
     loadConfig, saveConfig,
     listNests, listEggs, listNodes, listLocations
 } from '../../lib/cpanel.js';
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 export default {
     name:        'nestconfig',
     alias:       ['nestconfiguration', 'nestcfg', 'cpanelnest'],
     category:    'cpanel',
-    description: 'Configure the Pterodactyl Nest/Egg/Node template for .createpanel',
+    description: 'Configure the Pterodactyl Nest/Egg/Node template for createpanel',
     ownerOnly:   true,
     sudoAllowed: false,
 
     async execute(sock, msg, args, PREFIX, extra) {
         const chatId = msg.key.remoteJid;
-        const BOT    = getBotName();
+        const owner  = getOwnerName().toUpperCase();
         const { jidManager } = extra;
 
         if (!jidManager.isOwner(msg)) {
-            return sock.sendMessage(chatId,
-                { text: '❌ *Owner Only Command*' },
-                { quoted: msg }
-            );
+            return sock.sendMessage(chatId, { text: '❌ Owner only.' }, { quoted: msg });
         }
 
         const config = loadConfig();
         const nest   = config.nest;
         const sub    = (args[0] || '').toLowerCase();
 
-        // ── show / no args ──────────────────────────────────────────────────
+        // ── no args → show status + compact help ────────────────────────────
         if (!sub || sub === 'show') {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🏗️ *NEST CONFIGURATION* ⌋\n│\n` +
-                      `├─⊷ *Panel URL :* ${config.panelUrl  || '❌ not set'}\n` +
-                      `├─⊷ *API Key  :* ${config.apiKey     ? '✅ set' : '❌ not set'}\n` +
+                text: `╭─⌈ 🏗️ *NEST CONFIG* ⌋\n` +
+                      `├─⊷ Nest: ${nest.nestId ?? '—'}  Egg: ${nest.eggId ?? '—'}  Node: ${nest.nodeId ?? '—'}\n` +
+                      `├─⊷ Location: ${nest.locationId ?? '—'}  CPU: ${nest.cpu}%  RAM: ${nest.memory}MB  Disk: ${nest.disk}MB\n` +
                       `│\n` +
-                      `├─⌈ *Nest / Egg / Node* ⌋\n` +
-                      `├─⊷ Nest ID      : ${nest.nestId     ?? '—'}\n` +
-                      `├─⊷ Egg ID       : ${nest.eggId      ?? '—'}\n` +
-                      `├─⊷ Node ID      : ${nest.nodeId     ?? '—'}\n` +
-                      `├─⊷ Location ID  : ${nest.locationId ?? '—'}\n` +
-                      `│\n` +
-                      `├─⌈ *Resource Limits* ⌋\n` +
-                      `├─⊷ CPU          : ${nest.cpu} %\n` +
-                      `├─⊷ RAM          : ${nest.memory} MB\n` +
-                      `├─⊷ Disk         : ${nest.disk} MB\n` +
-                      `├─⊷ Databases    : ${nest.databases}\n` +
-                      `├─⊷ Backups      : ${nest.backups}\n` +
-                      `│\n` +
-                      `├─⌈ *Quick help* ⌋\n` +
-                      `├─⊷ \`${PREFIX}nestconfig nests\`        — list nests\n` +
-                      `├─⊷ \`${PREFIX}nestconfig eggs <id>\`    — list eggs in nest\n` +
-                      `├─⊷ \`${PREFIX}nestconfig nodes\`        — list nodes\n` +
-                      `├─⊷ \`${PREFIX}nestconfig locations\`    — list locations\n` +
-                      `├─⊷ \`${PREFIX}nestconfig nest <id>\`    — set nest\n` +
-                      `├─⊷ \`${PREFIX}nestconfig egg <id>\`     — set egg\n` +
-                      `├─⊷ \`${PREFIX}nestconfig location <id>\`— set location\n` +
-                      `├─⊷ \`${PREFIX}nestconfig cpu/ram/disk <val>\`\n` +
-                      `╰⊷ *Powered by ${BOT}*`
+                      `├─⊷ *${PREFIX}nestconfig nests* — list nests\n` +
+                      `├─⊷ *${PREFIX}nestconfig eggs <id>* — list eggs in a nest\n` +
+                      `├─⊷ *${PREFIX}nestconfig nodes* — list nodes\n` +
+                      `├─⊷ *${PREFIX}nestconfig locations* — list locations\n` +
+                      `├─⊷ *${PREFIX}nestconfig nest/egg/node/location <id>*\n` +
+                      `├─⊷ *${PREFIX}nestconfig cpu/ram/disk <value>*\n` +
+                      `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
 
-        // ── API listing commands ─────────────────────────────────────────────
+        // ── list commands ───────────────────────────────────────────────────
+        const listCmds = { nests: null, eggs: args[1], nodes: null, locations: null };
+
         if (sub === 'nests') {
-            await sock.sendMessage(chatId, { text: '⏳ Fetching nests...' }, { quoted: msg });
+            await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
             try {
-                const nests = await listNests();
-                if (!nests.length) return sock.sendMessage(chatId, { text: '❌ No nests found.' }, { quoted: msg });
-                const lines = nests.map(n =>
-                    `  • ID *${n.attributes.id}* — ${n.attributes.name}`
-                ).join('\n');
-                await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🪺 *NESTS* ⌋\n│\n${lines}\n│\n╰⊷ Use \`${PREFIX}nestconfig eggs <nestId>\` to see eggs`
+                const items = await listNests();
+                if (!items.length) {
+                    await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                    return sock.sendMessage(chatId, { text: '❌ No nests found.' }, { quoted: msg });
+                }
+                const lines = items.map(n => `  • *${n.attributes.id}* — ${n.attributes.name}`).join('\n');
+                await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+                return sock.sendMessage(chatId, {
+                    text: `╭─⌈ 🪺 *NESTS* ⌋\n${lines}\n╰⊷ *${PREFIX}nestconfig nest <id>* to set`
                 }, { quoted: msg });
             } catch (e) {
-                await sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                return sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
             }
-            return;
         }
 
         if (sub === 'eggs') {
-            const nestId = args[1];
-            if (!nestId) return sock.sendMessage(chatId,
-                { text: `Usage: \`${PREFIX}nestconfig eggs <nestId>\`` }, { quoted: msg });
-            await sock.sendMessage(chatId, { text: '⏳ Fetching eggs...' }, { quoted: msg });
+            if (!args[1]) return sock.sendMessage(chatId, { text: `Usage: \`${PREFIX}nestconfig eggs <nestId>\`` }, { quoted: msg });
+            await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
             try {
-                const eggs = await listEggs(nestId);
-                if (!eggs.length) return sock.sendMessage(chatId, { text: '❌ No eggs found in that nest.' }, { quoted: msg });
-                const lines = eggs.map(e =>
-                    `  • ID *${e.attributes.id}* — ${e.attributes.name}`
-                ).join('\n');
-                await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🥚 *EGGS (Nest ${nestId})* ⌋\n│\n${lines}\n│\n╰⊷ Use \`${PREFIX}nestconfig egg <eggId>\` to set`
+                const items = await listEggs(args[1]);
+                if (!items.length) {
+                    await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                    return sock.sendMessage(chatId, { text: '❌ No eggs found in that nest.' }, { quoted: msg });
+                }
+                const lines = items.map(e => `  • *${e.attributes.id}* — ${e.attributes.name}`).join('\n');
+                await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+                return sock.sendMessage(chatId, {
+                    text: `╭─⌈ 🥚 *EGGS (Nest ${args[1]})* ⌋\n${lines}\n╰⊷ *${PREFIX}nestconfig egg <id>* to set`
                 }, { quoted: msg });
             } catch (e) {
-                await sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                return sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
             }
-            return;
         }
 
         if (sub === 'nodes') {
-            await sock.sendMessage(chatId, { text: '⏳ Fetching nodes...' }, { quoted: msg });
+            await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
             try {
-                const nodes = await listNodes();
-                if (!nodes.length) return sock.sendMessage(chatId, { text: '❌ No nodes found.' }, { quoted: msg });
-                const lines = nodes.map(n =>
-                    `  • ID *${n.attributes.id}* — ${n.attributes.name} (Location ${n.attributes.location_id})`
-                ).join('\n');
-                await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🖥️ *NODES* ⌋\n│\n${lines}\n│\n╰⊷ Use \`${PREFIX}nestconfig node <nodeId>\` to set`
+                const items = await listNodes();
+                if (!items.length) {
+                    await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                    return sock.sendMessage(chatId, { text: '❌ No nodes found.' }, { quoted: msg });
+                }
+                const lines = items.map(n => `  • *${n.attributes.id}* — ${n.attributes.name} (loc ${n.attributes.location_id})`).join('\n');
+                await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+                return sock.sendMessage(chatId, {
+                    text: `╭─⌈ 🖥️ *NODES* ⌋\n${lines}\n╰⊷ *${PREFIX}nestconfig node <id>* to set`
                 }, { quoted: msg });
             } catch (e) {
-                await sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                return sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
             }
-            return;
         }
 
         if (sub === 'locations') {
-            await sock.sendMessage(chatId, { text: '⏳ Fetching locations...' }, { quoted: msg });
+            await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
             try {
-                const locs = await listLocations();
-                if (!locs.length) return sock.sendMessage(chatId, { text: '❌ No locations found.' }, { quoted: msg });
-                const lines = locs.map(l =>
-                    `  • ID *${l.attributes.id}* — ${l.attributes.long || l.attributes.short}`
-                ).join('\n');
-                await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 📍 *LOCATIONS* ⌋\n│\n${lines}\n│\n╰⊷ Use \`${PREFIX}nestconfig location <id>\` to set`
+                const items = await listLocations();
+                if (!items.length) {
+                    await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                    return sock.sendMessage(chatId, { text: '❌ No locations found.' }, { quoted: msg });
+                }
+                const lines = items.map(l => `  • *${l.attributes.id}* — ${l.attributes.long || l.attributes.short}`).join('\n');
+                await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+                return sock.sendMessage(chatId, {
+                    text: `╭─⌈ 📍 *LOCATIONS* ⌋\n${lines}\n╰⊷ *${PREFIX}nestconfig location <id>* to set`
                 }, { quoted: msg });
             } catch (e) {
-                await sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+                return sock.sendMessage(chatId, { text: `❌ ${e.message}` }, { quoted: msg });
             }
-            return;
         }
 
-        // ── Setter commands ──────────────────────────────────────────────────
-        const val = args[1];
-
+        // ── setter commands ──────────────────────────────────────────────────
         const setters = {
-            nest:     (v) => { nest.nestId     = Number(v); },
-            egg:      (v) => { nest.eggId      = Number(v); },
-            node:     (v) => { nest.nodeId     = Number(v); },
-            location: (v) => { nest.locationId = Number(v); },
-            cpu:      (v) => { nest.cpu        = Number(v); },
-            ram:      (v) => { nest.memory     = Number(v); },
-            disk:     (v) => { nest.disk       = Number(v); },
-            dbs:      (v) => { nest.databases  = Number(v); },
-            backups:  (v) => { nest.backups    = Number(v); },
-            startup:  (v) => { nest.startupCommand = args.slice(1).join(' '); },
-            image:    (v) => { nest.dockerImage    = args.slice(1).join(' '); }
-        };
-
-        const friendlyNames = {
-            nest: 'Nest ID', egg: 'Egg ID', node: 'Node ID',
-            location: 'Location ID', cpu: 'CPU', ram: 'RAM',
-            disk: 'Disk', dbs: 'Databases', backups: 'Backups',
-            startup: 'Startup Command', image: 'Docker Image'
+            nest:     (v) => { nest.nestId        = Number(v); },
+            egg:      (v) => { nest.eggId         = Number(v); },
+            node:     (v) => { nest.nodeId        = Number(v); },
+            location: (v) => { nest.locationId    = Number(v); },
+            cpu:      (v) => { nest.cpu           = Number(v); },
+            ram:      (v) => { nest.memory        = Number(v); },
+            disk:     (v) => { nest.disk          = Number(v); },
+            dbs:      (v) => { nest.databases     = Number(v); },
+            backups:  (v) => { nest.backups       = Number(v); },
+            startup:  ()  => { nest.startupCommand = args.slice(1).join(' '); },
+            image:    ()  => { nest.dockerImage    = args.slice(1).join(' '); }
         };
 
         if (!setters[sub]) {
             return sock.sendMessage(chatId, {
-                text: `❓ Unknown sub-command: *${sub}*\n\nRun \`${PREFIX}nestconfig\` to see all options.`
+                text: `❓ Unknown option: *${sub}*\n\nRun \`${PREFIX}nestconfig\` for help.`
             }, { quoted: msg });
         }
 
+        const val = args[1];
         if (!val) {
-            return sock.sendMessage(chatId, {
-                text: `Usage: \`${PREFIX}nestconfig ${sub} <value>\``
-            }, { quoted: msg });
+            return sock.sendMessage(chatId, { text: `Usage: \`${PREFIX}nestconfig ${sub} <value>\`` }, { quoted: msg });
         }
 
         setters[sub](val);
@@ -199,8 +153,9 @@ export default {
         saveConfig(config);
 
         const display = (sub === 'startup' || sub === 'image') ? args.slice(1).join(' ') : val;
+        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
         await sock.sendMessage(chatId, {
-            text: `✅ *${friendlyNames[sub]}* updated → \`${display}\``
+            text: `✅ *${sub}* → \`${display}\``
         }, { quoted: msg });
     }
 };
