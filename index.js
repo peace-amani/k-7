@@ -5000,6 +5000,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             const { createRequire } = await import('module');
             const _require = createRequire(import.meta.url);
             _giftedBtns = _require('gifted-btns');
+            globalThis._giftedBtns = _giftedBtns;   // exposed for cpanel & other commands
         } catch (e) {
             UltraCleanLogger.info('⚠️ gifted-btns not available for button mode');
         }
