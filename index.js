@@ -929,6 +929,9 @@ async function reloadConfigCaches() {
         const antispamData = await _loadConfigCache('antispam_config', {});
         globalThis._antispamConfig = (antispamData && Object.keys(antispamData).length > 0) ? antispamData : (globalThis._antispamConfig || {});
 
+        const tzData = await _loadConfigCache('timezone_config', { timezone: 'UTC' });
+        globalThis._timezone = tzData?.timezone || 'UTC';
+
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;

@@ -1398,20 +1398,23 @@ case 1: {
     }
   };
   
-  // Get current time and date (keeping for potential future use)
+  // Get current time and date using the configured timezone (set via .settimezone)
   const now = new Date();
+  const _tz = globalThis._timezone || 'UTC';
   const currentTime = now.toLocaleTimeString('en-US', { 
     hour12: true, 
     hour: '2-digit', 
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
+    timeZone: _tz
   });
   
   const currentDate = now.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: _tz
   });
   
   // Load bot information using helper functions
