@@ -29,15 +29,36 @@ export default {
         if (!sub || sub === 'show') {
             return sock.sendMessage(chatId, {
                 text: `╭─⌈ 🏗️ *NEST CONFIG* ⌋\n` +
-                      `├─⊷ Nest: ${nest.nestId ?? '—'}  Egg: ${nest.eggId ?? '—'}  Node: ${nest.nodeId ?? '—'}\n` +
-                      `├─⊷ Location: ${nest.locationId ?? '—'}  CPU: ${nest.cpu}%  RAM: ${nest.memory}MB  Disk: ${nest.disk}MB\n` +
                       `│\n` +
-                      `├─⊷ *${PREFIX}nestconfig nests* — list nests\n` +
-                      `├─⊷ *${PREFIX}nestconfig eggs <id>* — list eggs in a nest\n` +
-                      `├─⊷ *${PREFIX}nestconfig nodes* — list nodes\n` +
-                      `├─⊷ *${PREFIX}nestconfig locations* — list locations\n` +
-                      `├─⊷ *${PREFIX}nestconfig nest/egg/node/location <id>*\n` +
-                      `├─⊷ *${PREFIX}nestconfig cpu/ram/disk <value>*\n` +
+                      `├─⊷ 🪺 *Current Settings*\n` +
+                      `│  ├⊷ Nest: ${nest.nestId ?? '—'}  Egg: ${nest.eggId ?? '—'}  Node: ${nest.nodeId ?? '—'}\n` +
+                      `│  └⊷ Location: ${nest.locationId ?? '—'}  CPU: ${nest.cpu}%  RAM: ${nest.memory}MB  Disk: ${nest.disk}MB\n` +
+                      `│\n` +
+                      `├─⊷ *${PREFIX}nestconfig nests*\n` +
+                      `│  └⊷ List all available nests\n` +
+                      `├─⊷ *${PREFIX}nestconfig eggs <nestId>*\n` +
+                      `│  └⊷ List eggs inside a nest\n` +
+                      `├─⊷ *${PREFIX}nestconfig nodes*\n` +
+                      `│  └⊷ List all nodes\n` +
+                      `├─⊷ *${PREFIX}nestconfig locations*\n` +
+                      `│  └⊷ List all locations\n` +
+                      `│\n` +
+                      `├─⊷ *${PREFIX}nestconfig nest <id>*\n` +
+                      `│  └⊷ Set the nest\n` +
+                      `├─⊷ *${PREFIX}nestconfig egg <id>*\n` +
+                      `│  └⊷ Set the egg\n` +
+                      `├─⊷ *${PREFIX}nestconfig node <id>*\n` +
+                      `│  └⊷ Set the node\n` +
+                      `├─⊷ *${PREFIX}nestconfig location <id>*\n` +
+                      `│  └⊷ Set the location\n` +
+                      `│\n` +
+                      `├─⊷ *${PREFIX}nestconfig cpu <value>*\n` +
+                      `│  └⊷ Set CPU limit (e.g. 100)\n` +
+                      `├─⊷ *${PREFIX}nestconfig ram <value>*\n` +
+                      `│  └⊷ Set RAM in MB (e.g. 512)\n` +
+                      `├─⊷ *${PREFIX}nestconfig disk <value>*\n` +
+                      `│  └⊷ Set disk in MB (e.g. 2048)\n` +
+                      `│\n` +
                       `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
