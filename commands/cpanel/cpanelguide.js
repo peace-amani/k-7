@@ -1,11 +1,12 @@
 import { sendSubMenu } from '../../lib/menuHelper.js';
 
 export default {
-  name: 'cpanelguide',
-  alias: ['panelguide', 'pteroguide', 'cpanelhelp'],
-  desc: 'Detailed guide for all Pterodactyl panel commands',
-  category: 'CPanel',
-  usage: '.cpanelguide',
+  name:        'cpanelguide',
+  alias:       ['panelguide', 'pteroguide', 'cpanelhelp'],
+  description: 'Detailed guide for all Pterodactyl panel commands',
+  category:    'cpanel',
+  ownerOnly:   true,
+  sudoAllowed: false,
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;

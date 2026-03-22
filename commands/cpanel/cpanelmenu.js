@@ -7,11 +7,12 @@ let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch {}
 
 export default {
-  name: 'cpanelmenu',
-  alias: ['panelmenu', 'ptero', 'pteromenu'],
-  desc: 'Shows all Pterodactyl panel commands',
-  category: 'CPanel',
-  usage: '.cpanelmenu',
+  name:        'cpanelmenu',
+  alias:       ['panelmenu', 'ptero', 'pteromenu'],
+  description: 'Shows all Pterodactyl panel commands',
+  category:    'cpanel',
+  ownerOnly:   true,
+  sudoAllowed: false,
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;
