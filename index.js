@@ -270,6 +270,7 @@ import { isButtonModeEnabled } from './lib/buttonMode.js';
 import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
 import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
 import { setActiveCommand, clearActiveCommand, getActiveCommand, buildCommandButtons } from './lib/commandButtons.js';
+import { startScheduler, updateSchedulerSock } from './lib/scheduler.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
 import { migrateWarningsToSupabase } from './lib/warnings-store.js';
 import { detectPlatform } from './lib/platformDetect.js';
@@ -5349,8 +5350,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         statusAntideleteInitDone = false;
                     });
                     initStatusReplyListener(sock, OWNER_CLEAN_JID);
+                    startScheduler(sock);
                 } else {
                     updateStatusAntideleteSock(sock);
+                    updateSchedulerSock(sock);
                 }
                 
                 
