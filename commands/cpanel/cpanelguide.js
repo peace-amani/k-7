@@ -67,6 +67,9 @@ export default {
 ├─⊷ *${PREFIX}demoteadminusers*
 │  └⊷ Demote all admins except the main admin
 │
+├─⊷ *${PREFIX}deleteallusers*
+│  └⊷ Delete all users except the main admin
+│
 ╰─⊷
 
 ╭─⊷ *🖥️ STEP 4 — MANAGE SERVERS*
