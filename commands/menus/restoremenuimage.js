@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import { invalidateMenuImageCache } from "./menu.js";
+import { invalidateMenuHelperCache } from "../../lib/menuHelper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,6 +85,7 @@ export default {
           // Save the default image
           fs.writeFileSync(wolfbotPath, imageBuffer);
           try { invalidateMenuImageCache(); } catch {}
+          try { invalidateMenuHelperCache(); } catch {}
           
           console.log(`✅ Default menu image restored from URL`);
 
@@ -195,6 +197,7 @@ export default {
       }
       
       try { invalidateMenuImageCache(); } catch {}
+      try { invalidateMenuHelperCache(); } catch {}
       console.log(`✅ Menu ${isGifBackup ? 'GIF' : 'image'} restored from backup: ${backupToRestore}`);
 
       await sock.sendMessage(jid, { react: { text: "✅", key: m.key } });

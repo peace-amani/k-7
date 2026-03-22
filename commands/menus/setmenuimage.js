@@ -5,6 +5,7 @@ import axios from "axios";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
 import { execSync } from "child_process";
 import { invalidateMenuImageCache } from "./menu.js";
+import { invalidateMenuHelperCache } from "../../lib/menuHelper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -283,6 +284,7 @@ export default {
       if (stats.size === 0) throw new Error("Saved file is empty");
 
       try { invalidateMenuImageCache(); } catch {}
+      try { invalidateMenuHelperCache(); } catch {}
 
       // Persist the source info so ?getsettings can show the real source
       try {
