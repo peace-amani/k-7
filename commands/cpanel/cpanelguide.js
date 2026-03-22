@@ -75,7 +75,12 @@ export default {
 ╭─⊷ *🖥️ STEP 4 — MANAGE SERVERS*
 │
 ├─⊷ *${PREFIX}createpanel <email>*
-│  └⊷ Create a server for an existing user
+│  └⊷ Create a limited server using your nestconfig limits
+│  └⊷ Shows CPU / RAM / Disk / Port on success
+│
+├─⊷ *${PREFIX}createunlimited <email>*
+│  └⊷ Create a server with no CPU, RAM or disk cap
+│  └⊷ Same allocation/port system — just 0 resource limits
 │
 ├─⊷ *${PREFIX}deletepanel <server-id>*
 │  └⊷ Delete a server by ID (get ID from listpanels)

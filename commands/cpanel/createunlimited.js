@@ -1,14 +1,14 @@
 import {
-    getUserByEmail, getUserByUsername, createServer, isConfigured, loadConfig
+    getUserByEmail, getUserByUsername, createServer, isConfigured
 } from '../../lib/cpanel.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { getBotName }   from '../../lib/botname.js';
 
 export default {
-    name:        'createpanel',
-    alias:       ['newpanel', 'addpanel', 'cpanelcreate'],
+    name:        'createunlimited',
+    alias:       ['createunli', 'unlimitedpanel', 'unlipanel'],
     category:    'cpanel',
-    description: 'Create a limited Pterodactyl server for an existing panel user',
+    description: 'Create an unlimited Pterodactyl server (no CPU/RAM/disk cap)',
     ownerOnly:   true,
     sudoAllowed: false,
 
@@ -27,12 +27,11 @@ export default {
         if (!identifier) {
             return sock.sendMessage(chatId, {
                 text:
-                    `╭─⌈ 🖥️ *CREATE PANEL* ⌋\n` +
-                    `├─⊷ *${PREFIX}createpanel <email or username>*\n` +
-                    `│  └⊷ Creates a limited server using nestconfig limits\n` +
-                    `├─⊷ *${PREFIX}createpanel <email> <server name>*\n` +
+                    `╭─⌈ ♾️ *CREATE UNLIMITED SERVER* ⌋\n` +
+                    `├─⊷ *${PREFIX}createunlimited <email or username>*\n` +
+                    `│  └⊷ Creates an unlimited server (no resource caps)\n` +
+                    `├─⊷ *${PREFIX}createunlimited <email> <server name>*\n` +
                     `│  └⊷ Custom server name\n` +
-                    `├─⊷ For unlimited resources use *${PREFIX}createunlimited*\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
@@ -70,13 +69,16 @@ export default {
 
         let server;
         try {
-            server = await createServer(userId, serverName);
+            server = await createServer(userId, serverName, {
+                cpu:    0,
+                memory: 0,
+                disk:   0
+            });
         } catch (err) {
             await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
             return sock.sendMessage(chatId, { text: `❌ ${err.message}` }, { quoted: msg });
         }
 
-        const nest     = loadConfig().nest;
         const serverId = server?.attributes?.id;
         const shortId  = server?.attributes?.identifier;
         const port     = server?.attributes?.allocation?.default ?? '—';
@@ -84,15 +86,13 @@ export default {
         await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
         await sock.sendMessage(chatId, {
             text:
-                `╭─⌈ ✅ *PANEL CREATED* ⌋\n` +
+                `╭─⌈ ✅ *UNLIMITED SERVER CREATED* ⌋\n` +
                 `├─⊷ 🖥️ Server  : ${serverName}\n` +
                 `├─⊷ 👤 Owner   : ${username} (${email})\n` +
                 `├─⊷ 🆔 ID      : ${serverId ?? '—'}\n` +
                 `├─⊷ 🔑 Short   : ${shortId ?? '—'}\n` +
                 `├─⊷ 🌐 Port    : ${port}\n` +
-                `├─⊷ ⚡ CPU     : ${nest.cpu}%\n` +
-                `├─⊷ 🧠 RAM     : ${nest.memory} MB\n` +
-                `├─⊷ 💾 Disk    : ${nest.disk} MB\n` +
+                `├─⊷ ♾️ Limits  : Unlimited (CPU / RAM / Disk)\n` +
                 `╰⊷ *Powered by ${BOT}*`
         }, { quoted: msg });
     }
