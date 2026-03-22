@@ -1656,6 +1656,9 @@ case 1: {
 │  • nestconfig
 │  • createuser
 │  • createpanel
+│  • createunlimited
+│  • setpayment
+│  • prompt
 │  • cpanelmenu
 │
 ╰─⊷
@@ -2974,6 +2977,9 @@ case 3: {
 │ nestconfig
 │ createuser
 │ createpanel
+│ createunlimited
+│ setpayment
+│ prompt
 │ cpanelmenu
 └───────────────`,
 `┌──⌈ \`AUTOMATION\` ⌋
@@ -3934,6 +3940,9 @@ case 4: {
 │  • nestconfig
 │  • createuser
 │  • createpanel
+│  • createunlimited
+│  • setpayment
+│  • prompt
 │  • cpanelmenu
 │
 ╰─⊷
@@ -5730,6 +5739,9 @@ case 5: {
 │  • nestconfig
 │  • createuser
 │  • createpanel
+│  • createunlimited
+│  • setpayment
+│  • prompt
 │  • cpanelmenu
 │
 ╰─⊷
@@ -6776,6 +6788,9 @@ case 6: {
 > │ nestconfig
 > │ createuser
 > │ createpanel
+> │ createunlimited
+> │ setpayment
+> │ prompt
 > │ cpanelmenu
 > └───────────────`,
 `> ┌──⌈ \`SUDO\` ⌋
@@ -8570,6 +8585,9 @@ case 7: {
 │ nestconfig
 │ createuser
 │ createpanel
+│ createunlimited
+│ setpayment
+│ prompt
 │ cpanelmenu
 └───────────────`,
 `┌──⌈ \`SUDO\` ⌋
@@ -9322,6 +9340,9 @@ case 9: {
 │  • nestconfig
 │  • createuser
 │  • createpanel
+│  • createunlimited
+│  • setpayment
+│  • prompt
 │  • cpanelmenu
 │
 ╰─⊷
