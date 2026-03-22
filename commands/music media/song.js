@@ -11,31 +11,25 @@ const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
-// ── David Cyril API — primary download source ────────────────────────────────
+// ── David Cyril API — metadata + URL resolver (primary entry) ────────────────
 // Endpoint: GET https://apis.davidcyril.name.ng/song?query=<search or yt url>
 // Response: { status: true, result: { title, video_url, thumbnail, duration,
 //              audio: { download_url }, video: { download_url } } }
-async function davidcyrilSong(query) {
+//
+// NOTE: The audio.download_url points to savetube.vip CDN which returns 404
+// from server IPs (cloud/Replit). We use David Cyril purely for metadata
+// and to resolve a search term → clean YouTube URL, then pass that URL to
+// XWolf for the actual byte download.
+async function davidcyrilSongMeta(query) {
   try {
     const url = `https://apis.davidcyril.name.ng/song?query=${encodeURIComponent(query)}`;
-    const res  = await axios.get(url, { timeout: 20000 });
+    const res  = await axios.get(url, { timeout: 15000 });
     const data = res.data;
 
-    if (!data?.status || !data?.result?.audio?.download_url) return null;
+    if (!data?.status || !data?.result?.video_url) return null;
 
     const { title, video_url, thumbnail, duration } = data.result;
-    const dlUrl = data.result.audio.download_url;
-
-    const dlRes = await axios.get(dlUrl, {
-      responseType: 'arraybuffer',
-      timeout: 60000,
-      maxContentLength: 60 * 1024 * 1024
-    });
-
-    const buffer = Buffer.from(dlRes.data);
-    if (!buffer || buffer.length < 1000) return null;
-
-    return { buffer, title, thumbnail, duration, videoUrl: video_url };
+    return { title, thumbnail, duration, videoUrl: video_url };
   } catch {
     return null;
   }
@@ -64,87 +58,89 @@ export default {
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      // ── Resolve search query to video info (for button mode) ─────────────
       const isUrl = /^https?:\/\//i.test(searchQuery);
-      let videoId  = '';
       let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
 
-      if (!isUrl) {
-        const items = await xwolfSearch(searchQuery, 5);
-        if (items.length) {
-          const top = items[0];
-          videoId = top.id;
-          videoInfo = {
-            title:        top.title       || searchQuery,
-            channelTitle: top.channelTitle || '',
-            duration:     top.duration    || '',
-            thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
-          };
-          searchQuery = `https://youtube.com/watch?v=${top.id}`;
+      // ── Step 1: David Cyril (primary) — resolves search → YouTube URL +
+      //   returns clean metadata. We always pass the ORIGINAL query (search
+      //   term or URL) before xwolfSearch has a chance to overwrite it.
+      // ─────────────────────────────────────────────────────────────────────
+      console.log(`🎵 [SONG] Trying David Cyril (metadata + URL)...`);
+      const dc = await davidcyrilSongMeta(searchQuery);
 
-          // Button mode — show interactive preview card
-          if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
-            const videos = items.map(v => ({
-              url:       `https://youtube.com/watch?v=${v.id}`,
-              title:     v.title,
-              author:    v.channelTitle || '',
-              duration:  v.duration    || '',
-              videoId:   v.id,
-              thumbnail: `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`
-            }));
-            setMusicSession(jid, { videos, index: 0, type: 'audio' });
-            const buttons = [
-              { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download', id: `${p}songdl` }) }
-            ];
-            if (videos.length > 1) {
-              buttons.push({ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '➡️ Next Result', id: `${p}snext` }) });
-            }
-            try {
-              const msgOpts = {
-                title: videoInfo.title.substring(0, 60),
-                text:  `🎵 *${videoInfo.title}*\n👤 ${videoInfo.channelTitle || 'Unknown'}\n⏱️ ${videoInfo.duration || 'N/A'}\n\n_Result 1 of ${videos.length}_`,
-                footer: `🐺 ${getBotName()}`,
-                interactiveButtons: buttons
-              };
-              if (videoInfo.thumbnail) msgOpts.image = { url: videoInfo.thumbnail };
-              await giftedBtns.sendInteractiveMessage(sock, jid, msgOpts);
-              await sock.sendMessage(jid, { react: { text: '🎵', key: m.key } });
-              return;
-            } catch {}
-          }
-        }
+      if (dc?.videoUrl) {
+        // David Cyril resolved the query — use its video URL + metadata
+        if (dc.title)     videoInfo.title     = dc.title;
+        if (dc.thumbnail) videoInfo.thumbnail = dc.thumbnail;
+        if (dc.duration)  videoInfo.duration  = dc.duration;
+        searchQuery = dc.videoUrl;   // clean YouTube URL for XWolf download
+        console.log(`✅ [SONG] David Cyril resolved: "${dc.title}" → ${dc.videoUrl}`);
       } else {
-        videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        // David Cyril failed — fall back to xwolfSearch for resolution
+        console.log(`🎵 [SONG] David Cyril failed, falling back to xwolfSearch...`);
+
+        if (!isUrl) {
+          const items = await xwolfSearch(searchQuery, 5);
+          if (items.length) {
+            const top = items[0];
+            videoInfo = {
+              title:        top.title       || searchQuery,
+              channelTitle: top.channelTitle || '',
+              duration:     top.duration    || '',
+              thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
+            };
+            searchQuery = `https://youtube.com/watch?v=${top.id}`;
+
+            // Button mode — show interactive preview card
+            if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
+              const videos = items.map(v => ({
+                url:       `https://youtube.com/watch?v=${v.id}`,
+                title:     v.title,
+                author:    v.channelTitle || '',
+                duration:  v.duration    || '',
+                videoId:   v.id,
+                thumbnail: `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`
+              }));
+              setMusicSession(jid, { videos, index: 0, type: 'audio' });
+              const buttons = [
+                { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download', id: `${p}songdl` }) }
+              ];
+              if (videos.length > 1) {
+                buttons.push({ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '➡️ Next Result', id: `${p}snext` }) });
+              }
+              try {
+                const msgOpts = {
+                  title: videoInfo.title.substring(0, 60),
+                  text:  `🎵 *${videoInfo.title}*\n👤 ${videoInfo.channelTitle || 'Unknown'}\n⏱️ ${videoInfo.duration || 'N/A'}\n\n_Result 1 of ${videos.length}_`,
+                  footer: `🐺 ${getBotName()}`,
+                  interactiveButtons: buttons
+                };
+                if (videoInfo.thumbnail) msgOpts.image = { url: videoInfo.thumbnail };
+                await giftedBtns.sendInteractiveMessage(sock, jid, msgOpts);
+                await sock.sendMessage(jid, { react: { text: '🎵', key: m.key } });
+                return;
+              } catch {}
+            }
+          }
+        } else {
+          const videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+          if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        }
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
       // ── Download phase — tiered fallback ─────────────────────────────────
-      // 1st: David Cyril  /song?query=  (search + metadata + CDN MP3)
-      // 2nd: XWolf stream
-      // 3rd: Xcasper audio
+      // David Cyril already resolved the URL above; now XWolf downloads it.
+      // 1st: XWolf stream  (primary downloader — uses David Cyril's video URL)
+      // 2nd: Xcasper audio (last resort)
 
       let audioBuffer = null;
 
-      // 1st — David Cyril
-      console.log(`🎵 [SONG] Trying David Cyril API...`);
-      const dc = await davidcyrilSong(searchQuery);
-      if (dc?.buffer) {
-        audioBuffer = dc.buffer;
-        if (dc.title)     videoInfo.title     = dc.title;
-        if (dc.thumbnail) videoInfo.thumbnail = dc.thumbnail;
-        if (dc.duration)  videoInfo.duration  = dc.duration;
-        console.log(`✅ [SONG] David Cyril success: "${dc.title}"`);
-      }
+      // 1st — XWolf stream
+      audioBuffer = await streamXWolf(searchQuery, 'mp3');
 
-      // 2nd — XWolf stream
-      if (!audioBuffer) {
-        console.log(`🎵 [SONG] David Cyril failed, trying XWolf...`);
-        audioBuffer = await streamXWolf(searchQuery, 'mp3');
-      }
-
-      // 3rd — Xcasper
+      // 2nd — Xcasper
       if (!audioBuffer) {
         console.log(`🎵 [SONG] XWolf failed, trying Xcasper...`);
         audioBuffer = await xcasperAudio(searchQuery);
