@@ -131,20 +131,35 @@ export default {
         sourceLabel = `profile pic of ${targetClean.cleanNumber || replyTarget}`;
         console.log(`🖼️ Owner ${cleaned.cleanNumber} setting menu image from ${sourceLabel}`);
 
+        // Build an ordered list of JIDs to try, most likely to work first.
+        // quotedParticipant often has a device suffix (e.g. 2782…:12@s.whatsapp.net)
+        // which profilePictureUrl rejects — so use the cleaned JID first.
+        const jidsToTry = new Set();
+        if (!targetClean.isLid) {
+          jidsToTry.add(targetClean.cleanJid);                          // no device suffix
+          if (targetClean.cleanNumber) jidsToTry.add(`${targetClean.cleanNumber}@s.whatsapp.net`);
+        } else {
+          // For LID JIDs try the bare @lid first, then attempt phone@s.whatsapp.net
+          jidsToTry.add(replyTarget);
+          if (targetClean.cleanNumber) jidsToTry.add(`${targetClean.cleanNumber}@s.whatsapp.net`);
+        }
+        jidsToTry.add(replyTarget); // raw original as last resort
+
         let ppUrl;
-        try {
-          ppUrl = await sock.profilePictureUrl(replyTarget, "image");
-        } catch {
+        for (const tryJid of jidsToTry) {
           try {
-            const numberJid = targetClean.cleanNumber ? `${targetClean.cleanNumber}@s.whatsapp.net` : replyTarget;
-            ppUrl = await sock.profilePictureUrl(numberJid, "image");
-          } catch {
-            await sock.sendMessage(jid, { react: { text: "❌", key: m.key } });
-            await sock.sendMessage(jid, {
-              text: "❌ *Could not fetch profile picture*\n\nThe user may have their profile picture hidden or doesn't have one set."
-            }, { quoted: m });
-            return;
-          }
+            ppUrl = await sock.profilePictureUrl(tryJid, "image");
+            console.log(`📸 Got DP from JID: ${tryJid}`);
+            break;
+          } catch {}
+        }
+
+        if (!ppUrl) {
+          await sock.sendMessage(jid, { react: { text: "❌", key: m.key } });
+          await sock.sendMessage(jid, {
+            text: "❌ *Could not fetch profile picture*\n\nThe user may have their profile picture hidden or doesn't have one set."
+          }, { quoted: m });
+          return;
         }
 
         const response = await axios({
