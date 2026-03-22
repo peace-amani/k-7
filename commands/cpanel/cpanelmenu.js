@@ -24,10 +24,12 @@ export default {
 │  • createpanel
 ╰─⊷
 
-╭─⊷ *📘 GUIDE*
-│  • cpanelguide
-╰─⊷`;
+📘 *Cpanel Guide* → ${PREFIX}cpanelguide`;
 
-    await sendSubMenu(sock, jid, 'CPanel Menu', commandsText, m, PREFIX);
+    const extraButtons = [
+      { display_text: '📘 Cpanel Guide', id: `${PREFIX}cpanelguide` }
+    ];
+
+    await sendSubMenu(sock, jid, 'CPanel Menu', commandsText, m, PREFIX, extraButtons);
   },
 };
