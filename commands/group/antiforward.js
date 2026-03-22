@@ -223,13 +223,13 @@ export default {
                     `╭─⌈ 📤 *ANTI-FORWARD* ⌋\n` +
                     `├─⊷ Status: ${status}\n` +
                     `│\n` +
-                    `├─⊷ ${PREFIX}antiforward on warn/delete/kick\n` +
-                    `├─⊷ ${PREFIX}antiforward off\n` +
-                    `├─⊷ ${PREFIX}antiforward sources all/groups/channels/dms\n` +
-                    `├─⊷ ${PREFIX}antiforward maxwarn <n>\n` +
-                    `├─⊷ ${PREFIX}antiforward reset [@user|all]\n` +
-                    `├─⊷ ${PREFIX}antiforward status\n` +
-                    `├─⊷ ${PREFIX}antiforward help\n` +
+                    `├─⊷ on warn/delete/kick\n` +
+                    `├─⊷ off\n` +
+                    `├─⊷ sources all/groups/channels/dms\n` +
+                    `├─⊷ maxwarn <n>\n` +
+                    `├─⊷ reset [@user|all]\n` +
+                    `├─⊷ status\n` +
+                    `├─⊷ help\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
