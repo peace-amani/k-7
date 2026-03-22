@@ -963,17 +963,9 @@ export default {
       config.mode = subCommand;
       saveConfig(config);
 
-      const n = config.chatbotName || 'W.O.L.F';
-      const modeDescriptions = {
-        on:     `🟢 *${n}* is now *ACTIVE* everywhere!`,
-        off:    `🔴 *${n}* is now *DISABLED*.`,
-        groups: `👥 *${n}* is now active in *GROUPS ONLY*.`,
-        dms:    `💬 *${n}* is now active in *DMs ONLY*.`,
-        both:   `🌐 *${n}* is now active in *ALL CHATS*.`
-      };
-
+      const modeLabels = { on: '🟢 ON', off: '🔴 OFF', groups: '👥 GROUPS', dms: '💬 DMS', both: '🌐 ALL' };
       return sock.sendMessage(jid, {
-        text: `🐺 *${n}*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${modeDescriptions[subCommand]}\n\n🤖 *Model:* ${(AI_MODELS[config.preferredModel] || AI_MODELS.gpt).name}\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `✅ Chatbot mode set to: *${modeLabels[subCommand]}*`
       }, { quoted: m });
     }
 
@@ -982,22 +974,19 @@ export default {
       const modelName = (args[1] || '').toLowerCase();
 
       if (!modelName) {
-        // No model specified — list all available models with the active one flagged
-        const _cn = config.chatbotName || 'W.O.L.F';
-        let modelList = `🐺 *${_cn} - AI Models*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        const active = config.preferredModel || 'gpt';
+        let modelList = `*AI Models:*\n`;
         for (const [key, model] of Object.entries(AI_MODELS)) {
-          const isActive = key === (config.preferredModel || 'gpt');
-          modelList += `${model.icon} *${model.name}* (\`${key}\`) ${isActive ? '✅' : ''}\n`;
+          modelList += `${model.icon} ${model.name} (\`${key}\`)${key === active ? ' ✅' : ''}\n`;
         }
-        modelList += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        modelList += `Switch: \`${PREFIX}chatbot model <key>\``;
+        modelList += `\nSwitch: \`${PREFIX}chatbot model <key>\``;
         return sock.sendMessage(jid, { text: modelList }, { quoted: m });
       }
 
       if (!AI_MODELS[modelName]) {
         const validModels = Object.keys(AI_MODELS).join(', ');
         return sock.sendMessage(jid, {
-          text: `❌ Unknown model: *${modelName}*\n\n*Available:* ${validModels}`
+          text: `❌ Unknown model: *${modelName}*\nAvailable: ${validModels}`
         }, { quoted: m });
       }
 
@@ -1005,7 +994,7 @@ export default {
       saveConfig(config);
       const model = AI_MODELS[modelName];
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${model.icon} Now using: *${model.name}*\n\nAuto-fallback enabled if unavailable.\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `✅ Model set to: ${model.icon} *${model.name}*`
       }, { quoted: m });
     }
 
@@ -1046,7 +1035,7 @@ export default {
       clearConversation(senderJid);
       clearPendingAction(senderJid, jid);
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n\n🗑️ Conversation history cleared!`
+        text: `✅ Conversation history cleared`
       }, { quoted: m });
     }
 
@@ -1085,39 +1074,38 @@ export default {
 
     if (subCommand === 'addgroup') {
       if (!jid.endsWith('@g.us')) {
-        return sock.sendMessage(jid, { text: `❌ This command must be used inside a group chat.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Run this command inside a group.` }, { quoted: m });
       }
       if (!config.allowedGroups) config.allowedGroups = [];
       if (config.allowedGroups.includes(jid)) {
-        return sock.sendMessage(jid, { text: `⚠️ This group is already in the whitelist.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `⚠️ This group is already added.` }, { quoted: m });
       }
       config.allowedGroups.push(jid);
-      // Auto-enable group mode if chatbot is currently off
       const wasOffG = config.mode === 'off';
       if (wasOffG) config.mode = 'groups';
       saveConfig(config);
       let groupName = jid.split('@')[0];
       const cached  = globalThis.groupMetadataCache?.get(jid);
       if (cached?.data?.subject) groupName = cached.data.subject;
-      const autoNoteG = wasOffG ? `\n⚠️ *Auto-enabled Groups mode* (was OFF)` : '';
+      const autoNoteG = wasOffG ? `\n⚠️ Mode auto-set to GROUPS (was OFF)` : '';
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Group added to whitelist!\n\n👥 *Group:* ${groupName}\n📋 *Total:* ${config.allowedGroups.length} group(s)${autoNoteG}\n\n_W.O.L.F will only respond in whitelisted chats._`
+        text: `✅ *${groupName}* successfully added${autoNoteG}`
       }, { quoted: m });
     }
 
     if (subCommand === 'removegroup') {
       if (!jid.endsWith('@g.us')) {
-        return sock.sendMessage(jid, { text: `❌ This command must be used inside a group chat.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Run this command inside a group.` }, { quoted: m });
       }
       if (!config.allowedGroups) config.allowedGroups = [];
       const idx = config.allowedGroups.indexOf(jid);
       if (idx === -1) {
-        return sock.sendMessage(jid, { text: `⚠️ This group is not in the whitelist.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `⚠️ This group is not in the list.` }, { quoted: m });
       }
       config.allowedGroups.splice(idx, 1);
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🗑️ Group removed from whitelist!\n📋 *Remaining:* ${config.allowedGroups.length} group(s)`
+        text: `✅ Group removed (${config.allowedGroups.length} remaining)`
       }, { quoted: m });
     }
 
@@ -1125,18 +1113,17 @@ export default {
       const groups = config.allowedGroups || [];
       if (groups.length === 0) {
         return sock.sendMessage(jid, {
-          text: `🐺 *W.O.L.F*\n\n📋 No groups in whitelist.\n_W.O.L.F responds in all groups based on mode._`
+          text: `📋 No groups in whitelist.`
         }, { quoted: m });
       }
-      let listText = `🐺 *W.O.L.F - Whitelisted Groups*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+      let listText = `📋 *Whitelisted Groups (${groups.length}):*\n`;
       for (let i = 0; i < groups.length; i++) {
         const gid    = groups[i];
         let gName    = gid.split('@')[0];
         const cached = globalThis.groupMetadataCache?.get(gid);
         if (cached?.data?.subject) gName = cached.data.subject;
-        listText += `${i + 1}. 👥 *${gName}*\n`;
+        listText += `${i + 1}. ${gName}\n`;
       }
-      listText += `\n📋 *Total:* ${groups.length} group(s)`;
       return sock.sendMessage(jid, { text: listText }, { quoted: m });
     }
 
@@ -1144,7 +1131,7 @@ export default {
       config.allowedGroups = [];
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n\n🗑️ All groups removed from whitelist!\n_W.O.L.F will respond based on mode setting._`
+        text: `✅ All groups cleared`
       }, { quoted: m });
     }
 
@@ -1154,7 +1141,7 @@ export default {
       const number = (args[1] || '').replace(/[^0-9]/g, '');
       if (!number || number.length < 7) {
         return sock.sendMessage(jid, {
-          text: `❌ Please provide a valid phone number.\n\n*Usage:* \`${PREFIX}chatbot adddm 2547xxxxxxxx\``
+          text: `❌ Provide a valid number.\nUsage: \`${PREFIX}chatbot adddm 2547xxxxxxxx\``
         }, { quoted: m });
       }
       if (!config.allowedDMs) config.allowedDMs = [];
@@ -1164,16 +1151,15 @@ export default {
         return normDM === number;
       });
       if (exists) {
-        return sock.sendMessage(jid, { text: `⚠️ +${number} is already in the DM whitelist.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `⚠️ ${number} is already added.` }, { quoted: m });
       }
       config.allowedDMs.push(dmJid);
-      // Auto-enable DM mode if chatbot is currently off — whitelist only works when active
       const wasOff = config.mode === 'off';
       if (wasOff) config.mode = 'dms';
       saveConfig(config);
-      const autoNote = wasOff ? `\n⚠️ *Auto-enabled DMs mode* (was OFF)` : '';
+      const autoNote = wasOff ? `\n⚠️ Mode auto-set to DMS (was OFF)` : '';
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ DM added to whitelist!\n\n💬 *Number:* +${number}\n📋 *Total:* ${config.allowedDMs.length} DM(s)${autoNote}\n\n_W.O.L.F will only respond in whitelisted DMs._`
+        text: `✅ ${number} successfully added${autoNote}`
       }, { quoted: m });
     }
 
@@ -1181,7 +1167,7 @@ export default {
       const number = (args[1] || '').replace(/[^0-9]/g, '');
       if (!number || number.length < 7) {
         return sock.sendMessage(jid, {
-          text: `❌ Please provide a valid phone number.\n\n*Usage:* \`${PREFIX}chatbot removedm 2547xxxxxxxx\``
+          text: `❌ Provide a valid number.\nUsage: \`${PREFIX}chatbot removedm 2547xxxxxxxx\``
         }, { quoted: m });
       }
       if (!config.allowedDMs) config.allowedDMs = [];
@@ -1190,12 +1176,12 @@ export default {
         return normDM === number;
       });
       if (idx === -1) {
-        return sock.sendMessage(jid, { text: `⚠️ +${number} is not in the DM whitelist.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `⚠️ ${number} is not in the list.` }, { quoted: m });
       }
       config.allowedDMs.splice(idx, 1);
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🗑️ DM removed from whitelist!\n\n💬 *Number:* +${number}\n📋 *Remaining:* ${config.allowedDMs.length} DM(s)`
+        text: `✅ ${number} successfully removed`
       }, { quoted: m });
     }
 
@@ -1203,15 +1189,14 @@ export default {
       const dms = config.allowedDMs || [];
       if (dms.length === 0) {
         return sock.sendMessage(jid, {
-          text: `🐺 *W.O.L.F*\n\n📋 No DMs in whitelist.\n_W.O.L.F responds in all DMs based on mode._`
+          text: `📋 No DMs in whitelist.`
         }, { quoted: m });
       }
-      let listText = `🐺 *W.O.L.F - Whitelisted DMs*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+      let listText = `📋 *Whitelisted DMs (${dms.length}):*\n`;
       for (let i = 0; i < dms.length; i++) {
         const num = dms[i].split('@')[0].split(':')[0];
-        listText += `${i + 1}. 💬 *+${num}*\n`;
+        listText += `${i + 1}. +${num}\n`;
       }
-      listText += `\n📋 *Total:* ${dms.length} DM(s)`;
       return sock.sendMessage(jid, { text: listText }, { quoted: m });
     }
 
@@ -1219,7 +1204,7 @@ export default {
       config.allowedDMs = [];
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n\n🗑️ All DMs removed from whitelist!\n_W.O.L.F will respond based on mode setting._`
+        text: `✅ All DMs cleared`
       }, { quoted: m });
     }
 
@@ -1229,22 +1214,22 @@ export default {
       if (!newName) {
         const currentName = config.chatbotName || 'W.O.L.F';
         return sock.sendMessage(jid, {
-          text: `🐺 *Chatbot Name*\n\nCurrent: *${currentName}*\n\nTo change it:\n\`${PREFIX}chatbot name <new name>\`\n\nExample: \`${PREFIX}chatbot name ARIA\``
+          text: `Name: *${currentName}*\nChange: \`${PREFIX}chatbot name <new name>\``
         }, { quoted: m });
       }
       if (newName.length > 30) {
-        return sock.sendMessage(jid, { text: `❌ Name too long! Maximum 30 characters.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ Name too long (max 30 characters).` }, { quoted: m });
       }
       config.chatbotName = newName;
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `✅ *Chatbot name updated!*\n\n🤖 Now responds as: *${newName}*\n\n_The bot knows its new name and will introduce itself correctly._`
+        text: `✅ Chatbot name set to: *${newName}*`
       }, { quoted: m });
     }
 
     // Unknown sub-command fallback
     return sock.sendMessage(jid, {
-      text: `❌ Unknown option: *${subCommand}*\n\nUse \`${PREFIX}chatbot\` to see commands.`
+      text: `❌ Unknown option: *${subCommand}*\nUse \`${PREFIX}chatbot\` to see all commands.`
     }, { quoted: m });
   }
 };
