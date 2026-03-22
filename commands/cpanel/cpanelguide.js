@@ -103,11 +103,29 @@ export default {
 │  └⊷ Get it: Paystack Dashboard → Settings → API
 │  └⊷ Run without args to view your saved key
 │
+├─⊷ *${PREFIX}setpayment unli <amount>*
+│  └⊷ Set the price for unlimited server plan (KES)
+│  └⊷ Example: ${PREFIX}setpayment unli 500
+│
+├─⊷ *${PREFIX}setpayment lim <amount>*
+│  └⊷ Set the price for limited server plan (KES)
+│  └⊷ Example: ${PREFIX}setpayment lim 200
+│
+├─⊷ *${PREFIX}setpayment* (no args)
+│  └⊷ View current prices for both plans
+│
 ├─⊷ *${PREFIX}prompt <phone> <amount>*
-│  └⊷ Send an M-Pesa STK push to a phone number
-│  └⊷ Phone: 254713046497 / +254... / 0713...
-│  └⊷ Amount in KES — Example: ${PREFIX}prompt 254713046497 100
-│  └⊷ ✅ Bot confirms once payment goes through
+│  └⊷ Manual STK push — any amount
+│  └⊷ Example: ${PREFIX}prompt 254713046497 100
+│
+├─⊷ *${PREFIX}prompt <phone> <email> unlimited*
+│  └⊷ STK push → on payment: create user + unlimited server
+│  └⊷ Uses price set with setpayment unli
+│
+├─⊷ *${PREFIX}prompt <phone> <email> limited*
+│  └⊷ STK push → on payment: create user + limited server
+│  └⊷ Uses price set with setpayment lim
+│  └⊷ Limits come from your nestconfig settings
 │
 ╰─⊷`;
 

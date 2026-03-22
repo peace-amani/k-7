@@ -1,16 +1,18 @@
 import { isPaystackConfigured, initiateCharge, verifyCharge } from '../../lib/paystack.js';
+import { getPlanPrice } from '../../lib/paymentConfig.js';
+import { isConfigured, getUserByEmail, createUser, createServer, usernameFromEmail, generatePassword } from '../../lib/cpanel.js';
 import { getBotName } from '../../lib/botname.js';
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLLS = 24;
 
 export default {
-    name: 'prompt',
-    alias: ['stkpush', 'payprompt', 'mpesa'],
-    category: 'paystack',
-    desc: 'Send an M-Pesa STK push payment request',
+    name:      'prompt',
+    alias:     ['stkpush', 'payprompt', 'mpesa'],
+    category:  'paystack',
+    desc:      'Send an M-Pesa STK push — manual or auto-provision a server on payment',
     ownerOnly: true,
-    usage: '.prompt <phone> <amount>',
+    usage:     '.prompt <phone> <amount>  OR  .prompt <phone> <email> unlimited|limited',
 
     async execute(sock, msg, args, PREFIX, extra) {
         const jid = msg.key.remoteJid;
@@ -27,94 +29,236 @@ export default {
         }
 
         const phone = args?.[0];
-        const amount = args?.[1];
-
-        if (!phone || !amount || isNaN(Number(amount))) {
+        if (!phone) {
             return sock.sendMessage(jid, {
                 text:
                     `❌ Invalid usage.\n\n` +
-                    `*Usage:* ${PREFIX}prompt <phone> <amount>\n` +
-                    `*Example:* ${PREFIX}prompt 254713046497 100`
+                    `*Manual:*\n  ${PREFIX}prompt <phone> <amount>\n\n` +
+                    `*Auto-provision:*\n  ${PREFIX}prompt <phone> <email> unlimited\n  ${PREFIX}prompt <phone> <email> limited`
             }, { quoted: msg });
         }
 
-        if (Number(amount) <= 0) {
-            return sock.sendMessage(jid, { text: '❌ Amount must be greater than 0.' }, { quoted: msg });
+        // ── Detect mode: provisioning if args[1] contains '@' ────────────────
+        const isProvisioning = args?.[1]?.includes('@');
+
+        if (isProvisioning) {
+            return handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone);
+        } else {
+            return handleManual(sock, msg, args, PREFIX, BOT, jid, phone);
         }
+    }
+};
 
-        await sock.sendMessage(jid, { react: { text: '⏳', key: msg.key } });
+// ── Manual flow: prompt <phone> <amount> ──────────────────────────────────────
+async function handleManual(sock, msg, args, PREFIX, BOT, jid, phone) {
+    const amount = args?.[1];
 
-        const waitMsg = await sock.sendMessage(jid, {
+    if (!amount || isNaN(Number(amount))) {
+        return sock.sendMessage(jid, {
+            text: `❌ Invalid usage.\n\n*Usage:* ${PREFIX}prompt <phone> <amount>\n*Example:* ${PREFIX}prompt 254713046497 100`
+        }, { quoted: msg });
+    }
+
+    if (Number(amount) <= 0) {
+        return sock.sendMessage(jid, { text: '❌ Amount must be greater than 0.' }, { quoted: msg });
+    }
+
+    await sock.sendMessage(jid, { react: { text: '⏳', key: msg.key } });
+    await sock.sendMessage(jid, {
+        text:
+            `╭─⌈ *💳 STK PUSH SENT* ⌋\n` +
+            `├─⊷ 📱 *Phone*  : ${phone}\n` +
+            `├─⊷ 💰 *Amount* : KES ${Number(amount).toLocaleString()}\n` +
+            `├─⊷ ⏳ Waiting for payment confirmation...\n` +
+            `╰⊷ *Powered by ${BOT}*`
+    }, { quoted: msg });
+
+    const { reference, error: chargeErr } = await sendCharge(phone, amount);
+    if (chargeErr) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
+        return sock.sendMessage(jid, { text: `❌ Failed to send STK push:\n${chargeErr}` }, { quoted: msg });
+    }
+
+    const result = await pollPayment(reference);
+
+    if (result === 'success') {
+        await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
+        return sock.sendMessage(jid, {
             text:
-                `╭─⌈ *💳 STK PUSH SENT* ⌋\n` +
-                `├─⊷ 📱 *Phone*  : ${phone}\n` +
-                `├─⊷ 💰 *Amount* : KES ${Number(amount).toLocaleString()}\n` +
-                `├─⊷\n` +
-                `├─⊷ ⏳ Waiting for payment confirmation...\n` +
+                `╭─⌈ *✅ PAYMENT RECEIVED* ⌋\n` +
+                `├─⊷ 📱 *Phone*     : ${phone}\n` +
+                `├─⊷ 💰 *Amount*    : KES ${Number(amount).toLocaleString()}\n` +
+                `├─⊷ 🔖 *Reference* : ${reference}\n` +
+                `├─⊷ 🕐 *Time*      : ${new Date().toLocaleTimeString()}\n` +
                 `╰⊷ *Powered by ${BOT}*`
         }, { quoted: msg });
+    }
 
-        let reference;
+    await sendPaymentResult(sock, msg, jid, BOT, result, phone, amount, reference);
+}
+
+// ── Provisioning flow: prompt <phone> <email> unlimited|limited ───────────────
+async function handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone) {
+    const email = args[1];
+    const planRaw = (args[2] || 'limited').toLowerCase();
+    const plan = ['unli', 'unlimited', 'unlim'].includes(planRaw) ? 'unlimited' : 'limited';
+    const planLabel = plan === 'unlimited' ? '♾️ Unlimited' : '🖥️ Limited';
+
+    if (!isConfigured()) {
+        return sock.sendMessage(jid, {
+            text: `❌ Pterodactyl not configured.\nRun *${PREFIX}setkey*, *${PREFIX}setlink*, and *${PREFIX}nestconfig* first.`
+        }, { quoted: msg });
+    }
+
+    const price = getPlanPrice(plan);
+    if (price <= 0) {
+        return sock.sendMessage(jid, {
+            text:
+                `❌ No price set for *${planLabel}* plan.\n\n` +
+                `Set it first:\n  ${PREFIX}setpayment ${plan === 'unlimited' ? 'unli' : 'lim'} <amount>`
+        }, { quoted: msg });
+    }
+
+    await sock.sendMessage(jid, { react: { text: '⏳', key: msg.key } });
+    await sock.sendMessage(jid, {
+        text:
+            `╭─⌈ *💳 STK PUSH SENT* ⌋\n` +
+            `├─⊷ 📱 *Phone*   : ${phone}\n` +
+            `├─⊷ 📧 *Email*   : ${email}\n` +
+            `├─⊷ 📦 *Plan*    : ${planLabel}\n` +
+            `├─⊷ 💰 *Amount*  : KES ${price.toLocaleString()}\n` +
+            `├─⊷ ⏳ Waiting for payment confirmation...\n` +
+            `╰⊷ *Powered by ${BOT}*`
+    }, { quoted: msg });
+
+    const { reference, error: chargeErr } = await sendCharge(phone, price);
+    if (chargeErr) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
+        return sock.sendMessage(jid, { text: `❌ Failed to send STK push:\n${chargeErr}` }, { quoted: msg });
+    }
+
+    const result = await pollPayment(reference);
+
+    if (result !== 'success') {
+        return sendPaymentResult(sock, msg, jid, BOT, result, phone, price, reference);
+    }
+
+    // ── Payment confirmed — provision account ─────────────────────────────────
+    await sock.sendMessage(jid, {
+        text: `✅ *Payment confirmed!* Now provisioning ${planLabel} server for *${email}*...`
+    }, { quoted: msg });
+
+    // Resolve or create user
+    let user;
+    let isNewUser = false;
+    try {
+        user = await getUserByEmail(email);
+    } catch {}
+
+    let password = null;
+    let username = null;
+
+    if (!user) {
+        password = generatePassword();
+        username = usernameFromEmail(email);
+        const firstName = username.split(/[._-]/)[0] || 'Panel';
         try {
-            const charge = await initiateCharge(phone, amount);
-            reference = charge?.reference;
-            console.log(`[prompt] Charge initiated — ref: ${reference}, status: ${charge?.status}`);
+            const created = await createUser(email, username, password, firstName, 'User');
+            user = created;
+            isNewUser = true;
         } catch (err) {
-            console.log(`[prompt] Charge error: ${err.message}`);
             await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
             return sock.sendMessage(jid, {
-                text: `❌ Failed to send STK push:\n${err.message}`
+                text:
+                    `⚠️ *Payment received but user creation failed!*\n` +
+                    `├─⊷ 🔖 Ref     : ${reference}\n` +
+                    `├─⊷ 💰 Amount  : KES ${price.toLocaleString()}\n` +
+                    `├─⊷ ❌ Error   : ${err.message}\n` +
+                    `╰⊷ Please create the user manually with *${PREFIX}createuser*`
             }, { quoted: msg });
         }
+    } else {
+        username = user.attributes?.username;
+    }
 
-        if (!reference) {
-            await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
-            return sock.sendMessage(jid, {
-                text: `❌ No reference returned from Paystack. Check your key and try again.`
-            }, { quoted: msg });
+    const userId     = user?.attributes?.id ?? user?.id;
+    const serverName = `${username}'s Server`;
+
+    // Create server based on plan
+    let server;
+    try {
+        const overrides = plan === 'unlimited' ? { cpu: 0, memory: 0, disk: 0 } : {};
+        server = await createServer(userId, serverName, overrides);
+    } catch (err) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
+        return sock.sendMessage(jid, {
+            text:
+                `⚠️ *Payment received, user created, but server creation failed!*\n` +
+                `├─⊷ 🔖 Ref     : ${reference}\n` +
+                `├─⊷ 👤 User    : ${username} (${email})\n` +
+                `├─⊷ ❌ Error   : ${err.message}\n` +
+                `╰⊷ Create server manually with *${PREFIX}create${plan === 'unlimited' ? 'unlimited' : 'panel'} ${email}*`
+        }, { quoted: msg });
+    }
+
+    const serverId = server?.attributes?.id;
+    const shortId  = server?.attributes?.identifier;
+    const port     = server?.attributes?.allocation?.default ?? '—';
+
+    await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
+    await sock.sendMessage(jid, {
+        text:
+            `╭─⌈ *✅ SERVER PROVISIONED* ⌋\n` +
+            `├─⊷ 📦 *Plan*      : ${planLabel}\n` +
+            `├─⊷ 💰 *Paid*      : KES ${price.toLocaleString()}\n` +
+            `├─⊷ 🔖 *Ref*       : ${reference}\n` +
+            `├─⊷\n` +
+            `├─⊷ 👤 *Username*  : ${username}\n` +
+            `├─⊷ 📧 *Email*     : ${email}\n` +
+            (isNewUser ? `├─⊷ 🔑 *Password*  : ${password}\n` : '') +
+            `├─⊷\n` +
+            `├─⊷ 🖥️ *Server*    : ${serverName}\n` +
+            `├─⊷ 🆔 *ID*        : ${serverId ?? '—'}\n` +
+            `├─⊷ 🔑 *Short ID*  : ${shortId ?? '—'}\n` +
+            `├─⊷ 🌐 *Port*      : ${port}\n` +
+            `╰⊷ *Powered by ${BOT}*`
+    }, { quoted: msg });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function sendCharge(phone, amount) {
+    try {
+        const charge = await initiateCharge(phone, amount);
+        const reference = charge?.reference;
+        console.log(`[prompt] Charge initiated — ref: ${reference}`);
+        if (!reference) return { error: 'No reference returned from Paystack.' };
+        return { reference };
+    } catch (err) {
+        console.log(`[prompt] Charge error: ${err.message}`);
+        return { error: err.message };
+    }
+}
+
+async function pollPayment(reference) {
+    for (let i = 0; i < MAX_POLLS; i++) {
+        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+        try {
+            const tx = await verifyCharge(reference);
+            const status = tx?.status;
+            console.log(`[prompt] Poll ${i + 1}/${MAX_POLLS} — status: ${status}`);
+            if (status === 'success') return 'success';
+            if (status === 'failed' || status === 'reversed') return status;
+        } catch (err) {
+            console.log(`[prompt] Poll error: ${err.message}`);
         }
+    }
+    return 'timeout';
+}
 
-        for (let i = 0; i < MAX_POLLS; i++) {
-            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
-
-            try {
-                const tx = await verifyCharge(reference);
-                const status = tx?.status;
-                console.log(`[prompt] Poll ${i + 1}/${MAX_POLLS} — status: ${status}`);
-
-                if (status === 'success') {
-                    await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
-                    await sock.sendMessage(jid, {
-                        text:
-                            `╭─⌈ *✅ PAYMENT RECEIVED* ⌋\n` +
-                            `├─⊷ 📱 *Phone*     : ${phone}\n` +
-                            `├─⊷ 💰 *Amount*    : KES ${Number(amount).toLocaleString()}\n` +
-                            `├─⊷ 🔖 *Reference* : ${reference}\n` +
-                            `├─⊷ 🕐 *Time*      : ${new Date().toLocaleTimeString()}\n` +
-                            `╰⊷ *Powered by ${BOT}*`
-                    }, { quoted: msg });
-                    return;
-                }
-
-                if (status === 'failed' || status === 'reversed') {
-                    await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
-                    return sock.sendMessage(jid, {
-                        text:
-                            `╭─⌈ *❌ PAYMENT FAILED* ⌋\n` +
-                            `├─⊷ 📱 *Phone*  : ${phone}\n` +
-                            `├─⊷ 💰 *Amount* : KES ${Number(amount).toLocaleString()}\n` +
-                            `├─⊷ ❌ *Status* : ${status}\n` +
-                            `╰⊷ *Powered by ${BOT}*`
-                    }, { quoted: msg });
-                }
-
-            } catch (err) {
-                console.log(`[prompt] Poll error: ${err.message}`);
-            }
-        }
-
+async function sendPaymentResult(sock, msg, jid, BOT, result, phone, amount, reference) {
+    if (result === 'timeout') {
         await sock.sendMessage(jid, { react: { text: '⌛', key: msg.key } });
-        await sock.sendMessage(jid, {
+        return sock.sendMessage(jid, {
             text:
                 `╭─⌈ *⌛ PAYMENT TIMEOUT* ⌋\n` +
                 `├─⊷ 📱 *Phone*     : ${phone}\n` +
@@ -124,4 +268,14 @@ export default {
                 `╰⊷ *Powered by ${BOT}*`
         }, { quoted: msg });
     }
-};
+
+    await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
+    return sock.sendMessage(jid, {
+        text:
+            `╭─⌈ *❌ PAYMENT FAILED* ⌋\n` +
+            `├─⊷ 📱 *Phone*  : ${phone}\n` +
+            `├─⊷ 💰 *Amount* : KES ${Number(amount).toLocaleString()}\n` +
+            `├─⊷ ❌ *Status* : ${result}\n` +
+            `╰⊷ *Powered by ${BOT}*`
+    }, { quoted: msg });
+}
