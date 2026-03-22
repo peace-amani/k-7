@@ -1,11 +1,11 @@
 {
-  "name": "Silent WolfBot",
+  "name": "WOLFBOT",
   "description": "Professional WhatsApp Bot with auto-session authentication",
   "logo": "https://raw.githubusercontent.com/SuhailTechInfo/Suhail-Md/main/src/logo.jpg",
   "keywords": ["whatsapp", "bot", "wolfbot", "baileys", "session"],
   "repository": "https://github.com/7silent-wolf/silentwolf.git",
   "scripts": {
-    "start": "node --no-warnings --expose-gc --max-old-space-size=460 --max-semi-space-size=16 --experimental-global-webcrypto index.js"
+    "start": "node --no-warnings --experimental-global-webcrypto index.js"
   },
   "env": {
     "SESSION_ID": {
