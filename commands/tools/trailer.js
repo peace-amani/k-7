@@ -96,10 +96,7 @@ export default {
     console.log(`🎬 [TRAILER] Searching for: "${searchQuery}"`);
     
     try {
-      // Send initial status
-      const statusMsg = await sock.sendMessage(jid, { 
-        text: `🔍 *Searching movie:* "${searchQuery}"` 
-      }, { quoted: m });
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
       
       let movieData = null;
       let trailerUrl = null;
@@ -177,20 +174,15 @@ export default {
       
       // If no trailer found at all
       if (!trailerUrl) {
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         await sock.sendMessage(jid, { 
-          text: `❌ No trailer found for "${searchQuery}"\n\nTry:\n• A different movie title\n• Include year (e.g., "Inception 2010")\n• Search on YouTube manually`,
-          edit: statusMsg.key 
-        });
+          text: `❌ No trailer found for "${searchQuery}"\n\nTry:\n• A different movie title\n• Include year (e.g., "Inception 2010")\n• Search on YouTube manually`
+        }, { quoted: m });
         return;
       }
       
-      // Update status
       const movieTitle = movieData?.title || searchQuery;
       const movieYear = movieData?.year || '';
-      await sock.sendMessage(jid, { 
-        text: `✅ *Found:* ${movieTitle} ${movieYear}\n🎬 *Trailer Found!*\n⬇️ *Downloading...*`,
-        edit: statusMsg.key 
-      });
       
       // Download trailer
       console.log(`⬇️ Downloading trailer from: ${trailerUrl}`);
@@ -262,10 +254,10 @@ export default {
         
         if (fileSizeMB > 100) {
           console.log(`⚠️ File too large: ${fileSizeMB}MB`);
+          await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
           await sock.sendMessage(jid, { 
-            text: `❌ Trailer too large (${fileSizeMB}MB). Maximum size is 100MB.\n\nTry searching for a shorter teaser trailer.`,
-            edit: statusMsg.key 
-          });
+            text: `❌ Trailer too large (${fileSizeMB}MB). Maximum size is 100MB.\n\nTry searching for a shorter teaser trailer.`
+          }, { quoted: m });
           fs.unlinkSync(tempFile);
           return;
         }
@@ -323,22 +315,17 @@ export default {
           console.log(`🧹 Cleaned temp file: ${tempFile}`);
         }
         
-        // Send success message
-        await sock.sendMessage(jid, { 
-          text: `✅ *Trailer Downloaded!*\n\n🎬 *Movie:* ${movieTitle}\n📦 *Size:* ${fileSizeMB}MB\n🔧 *Source:* ${apiUsed}\n\nEnjoy the preview! 🍿`,
-          edit: statusMsg.key 
-        });
+        await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
         
         console.log(`✅ [TRAILER] Success: "${movieTitle}" (${fileSizeMB}MB) via ${apiUsed}`);
         
       } catch (downloadError) {
         console.error("❌ [TRAILER] Download error:", downloadError.message);
-        
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         // Send trailer as URL if download fails
         await sock.sendMessage(jid, { 
-          text: `❌ Couldn't download trailer. Here's the direct link:\n\n🔗 ${trailerUrl}\n\n*Movie:* ${movieTitle}\n*Source:* ${apiUsed}`,
-          edit: statusMsg.key 
-        });
+          text: `❌ Couldn't download trailer. Here's the direct link:\n\n🔗 ${trailerUrl}\n\n*Movie:* ${movieTitle}\n*Source:* ${apiUsed}`
+        }, { quoted: m });
         
         if (fs.existsSync(tempFile)) {
           try { fs.unlinkSync(tempFile); } catch {}
