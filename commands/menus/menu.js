@@ -29,6 +29,7 @@ import { setLastMenu, getAllFieldsStatus } from "../menus/menuToggles.js";
 import { getBotName as _getBotName } from '../../lib/botname.js';
 import { getPlatformInfo } from '../../lib/platformDetect.js';
 import { getOwnerName as _menuGetOwnerName } from '../../lib/menuHelper.js';
+import { getTimezoneFromPhone } from '../../lib/phoneTimezone.js';
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1499,7 +1500,7 @@ case 1: {
 ┃ ◆ Version: ${botVersion}
 ┃ ◆ Platform: ${deploymentPlatform.name}
 ┃ ◆ Status: ${deploymentPlatform.status}
-┃ ◆ Timezone: ${globalThis._timezone || 'UTC'}
+┃ ◆ Timezone: ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 ┃ ◆ Uptime: ${formatUptime(process.uptime())}
 ┃ ◆ RAM: ${ramUsage.bar} ${ramUsage.percent}%
 ┃ ◆ Memory: ${ramUsage.usedMB}MB / ${ramUsage.totalMB}MB
@@ -2418,7 +2419,7 @@ case 2: {
 ────────────────
 📌 *Prefix:* ${global.prefix || "."}
 📌 *Mode:* ${botMode}
-📌 *Timezone:* ${globalThis._timezone || 'UTC'}
+📌 *Timezone:* ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 📌 *Total Commands:* 200+
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
 📌 *Available styles: 1-7*
@@ -2812,8 +2813,7 @@ case 3: {
     }
     if ((fieldsStatus && fieldsStatus.usage) || (!fieldsStatus)) infoLines.push(`┃ Memory: ${usedMem}MB / ${totalMem}MB`);
     if ((fieldsStatus && fieldsStatus.timezone) || (!fieldsStatus)) {
-      const _tzLabel = globalThis._timezone || 'UTC';
-      infoLines.push(`┃ Timezone: ${_tzLabel}`);
+      infoLines.push(`┃ Timezone: ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}`);
     }
 
     if (infoLines.length > 0) {
@@ -3792,7 +3792,7 @@ case 4: {
 │  ├─⊷ *Prefix:* [ ${botPrefix} ]
 │  ├─⊷ *Version:* ${botVersion}
 │  ├─⊷ *Platform:* ${deploymentPlatform.name}
-│  ├─⊷ *Timezone:* ${globalThis._timezone || 'UTC'}
+│  ├─⊷ *Timezone:* ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 │  └─⊷ *Status:* ${deploymentPlatform.status}
 │
 ├─⊷ *📈 SYSTEM STATUS*
@@ -5543,7 +5543,7 @@ case 5: {
 │  ├⊷ *Version:* ${botVersion}
 │  ├⊷ *Platform:* ${deploymentPlatform.name}
 │  ├⊷ *Status:* ${deploymentPlatform.status}
-│  ├⊷ *Timezone:* ${globalThis._timezone || 'UTC'}
+│  ├⊷ *Timezone:* ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 │  ├⊷ *Uptime:* ${formatUptime(process.uptime())}
 │  ├⊷ *RAM Usage:* ${ramUsage.percent}%
 │  │  ${ramUsage.bar}
@@ -6596,7 +6596,7 @@ case 6: {
     if ((fieldsStatus && fieldsStatus.ram) || (!fieldsStatus)) infoLines.push(`> ┃ RAM: ${memBar} ${memPercentDisplay}%`);
     if ((fieldsStatus && fieldsStatus.usage) || (!fieldsStatus)) infoLines.push(`> ┃ Memory: ${usedMem}MB / ${totalMem}MB`);
     if ((fieldsStatus && fieldsStatus.timezone) || (!fieldsStatus)) {
-      infoLines.push(`> ┃ Timezone: ${globalThis._timezone || 'UTC'}`);
+      infoLines.push(`> ┃ Timezone: ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}`);
     }
 
     if (infoLines.length > 0) {
@@ -8382,7 +8382,7 @@ case 7: {
       infoLines.push(`┃ Status: ${deploymentPlatform.status}`);
     }
     if ((fieldsStatus && fieldsStatus.timezone) || (!fieldsStatus)) {
-      infoLines.push(`┃ Timezone: ${globalThis._timezone || 'UTC'}`);
+      infoLines.push(`┃ Timezone: ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}`);
     }
     if ((fieldsStatus && fieldsStatus.uptime) || (!fieldsStatus)) infoLines.push(`┃ Uptime: ${uptimeStr}`);
     if ((fieldsStatus && fieldsStatus.ram) || (!fieldsStatus)) infoLines.push(`┃ RAM: ${memBar} ${memPercentDisplay}%`);
@@ -9110,7 +9110,7 @@ case 9: {
 │  ├⊷ *Version:* ${botVersion9}
 │  ├⊷ *Platform:* ${deploymentPlatform9.name}
 │  ├⊷ *Status:* ${deploymentPlatform9.status}
-│  ├⊷ *Timezone:* ${globalThis._timezone || 'UTC'}
+│  ├⊷ *Timezone:* ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 │  ├⊷ *Uptime:* ${formatUptime9(process.uptime())}
 │  ├⊷ *RAM Usage:* ${ramUsage9.percent}%
 │  │  ${ramUsage9.bar}
