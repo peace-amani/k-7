@@ -730,6 +730,7 @@ import { isWelcomeEnabled, getWelcomeMessage, sendWelcomeMessage } from './comma
 import { isGoodbyeEnabled, getGoodbyeMessage, sendGoodbyeMessage } from './commands/group/goodbye.js';
 import { isJoinApprovalEnabled } from './commands/group/joinapproval.js';
 import { handleStatusMention as statusMentionHandler } from './commands/group/antistatusmention.js';
+import { handleAntiForward as antiforwardHandler, isAntiForwardEnabled } from './commands/group/antiforward.js';
 import { setupAntiGroupStatusListener } from './commands/group/antigroupstatus.js';
 
 // Import antidelete system (listeners registered in index.js, always active)
@@ -874,6 +875,13 @@ globalThis._saveAntispamConfig = function(data) {
 _loadConfigCache('antispam_config', {}).then(config => {
     globalThis._antispamConfig = config || {};
 }).catch(() => { globalThis._antispamConfig = {}; });
+globalThis._antiforwardConfig = null;
+globalThis._saveAntiforwardConfig = function(data) {
+    _saveConfigCache('antiforward_config', data);
+};
+_loadConfigCache('antiforward_config', {}).then(config => {
+    globalThis._antiforwardConfig = config || {};
+}).catch(() => { globalThis._antiforwardConfig = {}; });
 globalThis.reloadConfigCaches = reloadConfigCaches;
 async function reloadConfigCaches() {
     try {
@@ -932,6 +940,9 @@ async function reloadConfigCaches() {
 
         const antispamData = await _loadConfigCache('antispam_config', {});
         globalThis._antispamConfig = (antispamData && Object.keys(antispamData).length > 0) ? antispamData : (globalThis._antispamConfig || {});
+
+        const antiforwardData = await _loadConfigCache('antiforward_config', {});
+        globalThis._antiforwardConfig = (antiforwardData && Object.keys(antiforwardData).length > 0) ? antiforwardData : (globalThis._antiforwardConfig || {});
 
         const tzData = await _loadConfigCache('timezone_config', { timezone: 'UTC' });
         globalThis._timezone = tzData?.timezone || 'UTC';
@@ -6070,6 +6081,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         }
                     }
                 }
+            }
+
+            if (msg.message && !msg.key?.fromMe && msg.key?.remoteJid?.endsWith('@g.us') && isAntiForwardEnabled(msg.key.remoteJid)) {
+                antiforwardHandler(sock, msg).catch(() => {});
             }
 
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {

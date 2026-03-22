@@ -319,9 +319,7 @@ export default {
                 case 'kick': {
                     groupConfig.enabled = true;
                     groupConfig.mode = 'kick';
-                    if (!groupConfig.maxWarnings || groupConfig.maxWarnings > 3) {
-                        groupConfig.maxWarnings = 1;
-                    }
+                    groupConfig.maxWarnings = 1;
                     config[chatId] = groupConfig;
                     saveConfig(config);
 
