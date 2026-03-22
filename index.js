@@ -752,6 +752,10 @@ dotenv.config({ path: './.env' });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ── Seed Pterodactyl & Paystack configs from ENV (optional) ─────────────────
+import { seedConfigsFromEnv, getKeyStatus } from './lib/envConfig.js';
+seedConfigsFromEnv();
+
 
 // ====== CONFIGURATION ======
 // ====== SECTION 7: BOT IDENTITY & FILE PATH CONSTANTS ======
@@ -6865,6 +6869,11 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
         row(`🔗 LINK CONNECT   : ${AUTO_CONNECT_ON_LINK  ? '✅' : '❌'}`),
         row(`🔄 START CONNECT  : ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`),
         row(`🔐 AUTO-RECONNECT : ✅`),
+        sep,
+        (() => { const ks = getKeyStatus(); return [
+            row(`🐦 PTERODACTYL  : ${ks.pteroStatus}`),
+            row(`💳 PAYSTACK     : ${ks.paystackStatus}`),
+        ]; })().join('\n'),
         sep,
         row(`🏗️  Platform: ${detectPlatform()}`),
         row(`🔊 CONSOLE: ULTRA CLEAN`),
