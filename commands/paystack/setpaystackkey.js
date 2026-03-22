@@ -7,12 +7,12 @@ let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch {}
 
 export default {
-    name: 'setpaystackkey',
-    alias: ['spk', 'paystackkey'],
-    category: 'paystack',
-    desc: 'Set your Paystack secret key',
-    ownerOnly: true,
-    usage: '.setpaystackkey <sk_live_...>',
+    name:        'setpaystackkey',
+    alias:       ['spk', 'paystackkey'],
+    category:    'paystack',
+    description: 'Set your Paystack secret key',
+    ownerOnly:   true,
+    sudoAllowed: false,
 
     async execute(sock, msg, args, PREFIX, extra) {
         const jid = msg.key.remoteJid;

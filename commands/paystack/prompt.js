@@ -7,12 +7,12 @@ const POLL_INTERVAL_MS = 5000;
 const MAX_POLLS = 24;
 
 export default {
-    name:      'prompt',
-    alias:     ['stkpush', 'payprompt', 'mpesa'],
-    category:  'paystack',
-    desc:      'Send an M-Pesa STK push — manual or auto-provision a server on payment',
-    ownerOnly: true,
-    usage:     '.prompt <phone> <amount>  OR  .prompt <phone> <email> unlimited|limited',
+    name:        'prompt',
+    alias:       ['stkpush', 'payprompt', 'mpesa'],
+    category:    'paystack',
+    description: 'Send an M-Pesa STK push — manual or auto-provision a server on payment',
+    ownerOnly:   true,
+    sudoAllowed: false,
 
     async execute(sock, msg, args, PREFIX, extra) {
         const jid = msg.key.remoteJid;
@@ -32,9 +32,14 @@ export default {
         if (!phone) {
             return sock.sendMessage(jid, {
                 text:
-                    `❌ Invalid usage.\n\n` +
-                    `*Manual:*\n  ${PREFIX}prompt <phone> <amount>\n\n` +
-                    `*Auto-provision:*\n  ${PREFIX}prompt <phone> <email> unlimited\n  ${PREFIX}prompt <phone> <email> limited`
+                    `╭─⌈ 💳 *PROMPT* ⌋\n` +
+                    `├─⊷ *${PREFIX}prompt <phone> <amount>*\n` +
+                    `│  └⊷ Manual STK push for any amount\n` +
+                    `├─⊷ *${PREFIX}prompt <phone> <email> unlimited*\n` +
+                    `│  └⊷ Pay → create user + unlimited server\n` +
+                    `├─⊷ *${PREFIX}prompt <phone> <email> limited*\n` +
+                    `│  └⊷ Pay → create user + limited server\n` +
+                    `╰⊷ *Powered by ${BOT}*`
             }, { quoted: msg });
         }
 
@@ -55,7 +60,11 @@ async function handleManual(sock, msg, args, PREFIX, BOT, jid, phone) {
 
     if (!amount || isNaN(Number(amount))) {
         return sock.sendMessage(jid, {
-            text: `❌ Invalid usage.\n\n*Usage:* ${PREFIX}prompt <phone> <amount>\n*Example:* ${PREFIX}prompt 254713046497 100`
+            text:
+                `╭─⌈ 💳 *PROMPT* ⌋\n` +
+                `├─⊷ *${PREFIX}prompt <phone> <amount>*\n` +
+                `│  └⊷ Example: ${PREFIX}prompt 254713046497 100\n` +
+                `╰⊷ Phone formats: 254..., +254..., or 07...`
         }, { quoted: msg });
     }
 

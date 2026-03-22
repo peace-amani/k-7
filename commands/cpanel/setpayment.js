@@ -7,12 +7,12 @@ let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch {}
 
 export default {
-    name:      'setpayment',
-    alias:     ['setprice', 'payprice', 'priceset'],
-    category:  'cpanel',
-    desc:      'Set prices for limited and unlimited server plans',
-    ownerOnly: true,
-    usage:     '.setpayment unli <amount> | .setpayment lim <amount>',
+    name:        'setpayment',
+    alias:       ['setprice', 'payprice', 'priceset'],
+    category:    'cpanel',
+    description: 'Set prices for limited and unlimited server plans',
+    ownerOnly:   true,
+    sudoAllowed: false,
 
     async execute(sock, msg, args, PREFIX, extra) {
         const jid = msg.key.remoteJid;
@@ -51,16 +51,22 @@ export default {
         if (!isUnli && !isLim) {
             return sock.sendMessage(jid, {
                 text:
-                    `❌ Unknown plan *${plan}*\n\n` +
-                    `Use *unli* or *lim*:\n` +
-                    `  ${PREFIX}setpayment unli 500\n` +
-                    `  ${PREFIX}setpayment lim 200`
+                    `╭─⌈ 💰 *SET PAYMENT* ⌋\n` +
+                    `├─⊷ *${PREFIX}setpayment unli <amount>*\n` +
+                    `│  └⊷ Set price for unlimited plan\n` +
+                    `├─⊷ *${PREFIX}setpayment lim <amount>*\n` +
+                    `│  └⊷ Set price for limited plan\n` +
+                    `╰⊷ Unknown plan: *${plan}*`
             }, { quoted: msg });
         }
 
         if (!args[1] || isNaN(amount) || amount <= 0) {
             return sock.sendMessage(jid, {
-                text: `❌ Provide a valid amount.\nExample: ${PREFIX}setpayment ${plan} 500`
+                text:
+                    `╭─⌈ 💰 *SET PAYMENT* ⌋\n` +
+                    `├─⊷ *${PREFIX}setpayment ${plan} <amount>*\n` +
+                    `│  └⊷ Example: ${PREFIX}setpayment ${plan} 500\n` +
+                    `╰⊷ Amount must be a number greater than 0`
             }, { quoted: msg });
         }
 
