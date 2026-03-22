@@ -731,6 +731,7 @@ import { isGoodbyeEnabled, getGoodbyeMessage, sendGoodbyeMessage } from './comma
 import { isJoinApprovalEnabled } from './commands/group/joinapproval.js';
 import { handleStatusMention as statusMentionHandler } from './commands/group/antistatusmention.js';
 import { handleAntiForward as antiforwardHandler, isAntiForwardEnabled } from './commands/group/antiforward.js';
+import { handleAntiChat as antichatHandler, isAntiChatEnabled } from './commands/group/antichat.js';
 import { setupAntiGroupStatusListener } from './commands/group/antigroupstatus.js';
 
 // Import antidelete system (listeners registered in index.js, always active)
@@ -6085,6 +6086,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             if (msg.message && !msg.key?.fromMe && msg.key?.remoteJid?.endsWith('@g.us') && isAntiForwardEnabled(msg.key.remoteJid)) {
                 antiforwardHandler(sock, msg).catch(() => {});
+            }
+
+            if (msg.message && !msg.key?.fromMe && msg.key?.remoteJid?.endsWith('@g.us') && isAntiChatEnabled(msg.key.remoteJid)) {
+                antichatHandler(sock, msg).catch(() => {});
             }
 
             if (msg.message && msg.key?.remoteJid && !msg.key.fromMe) {
