@@ -23,7 +23,8 @@ export default {
       `${header}\n\n` +
       `╭─⊷ *⚙️ SETUP*\n│  • ${PREFIX}setlink\n│  • ${PREFIX}setkey\n╰─⊷\n\n` +
       `╭─⊷ *🏗️ NEST CONFIG*\n│  • ${PREFIX}nestconfig\n╰─⊷\n\n` +
-      `╭─⊷ *👤 CREATION*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}createpanel\n╰─⊷`;
+      `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n╰─⊷\n\n` +
+      `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n╰─⊷`;
 
     const buttons = [
       {
