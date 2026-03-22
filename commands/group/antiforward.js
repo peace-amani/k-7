@@ -215,34 +215,47 @@ export default {
             warnings:     {}
         };
 
-        // ── No args → help ────────────────────────────────────────────────────
-        if (!action || action === 'help') {
+        // ── No args → brief menu ─────────────────────────────────────────────
+        if (!action) {
             const status = gc.enabled ? `✅ ${gc.mode.toUpperCase()}` : '❌ OFF';
             return sock.sendMessage(chatId, {
                 text:
                     `╭─⌈ 📤 *ANTI-FORWARD* ⌋\n` +
-                    `├─⊷ *Status:* ${status}\n` +
+                    `├─⊷ Status: ${status}\n` +
                     `│\n` +
-                    `├─⊷ *${PREFIX}antiforward on warn*\n` +
-                    `│  └⊷ Warn sender for each forward\n` +
-                    `├─⊷ *${PREFIX}antiforward on delete*\n` +
-                    `│  └⊷ Delete forward + warn sender\n` +
-                    `├─⊷ *${PREFIX}antiforward on kick*\n` +
-                    `│  └⊷ Delete + kick after max warnings\n` +
-                    `├─⊷ *${PREFIX}antiforward off*\n` +
-                    `│  └⊷ Disable protection\n` +
-                    `│\n` +
-                    `├─⊷ *${PREFIX}antiforward sources all*\n` +
-                    `│  └⊷ Block all forwarded messages\n` +
-                    `├─⊷ *${PREFIX}antiforward sources groups channels dms*\n` +
-                    `│  └⊷ Block only selected sources\n` +
-                    `├─⊷ *${PREFIX}antiforward maxwarn <n>*\n` +
-                    `│  └⊷ Warnings before kick (default: 1)\n` +
-                    `├─⊷ *${PREFIX}antiforward reset [@user|all]*\n` +
-                    `│  └⊷ Clear warning count\n` +
-                    `├─⊷ *${PREFIX}antiforward status*\n` +
-                    `│  └⊷ View current settings\n` +
+                    `├─⊷ ${PREFIX}antiforward on warn/delete/kick\n` +
+                    `├─⊷ ${PREFIX}antiforward off\n` +
+                    `├─⊷ ${PREFIX}antiforward sources all/groups/channels/dms\n` +
+                    `├─⊷ ${PREFIX}antiforward maxwarn <n>\n` +
+                    `├─⊷ ${PREFIX}antiforward reset [@user|all]\n` +
+                    `├─⊷ ${PREFIX}antiforward status\n` +
+                    `├─⊷ ${PREFIX}antiforward help\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
+            }, { quoted: msg });
+        }
+
+        // ── Detailed help ─────────────────────────────────────────────────────
+        if (action === 'help') {
+            return sock.sendMessage(chatId, {
+                text:
+                    `╭─⌈ 📤 *ANTI-FORWARD GUIDE* ⌋\n` +
+                    `│\n` +
+                    `├─⊷ *on warn* — Warn sender, track count\n` +
+                    `├─⊷ *on delete* — Delete msg + warn sender\n` +
+                    `├─⊷ *on kick* — Delete + kick after max warns\n` +
+                    `├─⊷ *off* — Disable protection\n` +
+                    `│\n` +
+                    `├─⊷ *sources all* — Block any forward\n` +
+                    `├─⊷ *sources groups* — Forwards from groups only\n` +
+                    `├─⊷ *sources channels* — Forwards from channels only\n` +
+                    `├─⊷ *sources dms* — Forwards from DMs only\n` +
+                    `│  └⊷ Mix: sources groups channels\n` +
+                    `│\n` +
+                    `├─⊷ *maxwarn <n>* — Violations before kick\n` +
+                    `├─⊷ *reset @user* — Clear user warnings\n` +
+                    `├─⊷ *reset all* — Clear all warnings\n` +
+                    `├─⊷ *status* — View current settings\n` +
+                    `╰⊷ *Admins are exempt by default*`
             }, { quoted: msg });
         }
 
@@ -250,15 +263,7 @@ export default {
             const mode = args[1]?.toLowerCase();
             if (!mode || !['warn', 'delete', 'kick'].includes(mode)) {
                 return sock.sendMessage(chatId, {
-                    text:
-                        `╭─⌈ 📤 *ANTI-FORWARD MODE* ⌋\n` +
-                        `├─⊷ *${PREFIX}antiforward on warn*\n` +
-                        `│  └⊷ Warn sender\n` +
-                        `├─⊷ *${PREFIX}antiforward on delete*\n` +
-                        `│  └⊷ Delete + warn\n` +
-                        `├─⊷ *${PREFIX}antiforward on kick*\n` +
-                        `│  └⊷ Delete + kick after warnings\n` +
-                        `╰⊷ *Powered by ${owner} TECH*`
+                    text: `❌ Specify a mode: *warn*, *delete*, or *kick*\nExample: ${PREFIX}antiforward on delete`
                 }, { quoted: msg });
             }
 
@@ -268,16 +273,9 @@ export default {
             config[chatId] = gc;
             saveConfig(config);
 
-            const srcList = (gc.sources || ['all']).join(', ');
             const modeEmoji = { warn: '⚠️', delete: '🗑️', kick: '👢' }[mode];
             return sock.sendMessage(chatId, {
-                text:
-                    `╭─⌈ ✅ *ANTI-FORWARD ENABLED* ⌋\n` +
-                    `├─⊷ Mode    : ${modeEmoji} *${mode.toUpperCase()}*\n` +
-                    `├─⊷ Sources : ${srcList}\n` +
-                    `├─⊷ Max warns: ${gc.maxWarnings}\n` +
-                    `├─⊷ Admins  : ${gc.exemptAdmins ? 'Exempt' : 'Not exempt'}\n` +
-                    `╰⊷ *Powered by ${owner} TECH*`
+                text: `${modeEmoji} *Anti-Forward ON* — Mode: *${mode.toUpperCase()}*`
             }, { quoted: msg });
         }
 
@@ -286,7 +284,7 @@ export default {
             config[chatId] = gc;
             saveConfig(config);
             return sock.sendMessage(chatId, {
-                text: '❌ *Anti-Forward DISABLED*\nMembers can now forward messages freely.'
+                text: '❌ *Anti-Forward OFF*'
             }, { quoted: msg });
         }
 
@@ -299,14 +297,7 @@ export default {
 
             if (normalized.length === 0) {
                 return sock.sendMessage(chatId, {
-                    text:
-                        `╭─⌈ 📤 *SET SOURCES* ⌋\n` +
-                        `├─⊷ *${PREFIX}antiforward sources all*\n` +
-                        `│  └⊷ Block every forwarded message\n` +
-                        `├─⊷ *${PREFIX}antiforward sources groups channels dms*\n` +
-                        `│  └⊷ Block only selected origins\n` +
-                        `├─⊷ Current: ${(gc.sources || ['all']).join(', ')}\n` +
-                        `╰⊷ *Powered by ${owner} TECH*`
+                    text: `❌ Specify sources: *all*, *groups*, *channels*, *dms*\nCurrent: ${(gc.sources || ['all']).join(', ')}`
                 }, { quoted: msg });
             }
 
