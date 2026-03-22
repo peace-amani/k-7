@@ -21,10 +21,10 @@ export default {
 
     const bodyText =
       `${header}\n\n` +
-      `╭─⊷ *⚙️ SETUP*\n│  • ${PREFIX}setlink\n│  • ${PREFIX}setkey\n╰─⊷\n\n` +
+      `╭─⊷ *⚙️ SETUP*\n│  • ${PREFIX}setlink\n│  • ${PREFIX}setkey\n│  • ${PREFIX}mysetkey\n╰─⊷\n\n` +
       `╭─⊷ *🏗️ NEST CONFIG*\n│  • ${PREFIX}nestconfig\n╰─⊷\n\n` +
-      `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n╰─⊷\n\n` +
-      `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n╰─⊷`;
+      `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n│  • ${PREFIX}listadminusers\n│  • ${PREFIX}demoteall\n╰─⊷\n\n` +
+      `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n│  • ${PREFIX}deleteall\n╰─⊷`;
 
     const buttons = [
       {

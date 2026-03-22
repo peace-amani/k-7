@@ -19,7 +19,9 @@ export default {
 ├─⊷ *${PREFIX}setkey <api-key>*
 │  └⊷ Set your Application API key
 │  └⊷ Get it: Panel → Admin → API → Application API
-│  └⊷ Example: ${PREFIX}setkey ptlc_xxxxxxxxxxxxxx
+│
+├─⊷ *${PREFIX}mysetkey*
+│  └⊷ Show your saved API key with a copy button
 │
 ╰─⊷
 
@@ -59,6 +61,12 @@ export default {
 ├─⊷ *${PREFIX}totalusers*
 │  └⊷ Show total count of users
 │
+├─⊷ *${PREFIX}listadminusers*
+│  └⊷ List all admin users with a Demote ALL button
+│
+├─⊷ *${PREFIX}demoteall*
+│  └⊷ Demote all admins except the main admin
+│
 ╰─⊷
 
 ╭─⊷ *🖥️ STEP 4 — MANAGE SERVERS*
@@ -74,6 +82,9 @@ export default {
 │
 ├─⊷ *${PREFIX}totalpanels*
 │  └⊷ Show total count of servers
+│
+├─⊷ *${PREFIX}deleteall*
+│  └⊷ Force-delete every server on the panel
 │
 ╰─⊷`;
 

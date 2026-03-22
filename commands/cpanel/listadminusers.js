@@ -67,7 +67,7 @@ export default {
                             {
                                 name: 'quick_reply',
                                 buttonParamsJson: JSON.stringify({
-                                    display_text: '⬇️ Demote ALL',
+                                    display_text: '⬇️ DemoteAdminUsers',
                                     id: `${PREFIX}demoteall`
                                 })
                             }
