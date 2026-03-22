@@ -465,6 +465,7 @@ export default {
                 body += `│ ◎ *Menu Image URL:* ${short}\n`;
             }
             body += `│ ◎ *Footer:* ${footer.length > 45 ? footer.substring(0, 45) + '…' : footer}\n`;
+            body += `│ ◎ *Timezone:* ${globalThis._timezone || 'UTC'}\n`;
             body += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
             body += `│ ◎ *Online Presence:* ${onlinePresence}\n`;
             body += `│ ◎ *Disappearing Msgs:* ${dispState}\n`;

@@ -2730,20 +2730,23 @@ case 3: {
     return { name: 'Unknown', icon: '🏠', status: 'Active' };
   };
   
-  // Get current time and date
+  // Get current time and date using the configured timezone (set via .settimezone)
   const now = new Date();
+  const _tz2 = globalThis._timezone || 'UTC';
   const currentTime = now.toLocaleTimeString('en-US', { 
     hour12: true, 
     hour: '2-digit', 
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
+    timeZone: _tz2
   });
   
   const currentDate = now.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: _tz2
   });
   
   // Load bot information using helper functions
@@ -2806,6 +2809,10 @@ case 3: {
       infoLines.push(`┃ RAM: ${memBar} ${memPercentDisplay}%`);
     }
     if ((fieldsStatus && fieldsStatus.usage) || (!fieldsStatus)) infoLines.push(`┃ Memory: ${usedMem}MB / ${totalMem}MB`);
+    if ((fieldsStatus && fieldsStatus.timezone) || (!fieldsStatus)) {
+      const _tzLabel = globalThis._timezone || 'UTC';
+      infoLines.push(`┃ Timezone: ${_tzLabel}`);
+    }
 
     if (infoLines.length > 0) {
       infoSection = `┌──⌈ \`${currentBotName}\` ⌋\n${infoLines.join('\n')}\n└────────────────\n`;
