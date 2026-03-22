@@ -13,9 +13,7 @@ function ensureDir() {
 
 function loadConfig() {
     try {
-        if (fs.existsSync(configFile)) {
-            return JSON.parse(fs.readFileSync(configFile, 'utf8'));
-        }
+        if (fs.existsSync(configFile)) return JSON.parse(fs.readFileSync(configFile, 'utf8'));
     } catch {}
     return {};
 }
@@ -35,45 +33,49 @@ export function isAntiChatEnabled(groupJid) {
     return loadConfig()[groupJid]?.enabled || false;
 }
 
-function getAction(groupJid) {
-    return loadConfig()[groupJid]?.action || 'delete';
-}
-
-function isRestricted(groupJid, userJid) {
-    const restricted = loadConfig()[groupJid]?.restricted || [];
-    const cleanUser = cleanJid(userJid);
-    return restricted.some(u => cleanJid(u) === cleanUser);
-}
-
 // ── Auto-enforcement handler (wired in index.js) ─────────────────────────────
+// When antichat is ON: any non-admin message is acted upon
 export async function handleAntiChat(sock, msg) {
     try {
         if (!msg.message || msg.key?.fromMe) return;
 
         const chatJid = msg.key.remoteJid;
         if (!chatJid?.endsWith('@g.us')) return;
-        if (!isAntiChatEnabled(chatJid)) return;
+
+        const config = loadConfig();
+        const gc = config[chatJid];
+        if (!gc?.enabled) return;
 
         const senderJid = cleanJid(msg.key.participant || chatJid);
-        if (!isRestricted(chatJid, senderJid)) return;
+        const userName  = senderJid.split('@')[0];
+        const action    = gc.action || 'delete';
 
-        const userName = senderJid.split('@')[0];
-        const action   = getAction(chatJid);
+        // Fetch metadata to check if sender is admin — admins are always exempt
+        try {
+            const metadata = await sock.groupMetadata(chatJid);
+            const member   = metadata.participants.find(p => cleanJid(p.id) === senderJid);
+            const isAdmin  = member?.admin === 'admin' || member?.admin === 'superadmin';
+            if (isAdmin) return;
+        } catch { return; }
 
-        // Always delete the message first
+        // Delete the message
         try { await sock.sendMessage(chatJid, { delete: msg.key }); } catch {}
 
         switch (action) {
             case 'delete': {
                 await sock.sendMessage(chatJid, {
-                    text: `🚫 @${userName} is restricted from chatting in this group.`,
+                    text: `🚫 @${userName}, chatting is disabled in this group.`,
                     mentions: [senderJid]
                 });
                 break;
             }
             case 'warn': {
+                if (!gc.warnings) gc.warnings = {};
+                gc.warnings[senderJid] = (gc.warnings[senderJid] || 0) + 1;
+                config[chatJid] = gc;
+                saveConfig(config);
                 await sock.sendMessage(chatJid, {
-                    text: `⚠️ *Warning:* @${userName}, you are restricted from chatting here. Continued violations may result in removal.`,
+                    text: `⚠️ @${userName}, chatting is not allowed here. Warning *${gc.warnings[senderJid]}*.`,
                     mentions: [senderJid]
                 });
                 break;
@@ -81,7 +83,7 @@ export async function handleAntiChat(sock, msg) {
             case 'kick': {
                 try {
                     await sock.sendMessage(chatJid, {
-                        text: `🚨 @${userName} has been removed — restricted from chatting in this group.`,
+                        text: `🚨 @${userName} has been removed for chatting while antichat is active.`,
                         mentions: [senderJid]
                     });
                     await sock.groupParticipantsUpdate(chatJid, [senderJid], 'remove');
@@ -102,8 +104,8 @@ export async function handleAntiChat(sock, msg) {
 // ── Command ──────────────────────────────────────────────────────────────────
 export default {
     name:        'antichat',
-    alias:       ['nochat', 'chatblock', 'restrictchat'],
-    description: 'Restrict specific users from chatting in the group — delete, warn, or kick',
+    alias:       ['nochat', 'chatblock', 'lockgroup'],
+    description: 'Prevent non-admins from chatting in the group — delete, warn, or kick',
     category:    'group',
     groupOnly:   true,
 
@@ -112,15 +114,16 @@ export default {
         const owner  = getOwnerName().toUpperCase();
         const { jidManager } = extra;
 
-        const groupMeta = await sock.groupMetadata(chatId);
-        const sender    = cleanJid(msg.key.participant || chatId);
-        const member    = groupMeta.participants.find(p => cleanJid(p.id) === sender);
-        const isAdmin   = member?.admin === 'admin' || member?.admin === 'superadmin';
-
-        if (!isAdmin && !jidManager.isOwner(msg)) {
-            return sock.sendMessage(chatId, {
-                text: '❌ *Admin Only Command*'
-            }, { quoted: msg });
+        try {
+            const groupMeta = await sock.groupMetadata(chatId);
+            const sender    = cleanJid(msg.key.participant || chatId);
+            const member    = groupMeta.participants.find(p => cleanJid(p.id) === sender);
+            const isAdmin   = member?.admin === 'admin' || member?.admin === 'superadmin';
+            if (!isAdmin && !jidManager.isOwner(msg)) {
+                return sock.sendMessage(chatId, { text: '❌ *Admin Only Command*' }, { quoted: msg });
+            }
+        } catch {
+            return sock.sendMessage(chatId, { text: '❌ Failed to check permissions.' }, { quoted: msg });
         }
 
         const config = loadConfig();
@@ -129,7 +132,7 @@ export default {
         // ── Default: brief menu ───────────────────────────────────────────────
         if (!sub) {
             const gc     = config[chatId];
-            const status = gc?.enabled ? `✅ ON (${gc.action?.toUpperCase()})` : '❌ OFF';
+            const status = gc?.enabled ? `✅ ON (${(gc.action || 'delete').toUpperCase()})` : '❌ OFF';
             return sock.sendMessage(chatId, {
                 text:
                     `╭─⌈ 💬 *ANTI-CHAT* ⌋\n` +
@@ -138,9 +141,7 @@ export default {
                     `├⊷ antichat on\n` +
                     `├⊷ antichat off\n` +
                     `├⊷ antichat action delete/warn/kick\n` +
-                    `├⊷ antichat restrict @user\n` +
-                    `├⊷ antichat unrestrict @user\n` +
-                    `├⊷ antichat list\n` +
+                    `├⊷ antichat status\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
@@ -148,13 +149,13 @@ export default {
         if (sub === 'on' || sub === 'enable') {
             config[chatId] = {
                 ...config[chatId],
-                enabled:    true,
-                action:     config[chatId]?.action || 'delete',
-                restricted: config[chatId]?.restricted || []
+                enabled:  true,
+                action:   config[chatId]?.action || 'delete',
+                warnings: config[chatId]?.warnings || {}
             };
             saveConfig(config);
             return sock.sendMessage(chatId, {
-                text: `✅ *Anti-Chat ON* — Action: *${config[chatId].action.toUpperCase()}*`
+                text: `🔒 *Anti-Chat ON* — Action: *${config[chatId].action.toUpperCase()}*\nNon-admins cannot send messages.`
             }, { quoted: msg });
         }
 
@@ -162,7 +163,7 @@ export default {
             config[chatId] = { ...config[chatId], enabled: false };
             saveConfig(config);
             return sock.sendMessage(chatId, {
-                text: '❌ *Anti-Chat OFF*'
+                text: '🔓 *Anti-Chat OFF*\nMembers can chat freely.'
             }, { quoted: msg });
         }
 
@@ -180,72 +181,19 @@ export default {
             }, { quoted: msg });
         }
 
-        if (sub === 'restrict') {
-            const mentioned  = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-            const quoted     = msg.message?.extendedTextMessage?.contextInfo?.participant;
-            const target     = cleanJid(quoted || mentioned);
-
-            if (!target) {
-                return sock.sendMessage(chatId, {
-                    text: `❌ Tag or reply to a user.\nExample: ${PREFIX}antichat restrict @user`
-                }, { quoted: msg });
-            }
-
-            if (!config[chatId]) config[chatId] = { enabled: true, action: 'delete', restricted: [] };
-            if (!config[chatId].restricted) config[chatId].restricted = [];
-
-            if (config[chatId].restricted.some(u => cleanJid(u) === target)) {
-                return sock.sendMessage(chatId, {
-                    text: `⚠️ @${target.split('@')[0]} is already restricted.`,
-                    mentions: [target]
-                }, { quoted: msg });
-            }
-
-            config[chatId].restricted.push(target);
-            saveConfig(config);
+        if (sub === 'status' || sub === 'settings') {
+            const gc     = config[chatId];
+            const status = gc?.enabled ? '✅ ON' : '❌ OFF';
             return sock.sendMessage(chatId, {
-                text: `🚫 @${target.split('@')[0]} restricted from chatting.`,
-                mentions: [target]
-            }, { quoted: msg });
-        }
-
-        if (sub === 'unrestrict') {
-            const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-            const quoted    = msg.message?.extendedTextMessage?.contextInfo?.participant;
-            const target    = cleanJid(quoted || mentioned);
-
-            if (!target) {
-                return sock.sendMessage(chatId, {
-                    text: `❌ Tag or reply to a user.\nExample: ${PREFIX}antichat unrestrict @user`
-                }, { quoted: msg });
-            }
-
-            if (!config[chatId]?.restricted?.length) {
-                return sock.sendMessage(chatId, { text: '⚠️ No restricted users in this group.' }, { quoted: msg });
-            }
-
-            config[chatId].restricted = config[chatId].restricted.filter(u => cleanJid(u) !== target);
-            saveConfig(config);
-            return sock.sendMessage(chatId, {
-                text: `✅ @${target.split('@')[0]} can chat again.`,
-                mentions: [target]
-            }, { quoted: msg });
-        }
-
-        if (sub === 'list') {
-            const restricted = config[chatId]?.restricted || [];
-            if (restricted.length === 0) {
-                return sock.sendMessage(chatId, { text: '📋 No restricted users in this group.' }, { quoted: msg });
-            }
-            const lines = restricted.map((jid, i) => `${i + 1}. @${jid.split('@')[0]}`).join('\n');
-            return sock.sendMessage(chatId, {
-                text: `📋 *Restricted Users:*\n\n${lines}`,
-                mentions: restricted
+                text:
+                    `📊 *ANTI-CHAT STATUS*\n\n` +
+                    `Enabled: ${status}\n` +
+                    `Action : ${(gc?.action || 'delete').toUpperCase()}`
             }, { quoted: msg });
         }
 
         return sock.sendMessage(chatId, {
-            text: `❌ Unknown option. Use \`${PREFIX}antichat\` to see available commands.`
+            text: `❌ Unknown option. Use \`${PREFIX}antichat\` to see commands.`
         }, { quoted: msg });
     }
 };
