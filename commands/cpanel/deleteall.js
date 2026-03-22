@@ -30,6 +30,9 @@ export default {
             }
 
             await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
+            await sock.sendMessage(jid, {
+                text: `✅ All ${servers.length} servers deleted.`
+            }, { quoted: msg });
         } catch {
             await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
         }
