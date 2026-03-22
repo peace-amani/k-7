@@ -7,8 +7,8 @@ let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch {}
 
 export default {
-    name: 'listadmin',
-    alias: ['listadmins', 'paneladmins', 'getadmins'],
+    name: 'listadminusers',
+    alias: ['paneladmins', 'getadmins', 'adminusers'],
     category: 'cpanel',
     desc: 'List all panel admin users',
     ownerOnly: true,
