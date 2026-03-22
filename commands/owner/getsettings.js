@@ -283,6 +283,16 @@ async function getGoodbyeStatus() {
     return 'No groups';
 }
 
+async function getJoinApprovalState() {
+    try {
+        const data = await db.getConfig('joinapproval_data', {});
+        if (!data || !data.groups) return 'No groups';
+        const enabled = Object.values(data.groups).filter(g => g?.enabled === true);
+        return enabled.length ? `${enabled.length} group(s)` : 'No groups';
+    } catch {}
+    return 'No groups';
+}
+
 function formatUptime(seconds) {
     const d = Math.floor(seconds / 86400);
     const h = Math.floor((seconds % 86400) / 3600);
@@ -365,9 +375,10 @@ export default {
             const onlinePresence = getOnlinePresenceState();
             const dispState     = getDispState();
 
-            const warnLimit      = getPerGroupLimit('default');
-            const welcomeStatus  = await getWelcomeStatus();
-            const goodbyeStatus  = await getGoodbyeStatus();
+            const warnLimit        = getPerGroupLimit('default');
+            const welcomeStatus    = await getWelcomeStatus();
+            const goodbyeStatus    = await getGoodbyeStatus();
+            const joinApproval     = await getJoinApprovalState();
 
             let antidelete = 'OFF';
             try {
@@ -490,6 +501,7 @@ export default {
             body += `╭─⊷ *👥 GROUP FEATURES*\n`;
             body += `│ ◎ *Welcome:* ${welcomeStatus}\n`;
             body += `│ ◎ *Goodbye:* ${goodbyeStatus}\n`;
+            body += `│ ◎ *Join Approval:* ${joinApproval}\n`;
             body += `╰──────────────\n\n`;
 
             // ── BOT STATS ──
