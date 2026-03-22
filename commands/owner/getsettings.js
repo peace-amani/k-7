@@ -42,24 +42,67 @@ function getMenuStyle() {
     return data?.current || '1';
 }
 
-function getMenuImage() {
-    const imgPath1 = path.join(__dirname, '../menus/media/wolfbot.jpg');
-    const imgPath2 = path.join(__dirname, '../media/wolfbot.jpg');
-    if (fs.existsSync(imgPath1)) return imgPath1;
-    if (fs.existsSync(imgPath2)) return imgPath2;
+function getMenuLocalFile() {
+    const candidates = [
+        path.join(__dirname, '../menus/media/wolfbot.gif'),
+        path.join(__dirname, '../menus/media/wolfbot.jpg'),
+        path.join(__dirname, '../media/wolfbot.gif'),
+        path.join(__dirname, '../media/wolfbot.jpg'),
+    ];
+    for (const p of candidates) {
+        if (fs.existsSync(p)) return p;
+    }
     return null;
 }
 
-function getMenuImageUrl() {
+function _readMenuImageConfig() {
     const configPaths = [
         path.join(__dirname, '../../data/menuimage.json'),
-        path.join(__dirname, '../../data/menu_image.json')
+        path.join(__dirname, '../../data/menu_image.json'),
     ];
     for (const p of configPaths) {
         const data = safeReadJSON(p);
-        if (data?.url) return data.url;
+        if (data) return data;
     }
-    return getMenuImage() ? 'Local (wolfbot.jpg)' : 'Default';
+    return null;
+}
+
+function getMenuImageStatus() {
+    const data = _readMenuImageConfig();
+    const localFile = getMenuLocalFile();
+    const fileName = localFile ? path.basename(localFile) : null;
+
+    if (!data) {
+        return localFile ? `Custom (no source info) • ${fileName}` : 'Default';
+    }
+
+    // New format: { source, url, updatedAt }
+    // Old format: { url (label or actual URL), updatedAt }
+    let source = data.source;
+    if (!source) {
+        // Old format — url field may be a label or a real URL
+        const rawUrl = data.url || '';
+        source = rawUrl.startsWith('http') ? 'URL' : (rawUrl || 'unknown');
+    }
+
+    const date = data.updatedAt
+        ? new Date(data.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : null;
+
+    const fileTag = localFile ? ` • ${fileName} ✅` : ' • ⚠️ file missing';
+    const dateTag = date ? ` [${date}]` : '';
+
+    return `Custom (${source})${fileTag}${dateTag}`;
+}
+
+function getMenuImageUrlOnly() {
+    const data = _readMenuImageConfig();
+    if (!data) return null;
+    // New format: explicit url field (null when not a URL source)
+    if (data.url && data.url.startsWith('http')) return data.url;
+    // Old format: url field could have been the actual URL
+    if (!data.source && data.url && data.url.startsWith('http')) return data.url;
+    return null;
 }
 
 function getFooter() {
@@ -281,7 +324,8 @@ export default {
             const prefix = isPrefixless ? 'none (prefixless)' : getPrefix();
             const mode = getBotMode();
             const menuStyle = getMenuStyle();
-            const menuImageUrl = getMenuImageUrl();
+            const menuImageStatus = getMenuImageStatus();
+            const menuImageUrl = getMenuImageUrlOnly();
             const footer = getFooter();
 
             const autotyping = getAutotypingState();
@@ -374,7 +418,11 @@ export default {
             caption += `│ ◎ *Prefixless:* ${isPrefixless ? '✅ ON' : '❌ OFF'}\n`;
             caption += `│ ◎ *Mode:* ${mode.toUpperCase()}\n`;
             caption += `│ ◎ *Menu Style:* ${menuStyle}\n`;
-            caption += `│ ◎ *Menu Image:* ${menuImageUrl}\n`;
+            caption += `│ ◎ *Menu Image:* ${menuImageStatus}\n`;
+            if (menuImageUrl) {
+                const short = menuImageUrl.length > 55 ? menuImageUrl.substring(0, 55) + '…' : menuImageUrl;
+                caption += `│ ◎ *Menu Image URL:* ${short}\n`;
+            }
             caption += `│ ◎ *Footer:* ${footer.length > 40 ? footer.substring(0, 40) + '…' : footer}\n`;
             caption += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
             caption += `│ ◎ *Online Presence:* ${onlinePresence}\n`;
@@ -427,14 +475,15 @@ export default {
             caption += `🕒 *Updated:* ${new Date().toLocaleString()}\n`;
             caption += `🔧 *Use* \`${PREFIX}setsetting\` *to change settings*`;
 
-            const imagePath = getMenuImage();
+            const imagePath = getMenuLocalFile();
 
             if (imagePath) {
+                const isGif = imagePath.endsWith('.gif');
                 const imageBuffer = fs.readFileSync(imagePath);
                 await sock.sendMessage(chatId, {
                     image: imageBuffer,
                     caption: caption,
-                    mimetype: 'image/jpeg'
+                    mimetype: isGif ? 'image/gif' : 'image/jpeg'
                 }, { quoted: msg });
             } else {
                 await sock.sendMessage(chatId, { text: caption }, { quoted: msg });

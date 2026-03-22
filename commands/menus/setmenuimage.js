@@ -288,10 +288,11 @@ export default {
       try {
         const dataDir = path.join(__dirname, '../../data');
         if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-        const sourceUrl = hasUrl ? args[0] : (hasReplyPerson ? 'Profile pic' : null);
+        const actualUrl = hasUrl ? args[0] : null;
+        const source = hasUrl ? 'URL' : (hasReplyPerson ? 'Profile pic' : sourceLabel);
         fs.writeFileSync(
           path.join(dataDir, 'menuimage.json'),
-          JSON.stringify({ url: sourceUrl || sourceLabel, updatedAt: new Date().toISOString() }, null, 2)
+          JSON.stringify({ source, url: actualUrl, updatedAt: new Date().toISOString() }, null, 2)
         );
       } catch {}
 
