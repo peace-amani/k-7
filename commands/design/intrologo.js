@@ -1,4 +1,4 @@
-// // import { createCanvas } from 'canvas';
+// // import { createCanvas } from '../../lib/canvasWrapper.js';
 // // import { writeFileSync, unlinkSync } from 'fs';
 // // import { exec } from 'child_process';
 // // import { promisify } from 'util';
@@ -414,7 +414,7 @@
 
 
 
-// import { createCanvas } from 'canvas';
+// import { createCanvas } from '../../lib/canvasWrapper.js';
 // import { writeFileSync, unlinkSync, existsSync } from 'fs';
 // import { exec } from 'child_process';
 // import { promisify } from 'util';

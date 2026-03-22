@@ -1,5 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
-// import { createCanvas, registerFont } from 'canvas';
+// import { createCanvas, registerFont } from '../../lib/canvasWrapper.js';
 // import axios from "axios";
 
 // export default {
@@ -233,7 +233,7 @@ import { getBotName } from '../../lib/botname.js';
 
 
 
-import { createCanvas, registerFont } from 'canvas';
+import { createCanvas, registerFont } from '../../lib/canvasWrapper.js';
 import axios from 'axios';
 import { addWatermark } from '../../lib/logo-watermark.js';
 

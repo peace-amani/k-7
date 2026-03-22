@@ -1,5 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
-import { createCanvas } from 'canvas';
+import { createCanvas } from '../../lib/canvasWrapper.js';
 import { addWatermark } from '../../lib/logo-watermark.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
