@@ -1052,12 +1052,16 @@ export default {
         return sock.sendMessage(jid, { text: `⚠️ This group is already in the whitelist.` }, { quoted: m });
       }
       config.allowedGroups.push(jid);
+      // Auto-enable group mode if chatbot is currently off
+      const wasOffG = config.mode === 'off';
+      if (wasOffG) config.mode = 'groups';
       saveConfig(config);
       let groupName = jid.split('@')[0];
       const cached  = globalThis.groupMetadataCache?.get(jid);
       if (cached?.data?.subject) groupName = cached.data.subject;
+      const autoNoteG = wasOffG ? `\n⚠️ *Auto-enabled Groups mode* (was OFF)` : '';
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Group added to whitelist!\n\n👥 *Group:* ${groupName}\n📋 *Total:* ${config.allowedGroups.length} group(s)\n\n_W.O.L.F will only respond in whitelisted chats._`
+        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Group added to whitelist!\n\n👥 *Group:* ${groupName}\n📋 *Total:* ${config.allowedGroups.length} group(s)${autoNoteG}\n\n_W.O.L.F will only respond in whitelisted chats._`
       }, { quoted: m });
     }
 
@@ -1123,9 +1127,13 @@ export default {
         return sock.sendMessage(jid, { text: `⚠️ +${number} is already in the DM whitelist.` }, { quoted: m });
       }
       config.allowedDMs.push(dmJid);
+      // Auto-enable DM mode if chatbot is currently off — whitelist only works when active
+      const wasOff = config.mode === 'off';
+      if (wasOff) config.mode = 'dms';
       saveConfig(config);
+      const autoNote = wasOff ? `\n⚠️ *Auto-enabled DMs mode* (was OFF)` : '';
       return sock.sendMessage(jid, {
-        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ DM added to whitelist!\n\n💬 *Number:* +${number}\n📋 *Total:* ${config.allowedDMs.length} DM(s)\n\n_W.O.L.F will only respond in whitelisted DMs._`
+        text: `🐺 *W.O.L.F*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ DM added to whitelist!\n\n💬 *Number:* +${number}\n📋 *Total:* ${config.allowedDMs.length} DM(s)${autoNote}\n\n_W.O.L.F will only respond in whitelisted DMs._`
       }, { quoted: m });
     }
 
