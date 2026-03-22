@@ -8,6 +8,15 @@ import { getStatusAntideleteInfo } from './antideletestatus.js';
 import { getAntieditInfo } from './antiedit.js';
 import { detectPlatform } from '../../lib/platformDetect.js';
 import { isMusicModeEnabled } from '../../lib/musicMode.js';
+import {
+    createFadedEffect,
+    createReadMoreEffect,
+    getMenuImageBuffer,
+    sendLoadingMessage,
+    getRAMUsage,
+    formatUptime as menuFormatUptime,
+    getBotVersion,
+} from '../../lib/menuHelper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -319,72 +328,76 @@ export default {
         }
 
         try {
-            const ownerNumber = global.OWNER_CLEAN_NUMBER || global.OWNER_NUMBER || sock.user?.id?.split('@')[0] || 'Unknown';
+            // ── Loading indicator ─────────────────────────────────────────
+            const fkontak = await sendLoadingMessage(sock, chatId, 'settings', msg);
+
+            // ── Gather all settings ───────────────────────────────────────
+            const botName      = getBotName();
+            const version      = getBotVersion();
+            const ownerNumber  = global.OWNER_CLEAN_NUMBER || global.OWNER_NUMBER || sock.user?.id?.split('@')[0] || 'Unknown';
             const isPrefixless = getPrefixlessStatus();
-            const prefix = isPrefixless ? 'none (prefixless)' : getPrefix();
-            const mode = getBotMode();
-            const menuStyle = getMenuStyle();
+            const prefix       = isPrefixless ? 'none' : getPrefix();
+            const mode         = getBotMode();
+            const menuStyle    = getMenuStyle();
             const menuImageStatus = getMenuImageStatus();
-            const menuImageUrl = getMenuImageUrlOnly();
-            const footer = getFooter();
+            const menuImageUrl    = getMenuImageUrlOnly();
+            const footer       = getFooter();
+            const ram          = getRAMUsage();
+            const uptime       = menuFormatUptime(process.uptime());
+            const totalCmds    = globalThis._loadedCommandCount || countCommands(path.join(__dirname, '../../commands'));
+            const platform     = detectPlatform();
 
-            const autotyping = getAutotypingState();
-            const autorecording = getAutorecordingState();
-            const autoread = getAutoreadState();
-            const autoViewStatus = getAutoViewStatusState();
+            const autotyping         = getAutotypingState();
+            const autorecording      = getAutorecordingState();
+            const autoread           = getAutoreadState();
+            const autoViewStatus     = getAutoViewStatusState();
             const autoDownloadStatus = getAutoDownloadStatusState();
-            const autoreactStatus = getAutoreactStatusState();
-            const musicMode = getMusicModeState();
-            const chatbotState = getChatbotState();
+            const autoreactStatus    = getAutoreactStatusState();
+            const musicMode          = getMusicModeState();
+            const chatbotState       = getChatbotState();
 
-            const anticall = getAnticallState();
-            const anticallMsg = getAnticallMessage();
-            const antiViewOnce = getAntiViewOnceState();
-            const antibug = getAntibugState();
-            const antilink = getAntilinkState();
-            const antispam = getAntispamState();
+            const anticall      = getAnticallState();
+            const anticallMsg   = getAnticallMessage();
+            const antiViewOnce  = getAntiViewOnceState();
+            const antibug       = getAntibugState();
+            const antilink      = getAntilinkState();
+            const antispam      = getAntispamState();
             const onlinePresence = getOnlinePresenceState();
-            const dispState = getDispState();
+            const dispState     = getDispState();
 
-            const warnLimit = getPerGroupLimit('default');
-            const welcomeStatus = await getWelcomeStatus();
-            const goodbyeStatus = await getGoodbyeStatus();
+            const warnLimit      = getPerGroupLimit('default');
+            const welcomeStatus  = await getWelcomeStatus();
+            const goodbyeStatus  = await getGoodbyeStatus();
 
-            let antidelete = 'Unknown';
+            let antidelete = 'OFF';
             try {
                 const adCfg = await db.getConfig('antidelete_settings', null);
-                if (adCfg && typeof adCfg.enabled === 'boolean') {
-                    antidelete = adCfg.enabled ? (adCfg.mode || 'private').toUpperCase() : 'OFF';
-                } else {
-                    antidelete = 'OFF';
-                }
+                if (adCfg?.enabled === true) antidelete = (adCfg.mode || 'private').toUpperCase();
             } catch {}
 
-            let antidemote = 'Not configured';
+            let antidemote = 'OFF';
             try {
                 const adm = await db.getConfig('antidemote_config', null);
                 if (adm && typeof adm === 'object') {
                     const en = Object.values(adm).filter(v => v?.enabled);
-                    antidemote = en.length ? `${en.length} group(s)` : 'OFF';
+                    if (en.length) antidemote = `${en.length} group(s)`;
                 }
             } catch {}
 
-            let antipromote = 'Not configured';
+            let antipromote = 'OFF';
             try {
                 const apm = safeReadJSON(path.join(__dirname, '../../data/antipromote/config.json'))
                     || await db.getConfig('antipromote_config', null);
                 if (apm && typeof apm === 'object') {
                     const en = Object.values(apm).filter(v => v?.enabled);
-                    antipromote = en.length ? `${en.length} group(s)` : 'OFF';
+                    if (en.length) antipromote = `${en.length} group(s)`;
                 }
             } catch {}
 
-            let antideleteStatusDisplay = 'OFF';
+            let antideleteStatus = 'OFF';
             try {
                 const adsInfo = getStatusAntideleteInfo();
-                if (adsInfo.enabled) {
-                    antideleteStatusDisplay = (adsInfo.mode || 'private').toUpperCase();
-                }
+                if (adsInfo.enabled) antideleteStatus = (adsInfo.mode || 'private').toUpperCase();
             } catch {}
 
             let antieditDisplay = 'OFF';
@@ -404,89 +417,115 @@ export default {
                 else if (rrPref?.mode === 'none') readReceipts = 'OFF';
             } catch {}
 
-            const platform = detectPlatform();
-            const uptime = formatUptime(process.uptime());
-            const memUsage = `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`;
-            const totalCmds = globalThis._loadedCommandCount || countCommands(path.join(__dirname, '../../commands'));
+            // ── Faded header (visible before "Read more") ─────────────────
+            const headerText =
+`╭──⌈ ⚙️ ${botName} — Settings ⌋
+┃ ◆ Owner: ${ownerNumber}
+┃ ◆ Mode: ${mode.toUpperCase()}
+┃ ◆ Prefix: [ ${prefix} ]${isPrefixless ? ' + prefixless' : ''}
+┃ ◆ Version: ${version}
+┃ ◆ Platform: ${platform}
+┃ ◆ Uptime: ${uptime}
+┃ ◆ RAM: ${ram.bar} ${ram.percent}%
+┃ ◆ Memory: ${ram.usedMB}MB / ${ram.totalMB}MB
+┃ ◆ Commands: ${totalCmds} loaded
+╰────────────────`;
 
-            let caption = `⚙️  \`W.O.L.F  𝚂𝙴𝚃𝚃𝙸𝙽𝙶𝚂\`\n\n`;
+            const fadedHeader = createFadedEffect(headerText);
 
-            caption += `┌─── *BASIC CONFIG* ───\n`;
-            caption += `│ ◎ *Bot Name:* ${getBotName()}\n`;
-            caption += `│ ◎ *Owner:* ${ownerNumber}\n`;
-            caption += `│ ◎ *Prefix:* ${prefix}\n`;
-            caption += `│ ◎ *Prefixless:* ${isPrefixless ? '✅ ON' : '❌ OFF'}\n`;
-            caption += `│ ◎ *Mode:* ${mode.toUpperCase()}\n`;
-            caption += `│ ◎ *Menu Style:* ${menuStyle}\n`;
-            caption += `│ ◎ *Menu Image:* ${menuImageStatus}\n`;
+            // ── Settings body (hidden behind "Read more") ──────────────────
+            let body = '';
+
+            // ── BOT CORE ──
+            body += `╭─⊷ *⚙️ BOT CORE*\n`;
+            body += `│ ◎ *Bot Name:* ${botName}\n`;
+            body += `│ ◎ *Owner:* ${ownerNumber}\n`;
+            body += `│ ◎ *Prefix:* ${prefix}${isPrefixless ? '  *(+ prefixless ON)*' : ''}\n`;
+            body += `│ ◎ *Mode:* ${mode.toUpperCase()}\n`;
+            body += `│ ◎ *Menu Style:* ${menuStyle}\n`;
+            body += `│ ◎ *Menu Image:* ${menuImageStatus}\n`;
             if (menuImageUrl) {
-                const short = menuImageUrl.length > 55 ? menuImageUrl.substring(0, 55) + '…' : menuImageUrl;
-                caption += `│ ◎ *Menu Image URL:* ${short}\n`;
+                const short = menuImageUrl.length > 50 ? menuImageUrl.substring(0, 50) + '…' : menuImageUrl;
+                body += `│ ◎ *Menu Image URL:* ${short}\n`;
             }
-            caption += `│ ◎ *Footer:* ${footer.length > 40 ? footer.substring(0, 40) + '…' : footer}\n`;
-            caption += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
-            caption += `│ ◎ *Online Presence:* ${onlinePresence}\n`;
-            caption += `│ ◎ *Disappearing Msgs:* ${dispState}\n`;
-            caption += `└──────────────\n\n`;
+            body += `│ ◎ *Footer:* ${footer.length > 45 ? footer.substring(0, 45) + '…' : footer}\n`;
+            body += `│ ◎ *Read Receipts:* ${readReceipts}\n`;
+            body += `│ ◎ *Online Presence:* ${onlinePresence}\n`;
+            body += `│ ◎ *Disappearing Msgs:* ${dispState}\n`;
+            body += `╰──────────────\n\n`;
 
-            caption += `┌─── *AUTOMATION* ───\n`;
-            caption += `│ ◎ *Autotyping:* ${autotyping}\n`;
-            caption += `│ ◎ *Autorecording:* ${autorecording}\n`;
-            caption += `│ ◎ *Autoread:* ${autoread}\n`;
-            caption += `│ ◎ *Auto View Status:* ${autoViewStatus}\n`;
-            caption += `│ ◎ *Auto Download Status:* ${autoDownloadStatus}\n`;
-            caption += `│ ◎ *Autoreact Status:* ${autoreactStatus}\n`;
-            caption += `│ ◎ *Music Mode:* ${musicMode}\n`;
-            caption += `└──────────────\n\n`;
+            // ── AUTOMATION ──
+            body += `╭─⊷ *🎵 AUTOMATION*\n`;
+            body += `│ ◎ *Autotyping:* ${autotyping}\n`;
+            body += `│ ◎ *Autorecording:* ${autorecording}\n`;
+            body += `│ ◎ *Autoread:* ${autoread}\n`;
+            body += `│ ◎ *Auto View Status:* ${autoViewStatus}\n`;
+            body += `│ ◎ *Auto Download Status:* ${autoDownloadStatus}\n`;
+            body += `│ ◎ *Autoreact Status:* ${autoreactStatus}\n`;
+            body += `│ ◎ *Music Mode:* ${musicMode}\n`;
+            body += `╰──────────────\n\n`;
 
-            caption += `┌─── *AI / CHATBOT* ───\n`;
-            caption += `│ ◎ *Chatbot:* ${chatbotState}\n`;
-            caption += `└──────────────\n\n`;
+            // ── AI / CHATBOT ──
+            body += `╭─⊷ *🤖 AI / CHATBOT*\n`;
+            body += `│ ◎ *Chatbot:* ${chatbotState}\n`;
+            body += `╰──────────────\n\n`;
 
-            caption += `┌─── *PROTECTION* ───\n`;
-            caption += `│ ◎ *Anticall:* ${anticall}\n`;
-            caption += `│ ◎ *Anticall Msg:* ${anticallMsg}\n`;
-            caption += `│ ◎ *Antidelete:* ${antidelete}\n`;
-            caption += `│ ◎ *Antidelete Status:* ${antideleteStatusDisplay}\n`;
-            caption += `│ ◎ *Antiedit:* ${antieditDisplay}\n`;
-            caption += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
-            caption += `│ ◎ *Antilink:* ${antilink}\n`;
-            caption += `│ ◎ *Antispam:* ${antispam}\n`;
-            caption += `│ ◎ *Antibug:* ${antibug}\n`;
-            caption += `│ ◎ *Antidemote:* ${antidemote}\n`;
-            caption += `│ ◎ *Antipromote:* ${antipromote}\n`;
-            caption += `│ ◎ *Warn Limit:* ${warnLimit}\n`;
-            caption += `└──────────────\n\n`;
+            // ── PROTECTION ──
+            body += `╭─⊷ *🛡️ PROTECTION*\n`;
+            body += `│ ◎ *Anticall:* ${anticall}\n`;
+            body += `│ ◎ *Anticall Msg:* ${anticallMsg}\n`;
+            body += `│ ◎ *Antidelete:* ${antidelete}\n`;
+            body += `│ ◎ *Antidelete Status:* ${antideleteStatus}\n`;
+            body += `│ ◎ *Antiedit:* ${antieditDisplay}\n`;
+            body += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
+            body += `│ ◎ *Antilink:* ${antilink}\n`;
+            body += `│ ◎ *Antispam:* ${antispam}\n`;
+            body += `│ ◎ *Antibug:* ${antibug}\n`;
+            body += `│ ◎ *Antidemote:* ${antidemote}\n`;
+            body += `│ ◎ *Antipromote:* ${antipromote}\n`;
+            body += `│ ◎ *Warn Limit:* ${warnLimit}\n`;
+            body += `╰──────────────\n\n`;
 
-            caption += `┌─── *GROUP FEATURES* ───\n`;
-            caption += `│ ◎ *Welcome:* ${welcomeStatus}\n`;
-            caption += `│ ◎ *Goodbye:* ${goodbyeStatus}\n`;
-            caption += `└──────────────\n\n`;
+            // ── GROUP FEATURES ──
+            body += `╭─⊷ *👥 GROUP FEATURES*\n`;
+            body += `│ ◎ *Welcome:* ${welcomeStatus}\n`;
+            body += `│ ◎ *Goodbye:* ${goodbyeStatus}\n`;
+            body += `╰──────────────\n\n`;
 
-            caption += `┌─── *BOT STATS* ───\n`;
-            caption += `│ ◎ *Uptime:* ${uptime}\n`;
-            caption += `│ ◎ *Memory:* ${memUsage}\n`;
-            caption += `│ ◎ *Commands:* ${totalCmds}\n`;
-            caption += `│ ◎ *Node:* ${process.version}\n`;
-            caption += `│ ◎ *Platform:* ${platform}\n`;
-            caption += `│ ◎ *OS:* ${process.platform} ${process.arch}\n`;
-            caption += `└──────────────\n\n`;
+            // ── BOT STATS ──
+            body += `╭─⊷ *📊 BOT STATS*\n`;
+            body += `│ ◎ *Uptime:* ${uptime}\n`;
+            body += `│ ◎ *RAM:* ${ram.usedMB}MB / ${ram.totalMB}MB (${ram.percent}%)\n`;
+            body += `│ ◎ *Commands:* ${totalCmds}\n`;
+            body += `│ ◎ *Node:* ${process.version}\n`;
+            body += `│ ◎ *Platform:* ${platform}\n`;
+            body += `│ ◎ *OS:* ${process.platform} ${process.arch}\n`;
+            body += `╰──────────────\n`;
 
-            caption += `🕒 *Updated:* ${new Date().toLocaleString()}\n`;
-            caption += `🔧 *Use* \`${PREFIX}setsetting\` *to change settings*`;
+            body += `\n🕒 *Updated:* ${new Date().toLocaleString()}\n`;
+            body += `\n🐺 *POWERED BY ${(global.OWNER_NAME || 'SILENTW0LF').toUpperCase()} TECH* 🐺`;
 
-            const imagePath = getMenuLocalFile();
+            // ── Combine and send ──────────────────────────────────────────
+            const fullText = createReadMoreEffect(fadedHeader, body);
+            const media = await getMenuImageBuffer();
 
-            if (imagePath) {
-                const isGif = imagePath.endsWith('.gif');
-                const imageBuffer = fs.readFileSync(imagePath);
-                await sock.sendMessage(chatId, {
-                    image: imageBuffer,
-                    caption: caption,
-                    mimetype: isGif ? 'image/gif' : 'image/jpeg'
-                }, { quoted: msg });
+            if (media) {
+                if (media.type === 'gif' && media.mp4Buffer) {
+                    await sock.sendMessage(chatId, {
+                        video: media.mp4Buffer,
+                        gifPlayback: true,
+                        caption: fullText,
+                        mimetype: 'video/mp4'
+                    }, { quoted: fkontak });
+                } else {
+                    await sock.sendMessage(chatId, {
+                        image: media.buffer,
+                        caption: fullText,
+                        mimetype: 'image/jpeg'
+                    }, { quoted: fkontak });
+                }
             } else {
-                await sock.sendMessage(chatId, { text: caption }, { quoted: msg });
+                await sock.sendMessage(chatId, { text: fullText }, { quoted: fkontak });
             }
 
         } catch (error) {
