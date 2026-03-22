@@ -135,12 +135,12 @@ export default {
                     `╭─⌈ 💬 *ANTI-CHAT* ⌋\n` +
                     `├⊷ Status: ${status}\n` +
                     `\n` +
-                    `├⊷ on\n` +
-                    `├⊷ off\n` +
-                    `├⊷ action delete/warn/kick\n` +
-                    `├⊷ restrict @user\n` +
-                    `├⊷ unrestrict @user\n` +
-                    `├⊷ list\n` +
+                    `├⊷ antichat on\n` +
+                    `├⊷ antichat off\n` +
+                    `├⊷ antichat action delete/warn/kick\n` +
+                    `├⊷ antichat restrict @user\n` +
+                    `├⊷ antichat unrestrict @user\n` +
+                    `├⊷ antichat list\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
