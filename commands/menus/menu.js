@@ -1657,6 +1657,7 @@ case 1: {
 │  • createuser
 │  • createpanel
 │  • cpanelmenu
+│  • paystackmenu
 │
 ╰─⊷
 
@@ -2975,6 +2976,7 @@ case 3: {
 │ createuser
 │ createpanel
 │ cpanelmenu
+│ paystackmenu
 └───────────────`,
 `┌──⌈ \`AUTOMATION\` ⌋
 │ autoread
@@ -3935,6 +3937,7 @@ case 4: {
 │  • createuser
 │  • createpanel
 │  • cpanelmenu
+│  • paystackmenu
 │
 ╰─⊷
 
@@ -5731,6 +5734,7 @@ case 5: {
 │  • createuser
 │  • createpanel
 │  • cpanelmenu
+│  • paystackmenu
 │
 ╰─⊷
 
@@ -6777,6 +6781,7 @@ case 6: {
 > │ createuser
 > │ createpanel
 > │ cpanelmenu
+> │ paystackmenu
 > └───────────────`,
 `> ┌──⌈ \`SUDO\` ⌋
 > │ addsudo
@@ -8571,6 +8576,7 @@ case 7: {
 │ createuser
 │ createpanel
 │ cpanelmenu
+│ paystackmenu
 └───────────────`,
 `┌──⌈ \`SUDO\` ⌋
 │ addsudo
@@ -9323,6 +9329,7 @@ case 9: {
 │  • createuser
 │  • createpanel
 │  • cpanelmenu
+│  • paystackmenu
 │
 ╰─⊷
 
