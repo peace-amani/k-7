@@ -873,6 +873,32 @@ _loadConfigCache('antispam_config', {}).then(config => {
 globalThis.reloadConfigCaches = reloadConfigCaches;
 async function reloadConfigCaches() {
     try {
+        // Re-run JSON-to-DB migrations now that the real phone-number bot_id is set.
+        // migrateJSONToConfig is INSERT-OR-IGNORE, so existing entries are never overwritten.
+        // This promotes any JSON-file settings that were only stored under 'default' into
+        // the phone-number-scoped rows, so they persist correctly after this restart.
+        const _migrationFiles = [
+            { file: './bot_mode.json', key: 'bot_mode' },
+            { file: './bot_settings.json', key: 'bot_settings' },
+            { file: './prefix_config.json', key: 'prefix_config' },
+            { file: './owner.json', key: 'owner_data' },
+            { file: './whitelist.json', key: 'whitelist' },
+            { file: './blocked_users.json', key: 'blocked_users' },
+            { file: './data/welcome_data.json', key: 'welcome_data' },
+            { file: './data/autoViewConfig.json', key: 'autoview_config' },
+            { file: './data/autoReactConfig.json', key: 'autoreact_config' },
+            { file: './data/member_detection.json', key: 'member_detection' },
+            { file: './data/antiviewonce/config.json', key: 'antiviewonce_config' },
+            { file: './data/viewonce_messages/history.json', key: 'antiviewonce_history' },
+            { file: './data/status_detection_logs.json', key: 'status_detection_logs' },
+            { file: './anticall.json', key: 'anticall_config' },
+            { file: './autoread_settings.json', key: 'autoread_config' },
+            { file: './disp_settings.json', key: 'disp_config' },
+        ];
+        for (const { file, key } of _migrationFiles) {
+            await supabaseDb.migrateJSONToConfig(file, key).catch(() => {});
+        }
+
         _cache_owner_data = await _loadConfigCache('owner_data', {});
         _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: '.' });
         _cache_bot_settings = await _loadConfigCache('bot_settings', {});
@@ -920,7 +946,9 @@ async function reloadConfigCaches() {
             process.env.PREFIX = prefixCache;
         }
 
-    } catch {}
+    } catch (err) {
+        UltraCleanLogger.warning(`⚠️ Config reload error: ${err.message}`);
+    }
 }
 
 // ====== SECTION 9: SPEED & RATE-LIMIT CONSTANTS ======
