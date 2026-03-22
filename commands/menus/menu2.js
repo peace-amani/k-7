@@ -38,6 +38,7 @@ export default {
       { name: 'logomenu', icon: '🎨', desc: 'Logo design studio' },
       { name: 'mediamenu', icon: '🔄', desc: 'Media conversion' },
       { name: 'musicmenu', icon: '🎵', desc: 'Music & audio' },
+      { name: 'cpanelmenu', icon: '🖥️', desc: 'Pterodactyl panel commands' },
       { name: 'ownermenu', icon: '👑', desc: 'Owner controls' },
       { name: 'securitymenu', icon: '🛡️', desc: 'Security & hacking' },
       { name: 'stalkermenu', icon: '🕵️', desc: 'Stalker commands' },

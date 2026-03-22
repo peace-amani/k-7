@@ -1649,6 +1649,17 @@ case 1: {
 │
 ╰─⊷
 
+╭─⊷ *🖥️ CPANEL*
+│
+│  • setlink
+│  • setkey
+│  • nestconfig
+│  • createuser
+│  • createpanel
+│  • cpanelmenu
+│
+╰─⊷
+
 ╭─⊷ *👥 SUDO*
 │
 │  • addsudo
@@ -2957,6 +2968,14 @@ case 3: {
 │ sudodebug
 │ linksudo
 └───────────────`,
+`┌──⌈ \`CPANEL\` ⌋
+│ setlink
+│ setkey
+│ nestconfig
+│ createuser
+│ createpanel
+│ cpanelmenu
+└───────────────`,
 `┌──⌈ \`AUTOMATION\` ⌋
 │ autoread
 │ autotyping
@@ -3905,6 +3924,17 @@ case 4: {
 │  • disk
 │  • hostip
 │  • findcommands
+│
+╰─⊷
+
+╭─⊷ *🖥️ CPANEL*
+│
+│  • setlink
+│  • setkey
+│  • nestconfig
+│  • createuser
+│  • createpanel
+│  • cpanelmenu
 │
 ╰─⊷
 
@@ -5693,6 +5723,17 @@ case 5: {
 │
 ╰─⊷
 
+╭─⊷ *🖥️ CPANEL*
+│
+│  • setlink
+│  • setkey
+│  • nestconfig
+│  • createuser
+│  • createpanel
+│  • cpanelmenu
+│
+╰─⊷
+
 ╭─⊷ *👥 SUDO*
 │
 │  • addsudo
@@ -6728,6 +6769,14 @@ case 6: {
 > │ latestupdates
 > │ panel
 > │ debugchat
+> └───────────────`,
+`> ┌──⌈ \`CPANEL\` ⌋
+> │ setlink
+> │ setkey
+> │ nestconfig
+> │ createuser
+> │ createpanel
+> │ cpanelmenu
 > └───────────────`,
 `> ┌──⌈ \`SUDO\` ⌋
 > │ addsudo
@@ -8515,6 +8564,14 @@ case 7: {
 │ panel
 │ debugchat
 └───────────────`,
+`┌──⌈ \`CPANEL\` ⌋
+│ setlink
+│ setkey
+│ nestconfig
+│ createuser
+│ createpanel
+│ cpanelmenu
+└───────────────`,
 `┌──⌈ \`SUDO\` ⌋
 │ addsudo
 │ delsudo
@@ -9255,6 +9312,17 @@ case 9: {
 │  • profilepic
 │  • viewer
 │  • lastseen
+│
+╰─⊷
+
+╭─⊷ *🖥️ CPANEL*
+│
+│  • setlink
+│  • setkey
+│  • nestconfig
+│  • createuser
+│  • createpanel
+│  • cpanelmenu
 │
 ╰─⊷
 
