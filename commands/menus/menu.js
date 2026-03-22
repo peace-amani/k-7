@@ -45,13 +45,17 @@ const CACHE_TTL = 10 * 60 * 1000;
 
 async function getMenuMedia() {
   const now = Date.now();
+  // Custom images (set by .smi) live in data/ so they survive bot updates.
+  // Fall back to the git-tracked default in commands/menus/media/.
+  const customGif = path.join(process.cwd(), 'data', 'wolfbot_menu_custom.gif');
+  const customImg = path.join(process.cwd(), 'data', 'wolfbot_menu_custom.jpg');
   const gifPath1 = path.join(__dirname, "media", "wolfbot.gif");
   const gifPath2 = path.join(__dirname, "../media/wolfbot.gif");
   const imgPath1 = path.join(__dirname, "media", "wolfbot.jpg");
   const imgPath2 = path.join(__dirname, "../media/wolfbot.jpg");
 
-  const gifPath = fs.existsSync(gifPath1) ? gifPath1 : fs.existsSync(gifPath2) ? gifPath2 : null;
-  const imgPath = fs.existsSync(imgPath1) ? imgPath1 : fs.existsSync(imgPath2) ? imgPath2 : null;
+  const gifPath = fs.existsSync(customGif) ? customGif : fs.existsSync(gifPath1) ? gifPath1 : fs.existsSync(gifPath2) ? gifPath2 : null;
+  const imgPath = fs.existsSync(customImg) ? customImg : fs.existsSync(imgPath1) ? imgPath1 : fs.existsSync(imgPath2) ? imgPath2 : null;
 
   if (gifPath) {
     if (!_cachedMenuGif || (now - _cachedMenuImageTime > CACHE_TTL)) {

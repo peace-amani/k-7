@@ -53,6 +53,8 @@ function getMenuStyle() {
 
 function getMenuLocalFile() {
     const candidates = [
+        path.join(process.cwd(), 'data', 'wolfbot_menu_custom.gif'),
+        path.join(process.cwd(), 'data', 'wolfbot_menu_custom.jpg'),
         path.join(__dirname, '../menus/media/wolfbot.gif'),
         path.join(__dirname, '../menus/media/wolfbot.jpg'),
         path.join(__dirname, '../media/wolfbot.gif'),
@@ -80,9 +82,12 @@ function getMenuImageStatus() {
     const data = _readMenuImageConfig();
     const localFile = getMenuLocalFile();
     const fileName = localFile ? path.basename(localFile) : null;
+    const isCustomFile = localFile &&
+        (localFile.includes('wolfbot_menu_custom.jpg') || localFile.includes('wolfbot_menu_custom.gif'));
 
     if (!data) {
-        return localFile ? `Custom (no source info) • ${fileName}` : 'Default';
+        if (!localFile || !isCustomFile) return 'Default';
+        return `Custom (no source info) • ${fileName}`;
     }
 
     // New format: { source, url, updatedAt }

@@ -249,12 +249,14 @@ export default {
 
       console.log(`✅ Media downloaded: ${fileSizeMB}MB, type: ${contentType}`);
 
-      const mediaDir = path.join(__dirname, "media");
-      const wolfbotImgPath = path.join(mediaDir, "wolfbot.jpg");
-      const wolfbotGifPath = path.join(mediaDir, "wolfbot.gif");
-      const backupDir = path.join(mediaDir, "backups");
+      // Custom images are stored in data/ (git-ignored) so they survive bot updates.
+      // The git-tracked commands/menus/media/wolfbot.jpg remains as the default fallback.
+      const dataDir = path.join(process.cwd(), 'data');
+      const wolfbotImgPath = path.join(dataDir, "wolfbot_menu_custom.jpg");
+      const wolfbotGifPath = path.join(dataDir, "wolfbot_menu_custom.gif");
+      const backupDir = path.join(dataDir, "menu_backups");
 
-      if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -301,10 +303,8 @@ export default {
       try { invalidateMenuImageCache(); } catch {}
       try { invalidateMenuHelperCache(); } catch {}
 
-      // Persist the source info so ?getsettings can show the real source
+      // Persist the source info so .getsettings can show the real source
       try {
-        const dataDir = path.join(__dirname, '../../data');
-        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
         const actualUrl = hasUrl ? args[0] : null;
         const source = hasUrl ? 'URL' : (hasReplyPerson ? 'Profile pic' : sourceLabel);
         fs.writeFileSync(

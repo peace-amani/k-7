@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import axios from "axios";
 import { invalidateMenuImageCache } from "./menu.js";
 import { invalidateMenuHelperCache } from "../../lib/menuHelper.js";
 
@@ -13,108 +12,89 @@ export default {
   description: "Restore default menu image or from backup",
   async execute(sock, m, args) {
     const jid = m.key.remoteJid;
-    
-    // Check if user is bot owner
+
     const isOwner = m.sender === global.owner || m.sender === process.env.OWNER_NUMBER;
     if (!isOwner) {
-      await sock.sendMessage(jid, { 
-        text: "❌ Owner only!" 
-      }, { quoted: m });
+      await sock.sendMessage(jid, { text: "❌ Owner only!" }, { quoted: m });
       return;
     }
+
+    // Custom images live in data/ (git-ignored) so they survive bot updates.
+    const dataDir = path.join(process.cwd(), 'data');
+    const customImgPath = path.join(dataDir, "wolfbot_menu_custom.jpg");
+    const customGifPath = path.join(dataDir, "wolfbot_menu_custom.gif");
+    const backupDir = path.join(dataDir, "menu_backups");
+
+    // The git-tracked default image (always exists after a fresh update)
+    const defaultImgPath = path.join(__dirname, "media", "wolfbot.jpg");
 
     let statusMsg;
 
     try {
-      const mediaDir = path.join(__dirname, "media");
-      const backupDir = path.join(mediaDir, "backups");
-      const wolfbotPath = path.join(mediaDir, "wolfbot.jpg");
-      const wolfbotGifPath = path.join(mediaDir, "wolfbot.gif");
-      
-      // Your default menu image URL
-      const defaultImageUrl = "https://i.ibb.co/Gvkt4q9d/Chat-GPT-Image-Feb-21-2026-12-47-33-AM.png";
-
-      // If no arguments, restore to default image from URL
+      // ── Restore to default (no args) ───────────────────────────────────
       if (args.length === 0) {
-        statusMsg = await sock.sendMessage(jid, { 
-          text: "🔄 Downloading default image..." 
-        }, { quoted: m });
+        const hasCustom = fs.existsSync(customImgPath) || fs.existsSync(customGifPath);
 
-        try {
-          // Download default image from URL
-          const response = await axios({
-            method: 'GET',
-            url: defaultImageUrl,
-            responseType: 'arraybuffer',
-            timeout: 20000,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
-
-          await sock.sendMessage(jid, { 
-            text: "🔄 Downloading default image... ✅\n💾 Saving...",
-            edit: statusMsg.key 
-          });
-
-          const imageBuffer = Buffer.from(response.data);
-
-          // Create directories if they don't exist
-          if (!fs.existsSync(mediaDir)) {
-            fs.mkdirSync(mediaDir, { recursive: true });
+        if (!hasCustom) {
+          // Already on the default — nothing to do
+          const defaultBuf = fs.existsSync(defaultImgPath) ? fs.readFileSync(defaultImgPath) : null;
+          if (defaultBuf) {
+            await sock.sendMessage(jid, {
+              image: defaultBuf,
+              caption: `ℹ️ *Already on default image.*\n\nUse ${global.prefix}menu to see it.`
+            }, { quoted: m });
+          } else {
+            await sock.sendMessage(jid, { text: "ℹ️ Already on default image." }, { quoted: m });
           }
-          if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-          }
-
-          // Create backup of current image if it exists
-          if (fs.existsSync(wolfbotPath)) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const backupPath = path.join(backupDir, `wolfbot-backup-before-reset-${timestamp}.jpg`);
-            try {
-              fs.copyFileSync(wolfbotPath, backupPath);
-              console.log(`💾 Backup created: ${backupPath}`);
-            } catch (backupError) {
-              console.log("⚠️ Could not create backup");
-            }
-          }
-
-          // Remove any GIF menu image when restoring default
-          try { if (fs.existsSync(wolfbotGifPath)) fs.unlinkSync(wolfbotGifPath); } catch {}
-
-          // Save the default image
-          fs.writeFileSync(wolfbotPath, imageBuffer);
-          try { invalidateMenuImageCache(); } catch {}
-          try { invalidateMenuHelperCache(); } catch {}
-          
-          console.log(`✅ Default menu image restored from URL`);
-
-          // Get the restored image for preview
-          const restoredImageBuffer = fs.readFileSync(wolfbotPath);
-          
-          // Edit with final success message
-          await sock.sendMessage(jid, { 
-            image: restoredImageBuffer,
-            caption: `✅ *Default Menu Restored!*\n\nUse ${global.prefix}menu to see it.`,
-            edit: statusMsg.key 
-          });
-
-        } catch (downloadError) {
-          await sock.sendMessage(jid, { 
-            text: "❌ Failed to download default image",
-            edit: statusMsg.key 
-          });
           return;
+        }
+
+        statusMsg = await sock.sendMessage(jid, { text: "🔄 Restoring default menu image..." }, { quoted: m });
+
+        // Back up the current custom files before removing them
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+
+        if (fs.existsSync(customGifPath)) {
+          try { fs.copyFileSync(customGifPath, path.join(backupDir, `wolfbot-backup-${timestamp}.gif`)); } catch {}
+          try { fs.unlinkSync(customGifPath); } catch {}
+        }
+        if (fs.existsSync(customImgPath)) {
+          try { fs.copyFileSync(customImgPath, path.join(backupDir, `wolfbot-backup-${timestamp}.jpg`)); } catch {}
+          try { fs.unlinkSync(customImgPath); } catch {}
+        }
+
+        // Also clear the menuimage.json source record
+        try {
+          const menuJsonPath = path.join(dataDir, 'menuimage.json');
+          if (fs.existsSync(menuJsonPath)) fs.unlinkSync(menuJsonPath);
+        } catch {}
+
+        try { invalidateMenuImageCache(); } catch {}
+        try { invalidateMenuHelperCache(); } catch {}
+
+        console.log(`✅ Custom menu image removed — falling back to default`);
+
+        const defaultBuf = fs.existsSync(defaultImgPath) ? fs.readFileSync(defaultImgPath) : null;
+        if (defaultBuf) {
+          await sock.sendMessage(jid, {
+            image: defaultBuf,
+            caption: `✅ *Default Menu Restored!*\n\nUse ${global.prefix}menu to see it.`,
+            edit: statusMsg.key
+          });
+        } else {
+          await sock.sendMessage(jid, {
+            text: `✅ *Default Menu Restored!*\n\nUse ${global.prefix}menu to see it.`,
+            edit: statusMsg.key
+          });
         }
         return;
       }
 
-      // If argument is "list" or "backups", show available backups
+      // ── List backups ────────────────────────────────────────────────────
       if (args[0] === 'list' || args[0] === 'backups') {
         if (!fs.existsSync(backupDir)) {
-          await sock.sendMessage(jid, { 
-            text: "❌ No backups found!" 
-          }, { quoted: m });
+          await sock.sendMessage(jid, { text: "❌ No backups found!" }, { quoted: m });
           return;
         }
 
@@ -125,38 +105,30 @@ export default {
           .slice(0, 10);
 
         if (backupFiles.length === 0) {
-          await sock.sendMessage(jid, { 
-            text: "📁 No backups found!" 
-          }, { quoted: m });
+          await sock.sendMessage(jid, { text: "📁 No backups found!" }, { quoted: m });
           return;
         }
 
         let backupList = `📁 *Backups* (${backupFiles.length})\n\n`;
-        
         backupFiles.forEach((file, index) => {
           const filePath = path.join(backupDir, file);
           const stats = fs.statSync(filePath);
           const size = (stats.size / 1024 / 1024).toFixed(2);
           const isGif = file.endsWith('.gif');
-          
           backupList += `${index + 1}. ${isGif ? '🎞️' : '🖼️'} ${file}\n`;
           backupList += `   📏 ${size}MB\n\n`;
         });
-
         backupList += `💡 ${global.prefix}restoremenuimage <number>`;
 
         await sock.sendMessage(jid, { text: backupList }, { quoted: m });
         return;
       }
 
-      // If specific backup number is provided
+      // ── Restore from specific backup number ─────────────────────────────
       const index = parseInt(args[0]) - 1;
-      
-      // Check if backup directory exists
+
       if (!fs.existsSync(backupDir)) {
-        await sock.sendMessage(jid, { 
-          text: "❌ No backups found!" 
-        }, { quoted: m });
+        await sock.sendMessage(jid, { text: "❌ No backups found!" }, { quoted: m });
         return;
       }
 
@@ -166,36 +138,30 @@ export default {
         .reverse();
 
       if (backupFiles.length === 0) {
-        await sock.sendMessage(jid, { 
-          text: "❌ No backups found!" 
-        }, { quoted: m });
+        await sock.sendMessage(jid, { text: "❌ No backups found!" }, { quoted: m });
         return;
       }
 
       if (isNaN(index) || index < 0 || index >= backupFiles.length) {
-        await sock.sendMessage(jid, { 
-          text: `❌ Invalid! Use 1-${backupFiles.length}` 
-        }, { quoted: m });
+        await sock.sendMessage(jid, { text: `❌ Invalid! Use 1-${backupFiles.length}` }, { quoted: m });
         return;
       }
 
       const backupToRestore = backupFiles[index];
       const backupPath = path.join(backupDir, backupToRestore);
-      
-      statusMsg = await sock.sendMessage(jid, { 
-        text: `🔄 Restoring backup...` 
-      }, { quoted: m });
-
       const isGifBackup = backupToRestore.endsWith('.gif');
 
+      statusMsg = await sock.sendMessage(jid, { text: `🔄 Restoring backup...` }, { quoted: m });
+
+      // Remove whichever custom file isn't being restored, set the one that is
       if (isGifBackup) {
-        try { if (fs.existsSync(wolfbotPath)) fs.unlinkSync(wolfbotPath); } catch {}
-        fs.copyFileSync(backupPath, wolfbotGifPath);
+        try { if (fs.existsSync(customImgPath)) fs.unlinkSync(customImgPath); } catch {}
+        fs.copyFileSync(backupPath, customGifPath);
       } else {
-        try { if (fs.existsSync(wolfbotGifPath)) fs.unlinkSync(wolfbotGifPath); } catch {}
-        fs.copyFileSync(backupPath, wolfbotPath);
+        try { if (fs.existsSync(customGifPath)) fs.unlinkSync(customGifPath); } catch {}
+        fs.copyFileSync(backupPath, customImgPath);
       }
-      
+
       try { invalidateMenuImageCache(); } catch {}
       try { invalidateMenuHelperCache(); } catch {}
       console.log(`✅ Menu ${isGifBackup ? 'GIF' : 'image'} restored from backup: ${backupToRestore}`);
@@ -204,16 +170,10 @@ export default {
 
     } catch (error) {
       console.error("❌ [RESTOREMENUIMAGE] ERROR:", error);
-      
       if (statusMsg) {
-        await sock.sendMessage(jid, { 
-          text: "❌ Restore failed",
-          edit: statusMsg.key 
-        });
+        await sock.sendMessage(jid, { text: "❌ Restore failed", edit: statusMsg.key });
       } else {
-        await sock.sendMessage(jid, { 
-          text: "❌ Restore failed" 
-        }, { quoted: m });
+        await sock.sendMessage(jid, { text: "❌ Restore failed" }, { quoted: m });
       }
     }
   },
