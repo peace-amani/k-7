@@ -41,7 +41,27 @@ const CONVERSATIONS_DIR = path.join(DATA_DIR, 'conversations');
 // numbers on the same host don't share state.
 
 function getBotId() {
-  return supabase.getConfigBotId ? supabase.getConfigBotId() : 'default';
+  // Try the database-stored ID first
+  const dbId = supabase.getConfigBotId ? supabase.getConfigBotId() : 'default';
+  if (dbId && dbId !== 'default') {
+    const candidate = path.join(DATA_DIR, `chatbot_config_${dbId}.json`);
+    if (fs.existsSync(candidate)) return dbId;
+  }
+  // Fallback: use the owner's phone number from globals (covers LID-vs-phone mismatch)
+  const ownerNum = (global.OWNER_CLEAN_NUMBER || global.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
+  if (ownerNum) {
+    const candidate = path.join(DATA_DIR, `chatbot_config_${ownerNum}.json`);
+    if (fs.existsSync(candidate)) return ownerNum;
+  }
+  // Last resort: scan data/chatbot/ for any existing config file
+  try {
+    const files = fs.readdirSync(DATA_DIR).filter(f => f.startsWith('chatbot_config_') && f.endsWith('.json'));
+    if (files.length > 0) {
+      const match = files[0].replace('chatbot_config_', '').replace('.json', '');
+      return match;
+    }
+  } catch {}
+  return ownerNum || dbId || 'default';
 }
 
 // Return the path to the config JSON file for this bot instance.
