@@ -64,7 +64,7 @@ export default {
 ├─⊷ *${PREFIX}listadminusers*
 │  └⊷ List all admin users with a Demote ALL button
 │
-├─⊷ *${PREFIX}demoteall*
+├─⊷ *${PREFIX}demoteadminusers*
 │  └⊷ Demote all admins except the main admin
 │
 ╰─⊷

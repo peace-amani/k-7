@@ -68,7 +68,7 @@ export default {
                                 name: 'quick_reply',
                                 buttonParamsJson: JSON.stringify({
                                     display_text: '⬇️ DemoteAdminUsers',
-                                    id: `${PREFIX}demoteall`
+                                    id: `${PREFIX}demoteadminusers`
                                 })
                             }
                         ]
@@ -78,7 +78,7 @@ export default {
             }
 
             await sock.sendMessage(jid, {
-                text: `${text}\n\n⬇️ *Demote all* → ${PREFIX}demoteall`
+                text: `${text}\n\n⬇️ *Demote all* → ${PREFIX}demoteadminusers`
             }, { quoted: msg });
 
         } catch (err) {

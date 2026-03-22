@@ -1,7 +1,7 @@
 import { listUsers, updateUser, isConfigured } from '../../lib/cpanel.js';
 
 export default {
-    name: 'demoteall',
+    name: 'demoteadminusers',
     alias: ['demotealladmins', 'removeadmins'],
     category: 'cpanel',
     desc: 'Demote all panel admins except the main admin',
