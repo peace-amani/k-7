@@ -1,46 +1,18 @@
-import { createRequire } from 'module';
 import axios from 'axios';
-import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { isButtonModeEnabled } from '../../lib/buttonMode.js';
-import { setMusicSession } from '../../lib/musicSession.js';
-import { xwolfSearch } from '../../lib/xwolfApi.js';
-import { downloadAudioWithFallback } from '../../lib/audioDownloader.js';
 
-const require = createRequire(import.meta.url);
-let giftedBtns;
-try { giftedBtns = require('gifted-btns'); } catch (e) {}
+// https://apis.davidcyril.name.ng/play?query=<song>
+// Returns: { status, result: { title, video_url, thumbnail, duration, views, published, download_url } }
 
-// ── David Cyril API — metadata + URL resolver ─────────────────────────────
-async function davidcyrilPlayMeta(query) {
-  try {
-    const url = `https://apis.davidcyril.name.ng/play?query=${encodeURIComponent(query)}`;
-    const res  = await axios.get(url, { timeout: 15000 });
-    const data = res.data;
-    if (!data?.status || !data?.result?.video_url) return null;
-    const { title, video_url, thumbnail, duration } = data.result;
-    return { title, thumbnail, duration, videoUrl: video_url };
-  } catch {
-    return null;
-  }
-}
-
-// ── Search fallback: yt-search ────────────────────────────────────────────
-async function ytsSearch(query, limit = 5) {
-  try {
-    const { videos } = await yts(query);
-    if (!videos?.length) return [];
-    return videos.slice(0, limit).map(v => ({
-      id:           v.videoId,
-      title:        v.title,
-      channelTitle: v.author?.name || '',
-      duration:     v.timestamp   || '',
-      thumbnail:    v.thumbnail   || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`
-    }));
-  } catch {
-    return [];
-  }
+async function davidCyrilPlay(query) {
+  const res = await axios.get('https://apis.davidcyril.name.ng/play', {
+    params: { query },
+    timeout: 20000
+  });
+  const r = res.data?.result;
+  if (!res.data?.status || !r?.download_url) throw new Error(res.data?.message || 'No result from API');
+  return r;
 }
 
 export default {
@@ -51,165 +23,83 @@ export default {
 
   async execute(sock, m, args, prefix) {
     const jid = m.key.remoteJid;
-    const p = prefix || '.';
-    const quotedText = m.quoted?.text?.trim() || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim() || '';
+    const p   = prefix || '/';
+    const quotedText = m.quoted?.text?.trim()
+      || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim()
+      || '';
 
-    const flags = { list: args.includes('list') || args.includes('search') };
-    const queryArgs = args.filter(a => !['list', 'search'].includes(a));
-    let searchQuery = queryArgs.length > 0 ? queryArgs.join(' ') : quotedText;
+    const query = args.join(' ').trim() || quotedText;
 
-    if (!searchQuery && !flags.list) {
+    if (!query) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎵 *PLAY COMMAND* ⌋\n│\n├─⊷ *${p}play <song name>*\n│  └⊷ Download audio\n├─⊷ *${p}play <YouTube URL>*\n│  └⊷ Download from link\n├─⊷ *${p}play list <query>*\n│  └⊷ Search and list results\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🎵 *PLAY* ⌋\n├─⊷ *${p}play <song name>*\n├─⊷ *${p}play <YouTube URL>*\n├─⊷ Reply a message and send *${p}play*\n╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`
       }, { quoted: m });
     }
 
-    console.log(`🎵 [PLAY] Query: "${searchQuery}"`);
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
+    console.log(`🎵 [PLAY] Query: "${query}"`);
 
     try {
-      // ── List mode ────────────────────────────────────────────────────────
-      if (flags.list) {
-        const listQuery = searchQuery || args.join(' ');
-        let items = await xwolfSearch(listQuery, 10);
-        if (!items.length) items = await ytsSearch(listQuery, 10);
-        if (!items.length) {
-          await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-          return sock.sendMessage(jid, { text: `❌ No results found for "${listQuery}"` }, { quoted: m });
-        }
-        let listText = `🔍 *Search Results:* "${listQuery}"\n\n`;
-        items.forEach((v, i) => {
-          const ytUrl = `https://youtube.com/watch?v=${v.id}`;
-          listText += `${i + 1}. ${v.title}\n   👤 ${v.channelTitle || 'Unknown'}\n   ⏱️ ${v.duration || 'N/A'}\n   📺 ${p}play ${ytUrl}\n\n`;
-        });
-        await sock.sendMessage(jid, { text: listText }, { quoted: m });
-        await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-        return;
-      }
+      // ── 1. Fetch metadata + download URL from David Cyril ────────────────
+      const track = await davidCyrilPlay(query);
+      const { title, video_url, thumbnail, duration, download_url } = track;
 
-      // ── Step 1: resolve search → YouTube URL + metadata ──────────────────
-      // Priority: David Cyril → xwolfSearch → yt-search
-      const isUrl = /^https?:\/\//i.test(searchQuery);
-      let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
-
-      if (!isUrl) {
-        console.log(`🎵 [PLAY] Trying David Cyril...`);
-        const dc = await davidcyrilPlayMeta(searchQuery);
-
-        if (dc?.videoUrl) {
-          if (dc.title)     videoInfo.title     = dc.title;
-          if (dc.thumbnail) videoInfo.thumbnail = dc.thumbnail;
-          if (dc.duration)  videoInfo.duration  = dc.duration;
-          searchQuery = dc.videoUrl;
-          console.log(`✅ [PLAY] David Cyril: "${dc.title}" → ${dc.videoUrl}`);
-        } else {
-          console.log(`🎵 [PLAY] David Cyril failed, trying xwolfSearch...`);
-          let items = await xwolfSearch(searchQuery, 5);
-
-          if (!items.length) {
-            console.log(`🎵 [PLAY] xwolfSearch empty, trying yt-search...`);
-            items = await ytsSearch(searchQuery, 5);
-          }
-
-          if (items.length) {
-            const top = items[0];
-            videoInfo = {
-              title:        top.title       || searchQuery,
-              channelTitle: top.channelTitle || '',
-              duration:     top.duration    || '',
-              thumbnail:    top.thumbnail   || `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
-            };
-            searchQuery = `https://youtube.com/watch?v=${top.id}`;
-
-            // Button mode — interactive preview card
-            if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
-              const videos = items.map(v => ({
-                url:       `https://youtube.com/watch?v=${v.id}`,
-                title:     v.title,
-                author:    v.channelTitle || '',
-                duration:  v.duration    || '',
-                videoId:   v.id,
-                thumbnail: v.thumbnail   || `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`
-              }));
-              setMusicSession(jid, { videos, index: 0, type: 'audio' });
-              const buttons = [
-                { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download', id: `${p}songdl` }) }
-              ];
-              if (videos.length > 1) {
-                buttons.push({ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '➡️ Next Result', id: `${p}snext` }) });
-              }
-              try {
-                const msgOpts = {
-                  title:  videoInfo.title.substring(0, 60),
-                  text:   `🎵 *${videoInfo.title}*\n👤 ${videoInfo.channelTitle || 'Unknown'}\n⏱️ ${videoInfo.duration || 'N/A'}\n\n_Result 1 of ${videos.length}_`,
-                  footer: `🐺 ${getBotName()}`,
-                  interactiveButtons: buttons
-                };
-                if (videoInfo.thumbnail) msgOpts.image = { url: videoInfo.thumbnail };
-                await giftedBtns.sendInteractiveMessage(sock, jid, msgOpts);
-                await sock.sendMessage(jid, { react: { text: '🎵', key: m.key } });
-                return;
-              } catch {}
-            }
-          }
-        }
-      } else {
-        // Direct URL — extract thumbnail
-        const videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
-        // Still try David Cyril to get title/metadata for the URL
-        const dc = await davidcyrilPlayMeta(searchQuery);
-        if (dc?.title)     videoInfo.title     = dc.title;
-        if (dc?.thumbnail) videoInfo.thumbnail = dc.thumbnail;
-        if (dc?.duration)  videoInfo.duration  = dc.duration;
-        if (dc?.videoUrl)  searchQuery         = dc.videoUrl;
-      }
-
+      console.log(`✅ [PLAY] Got: "${title}" → ${download_url}`);
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      // ── Step 2: download audio — 4-source fallback chain ─────────────────
-      // Giftedtech → Cobalt → XWolf → XCasper
-      const audioBuffer = await downloadAudioWithFallback(searchQuery);
+      // ── 2. Download the audio file ───────────────────────────────────────
+      const dlRes = await axios.get(download_url, {
+        responseType: 'arraybuffer',
+        timeout: 120000,
+        maxRedirects: 5,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer':    'https://ytshorts.savetube.me/',
+          'Accept':     'audio/mpeg,audio/*;q=0.9,*/*;q=0.8'
+        },
+        validateStatus: s => s >= 200 && s < 400
+      });
 
-      if (!audioBuffer) {
-        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ Download failed. All sources are currently unavailable. Please try again later.` }, { quoted: m });
+      const audioBuffer = Buffer.from(dlRes.data);
+
+      if (audioBuffer.length < 10000) {
+        throw new Error(`Download returned too little data (${audioBuffer.length} bytes)`);
       }
 
-      const trackTitle = videoInfo.title || 'Audio';
-      const quality    = '128kbps';
-      const thumbUrl   = videoInfo.thumbnail;
+      const header = audioBuffer.slice(0, 50).toString('utf8').toLowerCase();
+      if (header.includes('<!doctype') || header.includes('<html')) {
+        throw new Error('CDN returned an HTML page instead of audio — try again later');
+      }
 
-      const sizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
+      const sizeMB = (audioBuffer.length / 1024 / 1024).toFixed(1);
       if (parseFloat(sizeMB) > 50) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-        return sock.sendMessage(jid, { text: `❌ File too large (${sizeMB}MB). Maximum is 50MB.` }, { quoted: m });
+        return sock.sendMessage(jid, { text: `❌ File too large (${sizeMB}MB). Max is 50MB.` }, { quoted: m });
       }
 
+      // ── 3. Fetch thumbnail ───────────────────────────────────────────────
       let thumbnailBuffer = null;
-      if (thumbUrl) {
+      if (thumbnail) {
         try {
-          const tr = await axios.get(thumbUrl, { responseType: 'arraybuffer', timeout: 10000 });
+          const tr = await axios.get(thumbnail, { responseType: 'arraybuffer', timeout: 10000 });
           if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
         } catch {}
       }
 
-      const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
-      const sizeLabel  = `${sizeMB}MB`;
-
+      const cleanTitle  = title.replace(/[^\w\s.-]/gi, '').substring(0, 50);
       const contextInfo = {
         externalAdReply: {
-          title:               trackTitle.substring(0, 60),
-          body:                `🎵 ${videoInfo.channelTitle ? videoInfo.channelTitle + ' | ' : ''}${videoInfo.duration ? '⏱️ ' + videoInfo.duration + ' | ' : ''}${sizeLabel} | ${quality} | Downloaded by ${getBotName()}`,
-          mediaType:           2,
-          thumbnail:           thumbnailBuffer,
-          sourceUrl:           searchQuery,
-          mediaUrl:            searchQuery,
+          title:     title.substring(0, 60),
+          body:      `🎵 ${duration ? '⏱️ ' + duration + ' | ' : ''}${sizeMB}MB | 128kbps | Downloaded by ${getBotName()}`,
+          mediaType: 2,
+          thumbnail: thumbnailBuffer,
+          sourceUrl: video_url,
+          mediaUrl:  video_url,
           renderLargerThumbnail: true
         }
       };
 
+      // ── 4. Send audio + document ─────────────────────────────────────────
       await sock.sendMessage(jid, {
         audio:    audioBuffer,
         mimetype: 'audio/mpeg',
@@ -225,18 +115,20 @@ export default {
         contextInfo: {
           externalAdReply: {
             ...contextInfo.externalAdReply,
-            body: `📄 Document | ${sizeLabel} | Downloaded by ${getBotName()}`
+            body: `📄 Document | ${sizeMB}MB | Downloaded by ${getBotName()}`
           }
         }
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [PLAY] Success: "${trackTitle}" (${sizeLabel})`);
+      console.log(`✅ [PLAY] Sent: "${title}" (${sizeMB}MB)`);
 
-    } catch (error) {
-      console.error('❌ [PLAY] ERROR:', error.message);
+    } catch (err) {
+      console.error(`❌ [PLAY] ${err.message}`);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-      await sock.sendMessage(jid, { text: `❌ Error: ${error.message}` }, { quoted: m });
+      await sock.sendMessage(jid, {
+        text: `❌ Failed: ${err.message}`
+      }, { quoted: m });
     }
   }
 };
