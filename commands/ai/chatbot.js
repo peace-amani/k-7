@@ -31,6 +31,7 @@ import path from 'path';
 import { normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
 // ── Data directory paths ───────────────────────────────────────────────────
 const DATA_DIR         = './data/chatbot';
@@ -600,6 +601,8 @@ export function getChatbotConfig() {
 // Checks the mode setting and any group/DM whitelists.
 export function isChatbotActiveForChat(chatId) {
   const config  = loadConfig();
+  const _resolvedForLog = chatId.endsWith('@lid') ? (globalThis.resolvePhoneFromLid?.(chatId) || 'unresolved') : null;
+  console.log(`[CHATBOT-CHECK] chatId=${chatId}${_resolvedForLog ? ` resolved=${_resolvedForLog}` : ''} mode=${config.mode} allowedDMs=${JSON.stringify(config.allowedDMs)} botId=${getBotId()}`);
   if (config.mode === 'off') return false;
 
   const isGroup = chatId.endsWith('@g.us');
@@ -616,10 +619,27 @@ export function isChatbotActiveForChat(chatId) {
   // If there is a whitelist for DMs, only whitelisted numbers get a response
   if (isDM && allowedDMs.length > 0) {
     const normalized = chatId.split('@')[0].split(':')[0];
-    return allowedDMs.some(dm => {
-      const normDM = dm.split('@')[0].split(':')[0];
-      return normDM === normalized;
-    });
+    // If chatId is a LID (@lid), resolve it to a phone number for whitelist comparison.
+    // Modern WhatsApp delivers DM remoteJid as a LID even when the whitelist stores phone numbers.
+    let resolvedPhone = null;
+    if (chatId.endsWith('@lid')) {
+      const fromGlobal = globalThis.resolvePhoneFromLid?.(chatId);
+      const fromCache  = globalThis.lidPhoneCache?.get(normalized) || globalThis.lidPhoneCache?.get(chatId);
+      const fromStore  = getPhoneFromLid(normalized) || getPhoneFromLid(chatId);
+      const raw = fromGlobal || fromCache || fromStore;
+      if (raw) resolvedPhone = String(raw).replace(/[^0-9]/g, '');
+    }
+    // If we have a resolved phone number, enforce the whitelist
+    if (resolvedPhone || !chatId.endsWith('@lid')) {
+      return allowedDMs.some(dm => {
+        const normDM = dm.split('@')[0].split(':')[0];
+        if (normDM === normalized) return true;
+        if (resolvedPhone && normDM === resolvedPhone) return true;
+        return false;
+      });
+    }
+    // LID couldn't be resolved — fall through to the mode check below.
+    // The user explicitly set a mode, so honour it rather than silently blocking.
   }
 
   // No whitelist — use the mode setting

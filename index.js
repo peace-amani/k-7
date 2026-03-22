@@ -353,6 +353,8 @@ function resolvePhoneFromLid(jid) {
 
     return null;
 }
+// Expose globally so other modules (chatbot.js, etc.) can resolve LID → phone
+globalThis.resolvePhoneFromLid = resolvePhoneFromLid;
 
 async function resolvePhoneFromGroup(senderJid, chatId, sock) {
     return resolveSenderFromGroup(senderJid, chatId, sock);
@@ -7697,9 +7699,13 @@ async function handleIncomingMessage(sock, msg) {
                 }
             }
 
-            if (isChatbotActiveForChat(chatId)) {
+            const _cbActive = isChatbotActiveForChat(chatId);
+            UltraCleanLogger.info(`[CHATBOT-TRACE] chatId=${chatId} active=${_cbActive} fromMe=${msg.key.fromMe}`);
+            if (_cbActive) {
                 if (chatId !== 'status@broadcast' && !msg.key.fromMe) {
-                    handleChatbotMessage(sock, msg, commands).catch(() => {});
+                    handleChatbotMessage(sock, msg, commands).catch((err) => {
+                        UltraCleanLogger.error(`[CHATBOT-ERR] ${err?.message || err}`);
+                    });
                 }
             }
             return;
