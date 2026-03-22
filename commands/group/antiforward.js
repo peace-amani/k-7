@@ -221,15 +221,15 @@ export default {
             return sock.sendMessage(chatId, {
                 text:
                     `╭─⌈ 📤 *ANTI-FORWARD* ⌋\n` +
-                    `├─⊷ Status: ${status}\n` +
-                    `│\n` +
-                    `├─⊷ on warn/delete/kick\n` +
-                    `├─⊷ off\n` +
-                    `├─⊷ sources all/groups/channels/dms\n` +
-                    `├─⊷ maxwarn <n>\n` +
-                    `├─⊷ reset [@user|all]\n` +
-                    `├─⊷ status\n` +
-                    `├─⊷ help\n` +
+                    `─⊷ Status: ${status}\n` +
+                    `\n` +
+                    `─⊷ on warn/delete/kick\n` +
+                    `─⊷ off\n` +
+                    `─⊷ sources all/groups/channels/dms\n` +
+                    `─⊷ maxwarn <n>\n` +
+                    `─⊷ reset [@user|all]\n` +
+                    `─⊷ status\n` +
+                    `─⊷ help\n` +
                     `╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: msg });
         }
@@ -239,22 +239,22 @@ export default {
             return sock.sendMessage(chatId, {
                 text:
                     `╭─⌈ 📤 *ANTI-FORWARD GUIDE* ⌋\n` +
-                    `│\n` +
-                    `├─⊷ *on warn* — Warn sender, track count\n` +
-                    `├─⊷ *on delete* — Delete msg + warn sender\n` +
-                    `├─⊷ *on kick* — Delete + kick after max warns\n` +
-                    `├─⊷ *off* — Disable protection\n` +
-                    `│\n` +
-                    `├─⊷ *sources all* — Block any forward\n` +
-                    `├─⊷ *sources groups* — Forwards from groups only\n` +
-                    `├─⊷ *sources channels* — Forwards from channels only\n` +
-                    `├─⊷ *sources dms* — Forwards from DMs only\n` +
-                    `│  └⊷ Mix: sources groups channels\n` +
-                    `│\n` +
-                    `├─⊷ *maxwarn <n>* — Violations before kick\n` +
-                    `├─⊷ *reset @user* — Clear user warnings\n` +
-                    `├─⊷ *reset all* — Clear all warnings\n` +
-                    `├─⊷ *status* — View current settings\n` +
+                    `\n` +
+                    `─⊷ *on warn* — Warn sender, track count\n` +
+                    `─⊷ *on delete* — Delete msg + warn sender\n` +
+                    `─⊷ *on kick* — Delete + kick after max warns\n` +
+                    `─⊷ *off* — Disable protection\n` +
+                    `\n` +
+                    `─⊷ *sources all* — Block any forward\n` +
+                    `─⊷ *sources groups* — Forwards from groups only\n` +
+                    `─⊷ *sources channels* — Forwards from channels only\n` +
+                    `─⊷ *sources dms* — Forwards from DMs only\n` +
+                    `  ─⊷ Mix: sources groups channels\n` +
+                    `\n` +
+                    `─⊷ *maxwarn <n>* — Violations before kick\n` +
+                    `─⊷ *reset @user* — Clear user warnings\n` +
+                    `─⊷ *reset all* — Clear all warnings\n` +
+                    `─⊷ *status* — View current settings\n` +
                     `╰⊷ *Admins are exempt by default*`
             }, { quoted: msg });
         }
