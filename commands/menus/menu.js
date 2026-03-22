@@ -1499,6 +1499,7 @@ case 1: {
 ┃ ◆ Version: ${botVersion}
 ┃ ◆ Platform: ${deploymentPlatform.name}
 ┃ ◆ Status: ${deploymentPlatform.status}
+┃ ◆ Timezone: ${globalThis._timezone || 'UTC'}
 ┃ ◆ Uptime: ${formatUptime(process.uptime())}
 ┃ ◆ RAM: ${ramUsage.bar} ${ramUsage.percent}%
 ┃ ◆ Memory: ${ramUsage.usedMB}MB / ${ramUsage.totalMB}MB
@@ -2417,6 +2418,7 @@ case 2: {
 ────────────────
 📌 *Prefix:* ${global.prefix || "."}
 📌 *Mode:* ${botMode}
+📌 *Timezone:* ${globalThis._timezone || 'UTC'}
 📌 *Total Commands:* 200+
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
 📌 *Available styles: 1-7*
@@ -5541,6 +5543,7 @@ case 5: {
 │  ├⊷ *Version:* ${botVersion}
 │  ├⊷ *Platform:* ${deploymentPlatform.name}
 │  ├⊷ *Status:* ${deploymentPlatform.status}
+│  ├⊷ *Timezone:* ${globalThis._timezone || 'UTC'}
 │  ├⊷ *Uptime:* ${formatUptime(process.uptime())}
 │  ├⊷ *RAM Usage:* ${ramUsage.percent}%
 │  │  ${ramUsage.bar}
@@ -8378,6 +8381,9 @@ case 7: {
       infoLines.push(`┃ Platform: ${deploymentPlatform.icon} ${deploymentPlatform.name}`);
       infoLines.push(`┃ Status: ${deploymentPlatform.status}`);
     }
+    if ((fieldsStatus && fieldsStatus.timezone) || (!fieldsStatus)) {
+      infoLines.push(`┃ Timezone: ${globalThis._timezone || 'UTC'}`);
+    }
     if ((fieldsStatus && fieldsStatus.uptime) || (!fieldsStatus)) infoLines.push(`┃ Uptime: ${uptimeStr}`);
     if ((fieldsStatus && fieldsStatus.ram) || (!fieldsStatus)) infoLines.push(`┃ RAM: ${memBar} ${memPercentDisplay}%`);
     if ((fieldsStatus && fieldsStatus.usage) || (!fieldsStatus)) infoLines.push(`┃ Memory: ${usedMem}MB / ${totalMem}MB`);
@@ -9104,6 +9110,7 @@ case 9: {
 │  ├⊷ *Version:* ${botVersion9}
 │  ├⊷ *Platform:* ${deploymentPlatform9.name}
 │  ├⊷ *Status:* ${deploymentPlatform9.status}
+│  ├⊷ *Timezone:* ${globalThis._timezone || 'UTC'}
 │  ├⊷ *Uptime:* ${formatUptime9(process.uptime())}
 │  ├⊷ *RAM Usage:* ${ramUsage9.percent}%
 │  │  ${ramUsage9.bar}
