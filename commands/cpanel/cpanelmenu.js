@@ -24,9 +24,9 @@ export default {
       `${header}\n\n` +
       `╭─⊷ *⚙️ SETUP*\n│  • ${PREFIX}setlink\n│  • ${PREFIX}setkey\n│  • ${PREFIX}mysetkey\n╰─⊷\n\n` +
       `╭─⊷ *🏗️ NEST CONFIG*\n│  • ${PREFIX}nestconfig\n╰─⊷\n\n` +
-      `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n│  • ${PREFIX}listadminusers\n│  • ${PREFIX}demoteadminusers\n│  • ${PREFIX}deleteallusers\n╰─⊷\n\n` +
+      `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}makeadmin\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n│  • ${PREFIX}listadminusers\n│  • ${PREFIX}demoteadminusers\n│  • ${PREFIX}deleteallusers\n╰─⊷\n\n` +
       `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}createunlimited\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n│  • ${PREFIX}deleteall\n╰─⊷\n\n` +
-      `╭─⊷ *💳 PAYSTACK*\n│  • ${PREFIX}setpaystackkey\n│  • ${PREFIX}setpayment\n│  • ${PREFIX}prompt\n╰─⊷`;
+      `╭─⊷ *💳 PAYSTACK*\n│  • ${PREFIX}setpaystackkey\n│  • ${PREFIX}setpayment (unli/lim/admin)\n│  • ${PREFIX}prompt\n╰─⊷`;
 
     const buttons = [
       {

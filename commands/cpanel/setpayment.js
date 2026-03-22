@@ -10,7 +10,7 @@ export default {
     name:        'setpayment',
     alias:       ['setprice', 'payprice', 'priceset'],
     category:    'cpanel',
-    description: 'Set prices for limited and unlimited server plans',
+    description: 'Set prices for limited, unlimited and admin plans',
     ownerOnly:   true,
     sudoAllowed: false,
 
@@ -26,17 +26,20 @@ export default {
 
         // ── No args → show current prices ────────────────────────────────────
         if (!args || !args[0]) {
-            const unli = config.unlimitedPrice;
-            const lim  = config.limitedPrice;
+            const unli  = config.unlimitedPrice;
+            const lim   = config.limitedPrice;
+            const admin = config.adminPrice;
 
             const text =
                 `╭─⌈ *💰 PAYMENT PRICES* ⌋\n` +
-                `├─⊷ ♾️ *Unlimited* : KES ${unli > 0 ? unli.toLocaleString() : '❌ Not set'}\n` +
-                `├─⊷ 🖥️ *Limited*   : KES ${lim  > 0 ? lim.toLocaleString()  : '❌ Not set'}\n` +
+                `├─⊷ ♾️ *Unlimited* : KES ${unli  > 0 ? unli.toLocaleString()  : '❌ Not set'}\n` +
+                `├─⊷ 🖥️ *Limited*   : KES ${lim   > 0 ? lim.toLocaleString()   : '❌ Not set'}\n` +
+                `├─⊷ 👑 *Admin*     : KES ${admin > 0 ? admin.toLocaleString() : '❌ Not set'}\n` +
                 `├─⊷\n` +
                 `├─⊷ *Usage:*\n` +
                 `│   ${PREFIX}setpayment unli <amount>\n` +
                 `│   ${PREFIX}setpayment lim <amount>\n` +
+                `│   ${PREFIX}setpayment admin <amount>\n` +
                 `╰⊷ *Powered by ${BOT}*`;
 
             return sock.sendMessage(jid, { text }, { quoted: msg });
@@ -45,10 +48,11 @@ export default {
         const plan   = args[0]?.toLowerCase();
         const amount = Number(args[1]);
 
-        const isUnli = ['unli', 'unlimited', 'unlim'].includes(plan);
-        const isLim  = ['lim', 'limited', 'limit'].includes(plan);
+        const isUnli  = ['unli', 'unlimited', 'unlim'].includes(plan);
+        const isLim   = ['lim', 'limited', 'limit'].includes(plan);
+        const isAdmin = ['admin', 'administrator'].includes(plan);
 
-        if (!isUnli && !isLim) {
+        if (!isUnli && !isLim && !isAdmin) {
             return sock.sendMessage(jid, {
                 text:
                     `╭─⌈ 💰 *SET PAYMENT* ⌋\n` +
@@ -56,6 +60,8 @@ export default {
                     `│  └⊷ Set price for unlimited plan\n` +
                     `├─⊷ *${PREFIX}setpayment lim <amount>*\n` +
                     `│  └⊷ Set price for limited plan\n` +
+                    `├─⊷ *${PREFIX}setpayment admin <amount>*\n` +
+                    `│  └⊷ Set price for admin plan\n` +
                     `╰⊷ Unknown plan: *${plan}*`
             }, { quoted: msg });
         }
@@ -70,17 +76,21 @@ export default {
             }, { quoted: msg });
         }
 
-        if (isUnli) config.unlimitedPrice = amount;
-        if (isLim)  config.limitedPrice   = amount;
+        if (isUnli)  config.unlimitedPrice = amount;
+        if (isLim)   config.limitedPrice   = amount;
+        if (isAdmin) config.adminPrice     = amount;
         savePaymentConfig(config);
+
+        const planLabel = isUnli ? '♾️ Unlimited' : isAdmin ? '👑 Admin' : '🖥️ Limited';
 
         await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
         await sock.sendMessage(jid, {
             text:
                 `╭─⌈ *💰 PRICE UPDATED* ⌋\n` +
-                `├─⊷ ${isUnli ? '♾️ Unlimited' : '🖥️ Limited'} plan set to *KES ${amount.toLocaleString()}*\n` +
+                `├─⊷ ${planLabel} plan set to *KES ${amount.toLocaleString()}*\n` +
                 `├─⊷ ♾️ Unlimited : KES ${config.unlimitedPrice > 0 ? config.unlimitedPrice.toLocaleString() : '❌ Not set'}\n` +
                 `├─⊷ 🖥️ Limited   : KES ${config.limitedPrice   > 0 ? config.limitedPrice.toLocaleString()   : '❌ Not set'}\n` +
+                `├─⊷ 👑 Admin     : KES ${config.adminPrice     > 0 ? config.adminPrice.toLocaleString()     : '❌ Not set'}\n` +
                 `╰⊷ *Powered by ${BOT}*`
         }, { quoted: msg });
     }

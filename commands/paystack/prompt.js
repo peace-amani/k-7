@@ -1,6 +1,6 @@
 import { isPaystackConfigured, initiateCharge, verifyCharge } from '../../lib/paystack.js';
 import { getPlanPrice } from '../../lib/paymentConfig.js';
-import { isConfigured, getUserByEmail, createUser, createServer, usernameFromEmail, generatePassword } from '../../lib/cpanel.js';
+import { isConfigured, getUserByEmail, createUser, createServer, updateUser, usernameFromEmail, generatePassword } from '../../lib/cpanel.js';
 import { getBotName } from '../../lib/botname.js';
 
 const POLL_INTERVAL_MS = 5000;
@@ -39,6 +39,8 @@ export default {
                     `│  └⊷ Pay → create user + unlimited server\n` +
                     `├─⊷ *${PREFIX}prompt <phone> <email> limited*\n` +
                     `│  └⊷ Pay → create user + limited server\n` +
+                    `├─⊷ *${PREFIX}prompt <phone> <email> admin*\n` +
+                    `│  └⊷ Pay → create user + grant admin access\n` +
                     `╰⊷ *Powered by ${BOT}*`
             }, { quoted: msg });
         }
@@ -106,12 +108,17 @@ async function handleManual(sock, msg, args, PREFIX, BOT, jid, phone) {
     await sendPaymentResult(sock, msg, jid, BOT, result, phone, amount, reference);
 }
 
-// ── Provisioning flow: prompt <phone> <email> unlimited|limited ───────────────
+// ── Provisioning flow: prompt <phone> <email> unlimited|limited|admin ─────────
 async function handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone) {
     const email = args[1];
     const planRaw = (args[2] || 'limited').toLowerCase();
-    const plan = ['unli', 'unlimited', 'unlim'].includes(planRaw) ? 'unlimited' : 'limited';
-    const planLabel = plan === 'unlimited' ? '♾️ Unlimited' : '🖥️ Limited';
+    const isAdminPlan = ['admin', 'administrator'].includes(planRaw);
+    const plan = isAdminPlan ? 'admin'
+               : ['unli', 'unlimited', 'unlim'].includes(planRaw) ? 'unlimited'
+               : 'limited';
+    const planLabel = plan === 'unlimited' ? '♾️ Unlimited'
+                    : plan === 'admin'     ? '👑 Admin'
+                    : '🖥️ Limited';
 
     if (!isConfigured()) {
         return sock.sendMessage(jid, {
@@ -121,10 +128,11 @@ async function handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone) {
 
     const price = getPlanPrice(plan);
     if (price <= 0) {
+        const planKey = plan === 'unlimited' ? 'unli' : plan === 'admin' ? 'admin' : 'lim';
         return sock.sendMessage(jid, {
             text:
                 `❌ No price set for *${planLabel}* plan.\n\n` +
-                `Set it first:\n  ${PREFIX}setpayment ${plan === 'unlimited' ? 'unli' : 'lim'} <amount>`
+                `Set it first:\n  ${PREFIX}setpayment ${planKey} <amount>`
         }, { quoted: msg });
     }
 
@@ -154,7 +162,7 @@ async function handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone) {
 
     // ── Payment confirmed — provision account ─────────────────────────────────
     await sock.sendMessage(jid, {
-        text: `✅ *Payment confirmed!* Now provisioning ${planLabel} server for *${email}*...`
+        text: `✅ *Payment confirmed!* Now provisioning ${planLabel} account for *${email}*...`
     }, { quoted: msg });
 
     // Resolve or create user
@@ -190,10 +198,50 @@ async function handleProvisioning(sock, msg, args, PREFIX, BOT, jid, phone) {
         username = user.attributes?.username;
     }
 
-    const userId     = user?.attributes?.id ?? user?.id;
-    const serverName = `${username}'s Server`;
+    const attr   = user?.attributes ?? user;
+    const userId = attr?.id;
 
-    // Create server based on plan
+    // ── Admin plan: grant root_admin ──────────────────────────────────────────
+    if (plan === 'admin') {
+        try {
+            await updateUser(userId, {
+                email:      attr.email,
+                username:   attr.username,
+                first_name: attr.first_name,
+                last_name:  attr.last_name,
+                language:   attr.language || 'en',
+                root_admin: true
+            });
+        } catch (err) {
+            await sock.sendMessage(jid, { react: { text: '❌', key: msg.key } });
+            return sock.sendMessage(jid, {
+                text:
+                    `⚠️ *Payment received, user created, but admin grant failed!*\n` +
+                    `├─⊷ 🔖 Ref     : ${reference}\n` +
+                    `├─⊷ 👤 User    : ${username} (${email})\n` +
+                    `├─⊷ ❌ Error   : ${err.message}\n` +
+                    `╰⊷ Grant manually with *${PREFIX}makeadmin ${email}*`
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
+        return sock.sendMessage(jid, {
+            text:
+                `╭─⌈ *✅ ADMIN PROVISIONED* ⌋\n` +
+                `├─⊷ 📦 *Plan*      : ${planLabel}\n` +
+                `├─⊷ 💰 *Paid*      : KES ${price.toLocaleString()}\n` +
+                `├─⊷ 🔖 *Ref*       : ${reference}\n` +
+                `├─⊷\n` +
+                `├─⊷ 👤 *Username*  : ${username}\n` +
+                `├─⊷ 📧 *Email*     : ${email}\n` +
+                (isNewUser ? `├─⊷ 🔑 *Password*  : ${password}\n` : '') +
+                `├─⊷ 👑 *Role*      : Root Admin\n` +
+                `╰⊷ *Powered by ${BOT}*`
+        }, { quoted: msg });
+    }
+
+    // ── Server plan: create server ────────────────────────────────────────────
+    const serverName = `${username}'s Server`;
     let server;
     try {
         const overrides = plan === 'unlimited' ? { cpu: 0, memory: 0, disk: 0 } : {};

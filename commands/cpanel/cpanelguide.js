@@ -68,6 +68,10 @@ export default {
 ├─⊷ *${PREFIX}demoteadminusers*
 │  └⊷ Demote all admins except the main admin
 │
+├─⊷ *${PREFIX}makeadmin <email or username>*
+│  └⊷ Grant root admin to a panel user
+│  └⊷ Skips gracefully if already admin
+│
 ├─⊷ *${PREFIX}deleteallusers*
 │  └⊷ Delete all users except the main admin
 │
@@ -112,8 +116,12 @@ export default {
 │  └⊷ Set the price for limited server plan (KES)
 │  └⊷ Example: ${PREFIX}setpayment lim 200
 │
+├─⊷ *${PREFIX}setpayment admin <amount>*
+│  └⊷ Set the price for admin access plan (KES)
+│  └⊷ Example: ${PREFIX}setpayment admin 1000
+│
 ├─⊷ *${PREFIX}setpayment* (no args)
-│  └⊷ View current prices for both plans
+│  └⊷ View current prices for all three plans
 │
 ├─⊷ *${PREFIX}prompt <phone> <amount>*
 │  └⊷ Manual STK push — any amount
@@ -127,6 +135,10 @@ export default {
 │  └⊷ STK push → on payment: create user + limited server
 │  └⊷ Uses price set with setpayment lim
 │  └⊷ Limits come from your nestconfig settings
+│
+├─⊷ *${PREFIX}prompt <phone> <email> admin*
+│  └⊷ STK push → on payment: create user + grant root admin
+│  └⊷ Uses price set with setpayment admin
 │
 ╰─⊷`;
 
