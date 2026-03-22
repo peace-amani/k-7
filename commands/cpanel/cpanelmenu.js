@@ -24,7 +24,8 @@ export default {
       `╭─⊷ *⚙️ SETUP*\n│  • ${PREFIX}setlink\n│  • ${PREFIX}setkey\n│  • ${PREFIX}mysetkey\n╰─⊷\n\n` +
       `╭─⊷ *🏗️ NEST CONFIG*\n│  • ${PREFIX}nestconfig\n╰─⊷\n\n` +
       `╭─⊷ *👤 USERS*\n│  • ${PREFIX}createuser\n│  • ${PREFIX}deleteuser\n│  • ${PREFIX}listusers\n│  • ${PREFIX}totalusers\n│  • ${PREFIX}listadminusers\n│  • ${PREFIX}demoteadminusers\n│  • ${PREFIX}deleteallusers\n╰─⊷\n\n` +
-      `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n│  • ${PREFIX}deleteall\n╰─⊷`;
+      `╭─⊷ *🖥️ SERVERS*\n│  • ${PREFIX}createpanel\n│  • ${PREFIX}deletepanel\n│  • ${PREFIX}listpanels\n│  • ${PREFIX}totalpanels\n│  • ${PREFIX}deleteall\n╰─⊷\n\n` +
+      `╭─⊷ *💳 PAYSTACK*\n│  • ${PREFIX}setpaystackkey\n│  • ${PREFIX}prompt\n╰─⊷`;
 
     const buttons = [
       {

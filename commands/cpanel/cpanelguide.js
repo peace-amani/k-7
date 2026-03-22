@@ -89,6 +89,21 @@ export default {
 ├─⊷ *${PREFIX}deleteall*
 │  └⊷ Force-delete every server on the panel
 │
+╰─⊷
+
+╭─⊷ *💳 STEP 5 — PAYSTACK PAYMENTS*
+│
+├─⊷ *${PREFIX}setpaystackkey <sk_live_...>*
+│  └⊷ Set your Paystack secret key
+│  └⊷ Get it: Paystack Dashboard → Settings → API
+│  └⊷ Run without args to view your saved key
+│
+├─⊷ *${PREFIX}prompt <phone> <amount>*
+│  └⊷ Send an M-Pesa STK push to a phone number
+│  └⊷ Phone: 254713046497 / +254... / 0713...
+│  └⊷ Amount in KES — Example: ${PREFIX}prompt 254713046497 100
+│  └⊷ ✅ Bot confirms once payment goes through
+│
 ╰─⊷`;
 
     await sendSubMenu(sock, jid, 'CPanel Guide', commandsText, m, PREFIX);
