@@ -7,6 +7,7 @@ import db from '../../lib/database.js';
 import { getStatusAntideleteInfo } from './antideletestatus.js';
 import { getAntieditInfo } from './antiedit.js';
 import { detectPlatform } from '../../lib/platformDetect.js';
+import { isMusicModeEnabled } from '../../lib/musicMode.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -168,6 +169,42 @@ function getOnlinePresenceState() {
     return `ON (${data.mode || 'online'})`;
 }
 
+function getMusicModeState() {
+    const data = safeReadJSON(path.join(__dirname, '../../data/musicmode.json'));
+    const enabled = (global.MUSIC_MODE === true) || (data?.enabled === true);
+    if (!enabled) return 'OFF';
+    const songCount = (data?.songs?.length || 0);
+    return `ON (${songCount} song${songCount !== 1 ? 's' : ''} in pool)`;
+}
+
+function getChatbotState() {
+    const dataDir = path.join(__dirname, '../../data/chatbot');
+    try {
+        if (!fs.existsSync(dataDir)) return 'OFF';
+        const ownerNum = global.OWNER_CLEAN_NUMBER || global.OWNER_NUMBER || '';
+        let cfgPath = null;
+        if (ownerNum) cfgPath = path.join(dataDir, `chatbot_config_${ownerNum}.json`);
+        if (!cfgPath || !fs.existsSync(cfgPath)) {
+            const files = fs.readdirSync(dataDir).filter(f => f.startsWith('chatbot_config_') && f.endsWith('.json'));
+            if (files.length) cfgPath = path.join(dataDir, files[0]);
+        }
+        if (!cfgPath || !fs.existsSync(cfgPath)) return 'OFF';
+        const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        const mode = cfg.mode || 'off';
+        if (mode === 'off') return 'OFF';
+        const name = cfg.chatbotName || 'W.O.L.F';
+        const model = cfg.preferredModel || 'gpt';
+        const dmCount = (cfg.allowedDMs || []).length;
+        const gcCount = (cfg.allowedGroups || []).length;
+        const wl = [];
+        if (dmCount) wl.push(`${dmCount} DM${dmCount !== 1 ? 's' : ''}`);
+        if (gcCount) wl.push(`${gcCount} group${gcCount !== 1 ? 's' : ''}`);
+        return `${mode.toUpperCase()} | ${name} | ${model}${wl.length ? ` | ${wl.join(', ')}` : ''}`;
+    } catch {
+        return 'Error reading config';
+    }
+}
+
 function getDispState() {
     const data = safeReadJSON(path.join(__dirname, '../../disp_settings.json'));
     if (!data) return 'OFF';
@@ -253,6 +290,8 @@ export default {
             const autoViewStatus = getAutoViewStatusState();
             const autoDownloadStatus = getAutoDownloadStatusState();
             const autoreactStatus = getAutoreactStatusState();
+            const musicMode = getMusicModeState();
+            const chatbotState = getChatbotState();
 
             const anticall = getAnticallState();
             const anticallMsg = getAnticallMessage();
@@ -349,6 +388,11 @@ export default {
             caption += `│ ◎ *Auto View Status:* ${autoViewStatus}\n`;
             caption += `│ ◎ *Auto Download Status:* ${autoDownloadStatus}\n`;
             caption += `│ ◎ *Autoreact Status:* ${autoreactStatus}\n`;
+            caption += `│ ◎ *Music Mode:* ${musicMode}\n`;
+            caption += `└──────────────\n\n`;
+
+            caption += `┌─── *AI / CHATBOT* ───\n`;
+            caption += `│ ◎ *Chatbot:* ${chatbotState}\n`;
             caption += `└──────────────\n\n`;
 
             caption += `┌─── *PROTECTION* ───\n`;
