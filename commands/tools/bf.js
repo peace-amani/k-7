@@ -73,15 +73,9 @@ export default {
       isFemale = femaleNames.some(name => targetName.toLowerCase().includes(name));
       
       console.log(`📋 Processing for: ${targetName} (${targetNumber}) - ${isFemale ? '♀️ Female' : '♂️ Male'}`);
-      
-      // ====== SEND PROCESSING MESSAGE ======
-      const statusMsg = await sock.sendMessage(jid, {
-        text: `💙 *BOYFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `🤵 *Finding boyfriend...*\n` +
-              `⏳ *Processing...*`
-      }, { quoted: m });
-      
+
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
+
       // ====== GET PROFILE PICTURE ======
       let profilePicBuffer = null;
       let profilePicImage = null;
@@ -109,30 +103,8 @@ export default {
         profilePicImage = await loadImage(profilePicBuffer);
         console.log(`✅ Profile picture downloaded: ${profilePicBuffer.length} bytes`);
         
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `💙 *BOYFRIEND PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Getting profile...* ✅\n` +
-                `🤵 *Finding boyfriend...* 🔄\n` +
-                `🎨 *Creating couple picture...*`,
-          edit: statusMsg.key
-        });
-        
       } catch (error) {
         console.log(`⚠️ Profile picture error: ${error.message}`);
-        
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `💙 *BOYFRIEND PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Getting profile...* ⚠️\n` +
-                `🤵 *Finding boyfriend...* 🔄\n` +
-                `🎨 *Creating couple picture...*`,
-          edit: statusMsg.key
-        });
         
         // Create simple avatar
         const canvas = createCanvas(400, 400);
@@ -162,16 +134,6 @@ export default {
       }
       
       // ====== GET RANDOM BOYFRIEND IMAGE ======
-      await sock.sendMessage(jid, {
-        text: `💙 *BOYFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Getting profile...* ✅\n` +
-              `🤵 *Finding boyfriend...* 🔄\n` +
-              `🎨 *Creating couple picture...*`,
-        edit: statusMsg.key
-      });
-      
       let boyfriendImage = null;
       let boyfriendName = "";
       let boyfriendType = "";
@@ -240,12 +202,6 @@ export default {
       }
       
       // ====== CREATE COUPLE PICTURE ======
-      await sock.sendMessage(jid, {
-        text: `💙 *BOYFRIEND PROFILE*\n` +
-              `🎨 *Creating couple picture...* 🔄`,
-        edit: statusMsg.key
-      });
-      
       let finalImageBuffer;
       
       try {
@@ -266,13 +222,6 @@ export default {
       }
       
       // ====== SEND FINAL IMAGE ======
-      await sock.sendMessage(jid, {
-        text: `💙 *BOYFRIEND PROFILE*\n\n` +
-              `🎨 *Creating couple picture...* ✅\n` +
-              `📤 *Sending result...*`,
-        edit: statusMsg.key
-      });
-      
       // Generate random boyfriend personality
       const personalities = [
         "The Handsome Protector 🛡️",
@@ -314,28 +263,13 @@ export default {
         quoted: m
       });
       
-      // Final status update
-      await sock.sendMessage(jid, {
-        text: `✅ *BOYFRIEND CREATED!*\n\n` +
-              `💑 ${targetName} × ${boyfriendName}\n` +
-              `🌟 ${randomPersonality}\n` +
-              `✨ Check the picture above!`,
-        edit: statusMsg.key
-      });
-      
+      await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+
     } catch (error) {
       console.error('❌ [BF] ERROR:', error);
-      
-      const errorMessage = `❌ *PROCESSING FAILED!*\n\n` +
-        `Error: ${error.message}\n\n` +
-        `💡 *How to use:*\n` +
-        `• Reply to ANY message\n` +
-        `• Type \`${PREFIX}bf\`\n` +
-        `• That's it!\n\n` +
-        `📌 *Example:* Reply to this message with \`${PREFIX}bf\``;
-      
+      await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: errorMessage
+        text: `❌ Failed: ${error.message}`
       }, { quoted: m });
     }
   }

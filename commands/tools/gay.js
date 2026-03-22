@@ -70,13 +70,8 @@ export default {
       
       console.log(`📋 Processing for: ${targetName} (${targetNumber})`);
       
-      // ====== SEND PROCESSING MESSAGE ======
-      const statusMsg = await sock.sendMessage(jid, {
-        text: `🏳️‍🌈 *RAINBOW PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `⏳ *Fetching profile...*`
-      }, { quoted: m });
-      
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
+
       // ====== GET PROFILE PICTURE ======
       let profilePicBuffer = null;
       
@@ -102,28 +97,8 @@ export default {
         profilePicBuffer = Buffer.from(response.data);
         console.log(`✅ Profile picture downloaded: ${profilePicBuffer.length} bytes`);
         
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `🏳️‍🌈 *RAINBOW PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Fetching profile...* ✅\n` +
-                `🎨 *Adding rainbow effect...*`,
-          edit: statusMsg.key
-        });
-        
       } catch (error) {
         console.log(`⚠️ Profile picture error: ${error.message}`);
-        
-        // Create default avatar
-        await sock.sendMessage(jid, {
-          text: `🏳️‍🌈 *RAINBOW PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Fetching profile...* ⚠️\n` +
-                `🎨 *Creating rainbow avatar...*`,
-          edit: statusMsg.key
-        });
         
         // Create simple avatar
         const firstLetter = targetName.charAt(0).toUpperCase();
@@ -142,15 +117,6 @@ export default {
       }
       
       // ====== APPLY RAINBOW EFFECT ======
-      await sock.sendMessage(jid, {
-        text: `🏳️‍🌈 *RAINBOW PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Fetching profile...* ✅\n` +
-              `🎨 *Adding rainbow effect...* 🔄`,
-        edit: statusMsg.key
-      });
-      
       let finalImageBuffer;
       
       try {
@@ -166,17 +132,6 @@ export default {
       
       // ====== SEND FINAL IMAGE ======
       await sock.sendMessage(jid, {
-        text: `🏳️‍🌈 *RAINBOW PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Fetching profile...* ✅\n` +
-              `🎨 *Adding rainbow effect...* ✅\n` +
-              `📤 *Sending result...*`,
-        edit: statusMsg.key
-      });
-      
-      // Send the image with reply
-      await sock.sendMessage(jid, {
         image: finalImageBuffer,
         caption: `🌈 *RAINBOW PROFILE PICTURE*\n\n` +
                 `👤 *User:* ${targetName}\n` +
@@ -184,30 +139,15 @@ export default {
                 `🎨 *Effect:* Pride Rainbow Filter\n\n` +
                 `🏳️‍🌈 *Love Wins!* 🏳️‍⚧️\n` +
                 `✨ Use \`${PREFIX}gay\` on others too!`,
-        quoted: m // This makes it reply to the command
+        quoted: m
       });
-      
-      // Final status update
-      await sock.sendMessage(jid, {
-        text: `✅ *RAINBOW EFFECT COMPLETE!*\n\n` +
-              `🌈 Added rainbow to ${targetName}'s profile!\n` +
-              `✨ Image sent as reply above`,
-        edit: statusMsg.key
-      });
+      await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       
     } catch (error) {
       console.error('❌ [GAY] ERROR:', error);
-      
-      const errorMessage = `❌ *PROCESSING FAILED!*\n\n` +
-        `Error: ${error.message}\n\n` +
-        `💡 *How to use:*\n` +
-        `• Reply to ANY message\n` +
-        `• Type \`${PREFIX}gay\`\n` +
-        `• That's it!\n\n` +
-        `📌 *Example:* Reply to this message with \`${PREFIX}gay\``;
-      
+      await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: errorMessage
+        text: `❌ Failed: ${error.message}`
       }, { quoted: m });
     }
   },

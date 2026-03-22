@@ -68,15 +68,9 @@ export default {
       const targetNumber = targetJid.split('@')[0] || 'Unknown';
       
       console.log(`📋 Processing for: ${targetName} (${targetNumber})`);
-      
-      // ====== SEND PROCESSING MESSAGE ======
-      const statusMsg = await sock.sendMessage(jid, {
-        text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `👩 *Finding girlfriend...*\n` +
-              `⏳ *Processing...*`
-      }, { quoted: m });
-      
+
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
+
       // ====== GET PROFILE PICTURE ======
       let profilePicBuffer = null;
       let profilePicImage = null;
@@ -104,30 +98,8 @@ export default {
         profilePicImage = await loadImage(profilePicBuffer);
         console.log(`✅ Profile picture downloaded: ${profilePicBuffer.length} bytes`);
         
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Getting profile...* ✅\n` +
-                `👩 *Finding girlfriend...* 🔄\n` +
-                `🎨 *Creating couple picture...*`,
-          edit: statusMsg.key
-        });
-        
       } catch (error) {
         console.log(`⚠️ Profile picture error: ${error.message}`);
-        
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-                `👤 *User:* ${targetName}\n` +
-                `📱 *Number:* ${targetNumber}\n\n` +
-                `⏳ *Getting profile...* ⚠️\n` +
-                `👩 *Finding girlfriend...* 🔄\n` +
-                `🎨 *Creating couple picture...*`,
-          edit: statusMsg.key
-        });
         
         // Create simple avatar
         const canvas = createCanvas(400, 400);
@@ -156,16 +128,6 @@ export default {
       }
       
       // ====== GET RANDOM GIRL IMAGE ======
-      await sock.sendMessage(jid, {
-        text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Getting profile...* ✅\n` +
-              `👩 *Finding girlfriend...* 🔄\n` +
-              `🎨 *Creating couple picture...*`,
-        edit: statusMsg.key
-      });
-      
       let girlfriendImage = null;
       let girlfriendName = "";
       
@@ -231,16 +193,6 @@ export default {
       }
       
       // ====== CREATE COUPLE PICTURE ======
-      await sock.sendMessage(jid, {
-        text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Getting profile...* ✅\n` +
-              `👩 *Finding girlfriend...* ✅\n` +
-              `🎨 *Creating couple picture...* 🔄`,
-        edit: statusMsg.key
-      });
-      
       let finalImageBuffer;
       
       try {
@@ -255,17 +207,6 @@ export default {
       }
       
       // ====== SEND FINAL IMAGE ======
-      await sock.sendMessage(jid, {
-        text: `💑 *GIRLFRIEND PROFILE*\n\n` +
-              `👤 *User:* ${targetName}\n` +
-              `📱 *Number:* ${targetNumber}\n\n` +
-              `⏳ *Getting profile...* ✅\n` +
-              `👩 *Finding girlfriend...* ✅\n` +
-              `🎨 *Creating couple picture...* ✅\n` +
-              `📤 *Sending result...*`,
-        edit: statusMsg.key
-      });
-      
       // Generate random girlfriend personality
       const personalities = [
         "The Sweet Romantic ❤️",
@@ -296,31 +237,15 @@ export default {
                 `🌟 *Type:* ${randomPersonality}\n\n` +
                 `💕 ${randomQuote}\n` +
                 `✨ Use \`${PREFIX}gf\` to find more girlfriends!`,
-        quoted: m // This makes it reply to the command
+        quoted: m
       });
-      
-      // Final status update
-      await sock.sendMessage(jid, {
-        text: `✅ *GIRLFRIEND CREATED!*\n\n` +
-              `💑 ${targetName} × ${girlfriendName}\n` +
-              `🌟 ${randomPersonality}\n` +
-              `✨ Check the picture above!`,
-        edit: statusMsg.key
-      });
-      
+      await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+
     } catch (error) {
       console.error('❌ [GF] ERROR:', error);
-      
-      const errorMessage = `❌ *PROCESSING FAILED!*\n\n` +
-        `Error: ${error.message}\n\n` +
-        `💡 *How to use:*\n` +
-        `• Reply to ANY message\n` +
-        `• Type \`${PREFIX}gf\`\n` +
-        `• That's it!\n\n` +
-        `📌 *Example:* Reply to this message with \`${PREFIX}gf\``;
-      
+      await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: errorMessage
+        text: `❌ Failed: ${error.message}`
       }, { quoted: m });
     }
   },

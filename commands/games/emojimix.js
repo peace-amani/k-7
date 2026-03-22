@@ -268,9 +268,7 @@ export default {
                         (comboInfo ? `📝 *${comboInfo}*\n\n` : '\n') +
                         `⚡ *Mixing with API...*`;
       
-      const statusMsg = await sock.sendMessage(jid, {
-        text: statusText
-      }, { quoted: m });
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
       // ====== GET EMOJI MIX FROM API ======
       const apiUrl = 'https://iamtkm.vercel.app/tools/emojimix';
@@ -293,12 +291,6 @@ export default {
 
       console.log(`✅ Emoji mix API success: ${emoji1} + ${emoji2} (${response.data.length} bytes)`);
       
-      // ====== UPDATE STATUS ======
-      await sock.sendMessage(jid, {
-        text: `🎭 *Creating ${modeText}...* ✅\n⚡ *Processing image...*`,
-        edit: statusMsg.key
-      });
-
       const imageBuffer = Buffer.from(response.data);
       
       if (makeSticker) {
@@ -360,8 +352,9 @@ export default {
           await sock.sendMessage(jid, {
             sticker: finalSticker
           });
+          await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
           
-          // Success message
+          // Success message (commented out)
         //   const successText = `✅ *WolfBot Sticker Created!*\n\n` +
         //                      `🎭 *Emojis:* ${emoji1} + ${emoji2}\n` +
         //                      `🔤 *Combined:* ${combinedEmoji}\n` +
@@ -404,61 +397,14 @@ export default {
           caption: caption
         });
         
-        // Update status
-        await sock.sendMessage(jid, {
-          text: `✅ *Emoji Mix Complete!*\n\n${emoji1} + ${emoji2}\n\nImage sent successfully`,
-          edit: statusMsg.key
-        });
+        await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       }
 
     } catch (error) {
       console.error('❌ [EMOJIMIX] ERROR:', error);
-      
-      // ====== ERROR HANDLING ======
-      let errorMessage = `❌ *Emoji Mix Failed!*\n\n` +
-                        `🎭 *Attempted:* ${emoji1} + ${emoji2}\n\n`;
-      
-      if (error.response?.status === 404) {
-        errorMessage += `⚠️ *Error:* This emoji combination doesn't work\n\n`;
-        errorMessage += `💡 *Try these instead:*\n`;
-        
-        // Suggest popular combinations
-        Object.entries(popularCombos).forEach(([combo, desc]) => {
-          const [e1, e2] = combo.split('');
-          errorMessage += `• ${PREFIX}emojimix ${e1} ${e2} - ${desc}\n`;
-        });
-        
-      } else if (error.code === 'ETIMEDOUT') {
-        errorMessage += `⚠️ *Error:* Request timeout\n`;
-        errorMessage += `• API is taking too long\n`;
-        errorMessage += `• Try again in a moment\n\n`;
-        errorMessage += `💡 *Quick fix:* ${PREFIX}emojimix 😂 😭`;
-        
-      } else if (error.message.includes('sharp')) {
-        errorMessage += `⚠️ *Error:* Image processing failed\n`;
-        errorMessage += `• Sharp module not installed\n`;
-        errorMessage += `• Install: \`npm install sharp\`\n\n`;
-        errorMessage += `💡 *Without sharp:* ${PREFIX}emojimix 😂 😭 (image only)`;
-        
-      } else if (error.message.includes('node-webpmux')) {
-        errorMessage += `⚠️ *Error:* Sticker metadata failed\n`;
-        errorMessage += `• WebP module not installed\n`;
-        errorMessage += `• Install: \`npm install node-webpmux\`\n\n`;
-        errorMessage += `💡 *Without metadata:* ${PREFIX}emojimix 😂 😭 (image only)`;
-        
-      } else {
-        errorMessage += `⚠️ *Error:* ${error.message || 'Unknown error'}\n\n`;
-        errorMessage += `🔧 *Troubleshooting:*\n`;
-        errorMessage += `1. Check your internet\n`;
-        errorMessage += `2. Try different emojis\n`;
-        errorMessage += `3. Wait 1 minute\n`;
-        errorMessage += `4. Use popular combinations\n\n`;
-        errorMessage += `🎯 *Popular:* ${PREFIX}emojimix 😂 😭`;
-      }
-      
-      // Send error message
+      await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: errorMessage
+        text: `❌ Failed: ${error.message}`
       }, { quoted: m });
     }
   },

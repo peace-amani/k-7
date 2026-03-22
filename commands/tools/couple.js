@@ -554,11 +554,8 @@ export default {
       }
 
       const [person1Jid, person2Jid] = mentions;
-      
-      // Send initial processing message
-      const statusMsg = await sock.sendMessage(jid, {
-       // text: `💑 *CREATING COUPLE PICTURE*\n\n⏳ Fetching profiles...\n\n👤 Person 1: Loading...\n👤 Person 2: Loading...`
-      }, { quoted: m });
+
+      await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
       // Get group metadata for names
       let person1Name = 'Person 1';
@@ -588,37 +585,18 @@ export default {
       let person2Image = null;
       
       try {
-        // Update status for person 1
-        await sock.sendMessage(jid, {
-          //text: `💑 *CREATING COUPLE PICTURE*\n\n⏳ Fetching profiles...\n\n👤 Person 1: ${person1Name} 🔄\n👤 Person 2: Loading...`,
-          edit: statusMsg.key
-        });
-
         // Get person 1 profile
         person1Image = await getProfilePicture(sock, person1Jid, person1Name);
-        
-        // Update status for person 2
-        await sock.sendMessage(jid, {
-         // text: `💑 *CREATING COUPLE PICTURE*\n\n⏳ Fetching profiles...\n\n👤 Person 1: ${person1Name} ✅\n👤 Person 2: ${person2Name} 🔄`,
-          edit: statusMsg.key
-        });
 
         // Get person 2 profile
         person2Image = await getProfilePicture(sock, person2Jid, person2Name);
-        
-        // Update status for processing
-        await sock.sendMessage(jid, {
-         // text: `💑 *CREATING COUPLE PICTURE*\n\n⏳ Fetching profiles... ✅\n\n👤 Person 1: ${person1Name} ✅\n👤 Person 2: ${person2Name} ✅\n\n🎨 Creating couple picture... 🔄`,
-          edit: statusMsg.key
-        });
 
       } catch (error) {
         console.error('Error getting profile pictures:', error);
-        
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         await sock.sendMessage(jid, {
-          text: `❌ *PROFILE FETCH FAILED!*\n\nCould not get profile pictures.\n\nError: ${error.message}`,
-          edit: statusMsg.key
-        });
+          text: `❌ Failed to get profile pictures: ${error.message}`
+        }, { quoted: m });
         return;
       }
 
@@ -637,21 +615,14 @@ export default {
         
       } catch (error) {
         console.error('Error creating couple picture:', error);
-        
+        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         await sock.sendMessage(jid, {
-          text: `❌ *CREATION FAILED!*\n\nCould not create couple picture.\n\nError: ${error.message}`,
-          edit: statusMsg.key
-        });
+          text: `❌ Failed to create couple picture: ${error.message}`
+        }, { quoted: m });
         return;
       }
 
       // ====== SEND FINAL RESULT ======
-      // Update status
-      await sock.sendMessage(jid, {
-        text: `💑 *CREATING COUPLE PICTURE*\n📤 Sending result... 🔄`,
-        edit: statusMsg.key
-      });
-
       // Get random love percentage
       const lovePercentage = Math.floor(Math.random() * 41) + 60; // 60% to 100%
       const loveBar = generateLoveBar(lovePercentage);
@@ -698,21 +669,13 @@ export default {
         quoted: m // Reply to the original message
       });
 
-      // Final success message (don't edit status message, send new one)
-      await sock.sendMessage(jid, {
-        text: `✅ *COUPLE PICTURE SENT!*\n\n` +
-              `💑 Created couple picture for:\n` +
-              `👤 @${person1Jid.split('@')[0]} + 👤 @${person2Jid.split('@')[0]}\n\n` +
-              `💝 Love Score: ${lovePercentage}%\n` +
-              `✨ Check the beautiful picture above!`,
-        mentions: [person1Jid, person2Jid]
-      });
+      await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
     } catch (error) {
       console.error('❌ [COUPLE] ERROR:', error);
-      
+      await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `❌ *FATAL ERROR!*\n\nSomething went wrong.\n\nError: ${error.message}\n\nPlease try again.`
+        text: `❌ Failed: ${error.message}`
       }, { quoted: m });
     }
   }
