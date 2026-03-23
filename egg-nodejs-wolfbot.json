@@ -6,7 +6,7 @@
     "exported_at": "2024-01-01T00:00:00+00:00",
     "name": "Node.js - WolfBot",
     "author": "admin@xwolf.space",
-    "description": "Node.js egg for running WhatsApp bots",
+    "description": "Node.js egg for running WhatsApp bots. Auto-installs WolfBot on server creation.",
     "image": "ghcr.io\/parkervcp\/yolks:nodejs_20",
     "startup": "node --no-warnings --expose-gc --max-old-space-size={{MAX_RAM}} {{BOT_JS_FILE}}",
     "config": {
@@ -17,7 +17,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/bash\napt-get update -y\napt-get install -y git curl\ncd \/mnt\/server\nif [ -f package.json ]; then\n  npm install\nfi",
+            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl\n\ncd \/mnt\/server\n\n# Clone the bot repo if not already present\nif [ -z \"$(ls -A \/mnt\/server)\" ]; then\n  git clone https:\/\/github.com\/7silent-wolf\/silentwolf.git .\nelse\n  echo \"Files already present, skipping clone.\"\nfi\n\n# Install dependencies\nif [ -f package.json ]; then\n  npm install --omit=dev\n  echo \"Dependencies installed.\"\nfi\n\necho \"WolfBot installation complete. Start the server to run.\"",
             "container": "ghcr.io\/parkervcp\/yolks:nodejs_20",
             "entrypoint": "bash"
         }
@@ -29,7 +29,7 @@
             "env_variable": "BOT_JS_FILE",
             "default_value": "index.js",
             "user_viewable": 1,
-            "user_editable": 1,
+            "user_editable": 0,
             "rules": "required|string"
         },
         {
@@ -40,15 +40,6 @@
             "user_viewable": 1,
             "user_editable": 1,
             "rules": "required|numeric|min:256"
-        },
-        {
-            "name": "Git Repo URL",
-            "description": "Optional git repo to clone on install",
-            "env_variable": "GIT_REPO",
-            "default_value": "",
-            "user_viewable": 1,
-            "user_editable": 1,
-            "rules": "nullable|string"
         }
     ]
 }
