@@ -65,6 +65,7 @@
     "@hapi/boom": "^10.0.1",
     "@iamtraction/google-translate": "^2.0.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "adm-zip": "^0.5.16",
     "axios": "^1.13.6",
     "baileys": "^7.0.0-rc.9",
     "better-sqlite3": "^12.8.0",
