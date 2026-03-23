@@ -272,6 +272,7 @@ import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
 import { setActiveCommand, clearActiveCommand, getActiveCommand, buildCommandButtons } from './lib/commandButtons.js';
 import { startScheduler, updateSchedulerSock } from './lib/scheduler.js';
 import { resumeQueueIfPending } from './commands/group/creategroup.js';
+import { resumeExportQueueIfPending } from './commands/group/export.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
 import { migrateWarningsToSupabase } from './lib/warnings-store.js';
 import { detectPlatform } from './lib/platformDetect.js';
@@ -5338,6 +5339,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 globalThis._botConnectionOpenTime = connectionOpenTime;
                 markConnectionOpen(); // start the replay-drain window
                 try { resumeQueueIfPending(sock); } catch {}
+                try { resumeExportQueueIfPending(sock); } catch {}
                 updateWebStatus({ connected: true, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown' });
                 if (connectionStableTimer) clearTimeout(connectionStableTimer);
                 connectionStableTimer = setTimeout(() => {
