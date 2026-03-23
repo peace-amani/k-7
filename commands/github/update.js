@@ -1323,9 +1323,35 @@ const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
 /* -------------------- Configuration -------------------- */
-const UPDATE_ZIP_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy9hcmNoaXZlL3JlZnMvaGVhZHMvbWFpbi56aXA=', 'base64').toString();
-const GIT_REPO_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy5naXQ=', 'base64').toString();
-const OWNER_REPO_URL = "https://github.com/peace-amani/k-7.git";
+// Fallback URLs (original template repo — used only if package.json has no repo URL)
+const _FALLBACK_ZIP_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy9hcmNoaXZlL3JlZnMvaGVhZHMvbWFpbi56aXA=', 'base64').toString();
+const _FALLBACK_GIT_URL = Buffer.from('aHR0cHM6Ly9naXRodWIuY29tL3BlYWNlLWFtYW5pL2stNy5naXQ=', 'base64').toString();
+
+// Resolve the repo base URL from package.json (the user's own repo is listed there).
+// Falls back to the template URL only when package.json has no repository field.
+function _resolveOwnerRepoBase() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    let url = (pkg?.repository?.url || '').trim();
+    url = url.replace(/^git\+/, '').replace(/\.git$/, '');
+    if (url.startsWith('https://') && url.includes('github.com')) return url;
+  } catch {}
+  return null;
+}
+
+function getGitRepoUrl() {
+  const base = _resolveOwnerRepoBase();
+  return base ? `${base}.git` : _FALLBACK_GIT_URL;
+}
+
+function getZipRepoUrl(branch = 'main') {
+  const base = _resolveOwnerRepoBase();
+  return base ? `${base}/archive/refs/heads/${branch}.zip` : _FALLBACK_ZIP_URL;
+}
+
+const GIT_REPO_URL = getGitRepoUrl();
+const UPDATE_ZIP_URL = getZipRepoUrl();
+const OWNER_REPO_URL = GIT_REPO_URL;
 
 // Timeout configurations
 const DOWNLOAD_TIMEOUT = 120000;
@@ -1721,14 +1747,20 @@ async function updateViaGit(cleanAfter = false) {
     await run('git prune --expire=now').catch(() => {});
     await run('git gc --auto').catch(() => {});
     
+    // Resolve the correct repo URL from package.json (user's own repo).
+    const repoUrl = getGitRepoUrl();
+
     try {
-      await run('git remote get-url bot-upstream');
-      // existing upstream remote confirmed
+      const existingUrl = await run('git remote get-url bot-upstream');
+      // If bot-upstream points to the wrong repo, correct it now.
+      if (existingUrl.trim() !== repoUrl) {
+        await run(`git remote set-url bot-upstream ${repoUrl}`);
+      }
     } catch {
-      // adding upstream remote
-      await run(`git remote add bot-upstream ${GIT_REPO_URL}`);
+      // bot-upstream doesn't exist — add it pointing to the user's repo.
+      await run(`git remote add bot-upstream ${repoUrl}`);
     }
-    
+
     // (suppressed)
     await run('git fetch bot-upstream --depth=20 --prune');
     
@@ -2477,7 +2509,7 @@ export default {
         
       } else {
         await editStatus('📥 **Using ZIP update method**\nDownloading latest version...');
-        result = await updateViaZip();
+        result = await updateViaZip(getZipRepoUrl());
         
         await editStatus(`✅ **ZIP Update Complete**\nFiles updated: ${result.fileCount || 0}\nInstalling dependencies...`);
       }
