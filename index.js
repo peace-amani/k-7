@@ -916,7 +916,7 @@ async function reloadConfigCaches() {
         }
 
         _cache_owner_data = await _loadConfigCache('owner_data', {});
-        _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: '.' });
+        _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: DEFAULT_PREFIX });
         _cache_bot_settings = await _loadConfigCache('bot_settings', {});
         _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: 'public' });
         _cache_whitelist = await _loadConfigCache('whitelist', { whitelist: [] });
@@ -927,6 +927,12 @@ async function reloadConfigCaches() {
         _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
         globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
         _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
+
+        // Defensive: treat empty/stale DB rows as if they don't exist.
+        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
+        if (_cache_prefix_config && typeof _cache_prefix_config.prefix === 'undefined' && !_cache_prefix_config.isPrefixless) {
+            _cache_prefix_config = { prefix: DEFAULT_PREFIX };
+        }
 
         // Reload font, antilink & antibug configs with the correct bot ID (they were
         // initially loaded at module startup before login, so bot_id was 'default')
@@ -4818,7 +4824,7 @@ async function runDataMigrations() {
         }
 
         _cache_owner_data = await _loadConfigCache('owner_data', {});
-        _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: '.' });
+        _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: DEFAULT_PREFIX });
         _cache_bot_settings = await _loadConfigCache('bot_settings', {});
         _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: 'public' });
         _cache_whitelist = await _loadConfigCache('whitelist', { whitelist: [] });
@@ -4829,6 +4835,15 @@ async function runDataMigrations() {
         _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
         globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
         _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
+
+        // If bot_mode came back as an empty object (stale DB row), reset to proper default.
+        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
+        BOT_MODE = _cache_bot_mode?.mode || 'public';
+
+        // If prefix_config came back empty/invalid, reset to proper default.
+        if (_cache_prefix_config && typeof _cache_prefix_config.prefix === 'undefined' && !_cache_prefix_config.isPrefixless) {
+            _cache_prefix_config = { prefix: DEFAULT_PREFIX };
+        }
 
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
