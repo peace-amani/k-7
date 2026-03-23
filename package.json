@@ -13,13 +13,13 @@
     "monitor",
     "session-protection"
   ],
-  "homepage": "https://github.com/Silent-Wolf7/Silentwolf#readme",
+  "homepage": "https://github.com/7silent-wolf/silentwolf#readme",
   "bugs": {
-    "url": "https://github.com/Silent-Wolf7/Silentwolf/issues"
+    "url": "https://github.com/7silent-wolf/silentwolf/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Silent-Wolf7/silentwolf.git"
+    "url": "git+https://github.com/7silent-wolf/silentwolf.git"
   },
   "license": "MIT",
   "author": "7silent-wolf",
