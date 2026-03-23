@@ -220,6 +220,15 @@ function getAntispamState() {
     return `${enabled.length} group(s)`;
 }
 
+function getAntiforwardState() {
+    const cfg = globalThis._antiforwardConfig;
+    if (!cfg || typeof cfg !== 'object') return 'Not configured';
+    const entries = Object.values(cfg).filter(v => v?.enabled);
+    if (entries.length === 0) return 'OFF';
+    const modes = [...new Set(entries.map(v => (v.mode || 'warn').toUpperCase()))];
+    return `ON — ${entries.length} group(s) (${modes.join('/')})`;
+}
+
 function getOnlinePresenceState() {
     const data = safeReadJSON(path.join(__dirname, '../../data/presence/config.json'));
     if (!data || !data.enabled) return 'OFF';
@@ -377,6 +386,7 @@ export default {
             const antibug       = getAntibugState();
             const antilink      = getAntilinkState();
             const antispam      = getAntispamState();
+            const antiforward   = getAntiforwardState();
             const onlinePresence = getOnlinePresenceState();
             const dispState     = getDispState();
 
@@ -497,6 +507,7 @@ export default {
             body += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
             body += `│ ◎ *Antilink:* ${antilink}\n`;
             body += `│ ◎ *Antispam:* ${antispam}\n`;
+            body += `│ ◎ *Antiforward:* ${antiforward}\n`;
             body += `│ ◎ *Antibug:* ${antibug}\n`;
             body += `│ ◎ *Antidemote:* ${antidemote}\n`;
             body += `│ ◎ *Antipromote:* ${antipromote}\n`;
