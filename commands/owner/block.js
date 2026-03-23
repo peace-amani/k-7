@@ -26,7 +26,27 @@ async function resolveJidForBlock(sock, rawJid, groupId) {
 }
 
 async function tryBlock(sock, jid) {
-    await sock.updateBlockStatus(jid, 'block');
+    // Method 1: standard Baileys call
+    try {
+        await sock.updateBlockStatus(jid, 'block');
+        return;
+    } catch (e1) {
+        console.log(`[BLOCK] updateBlockStatus failed (${e1?.message}), trying custom IQ...`);
+    }
+
+    // Method 2: custom IQ with <list> wrapper (newer WhatsApp protocol)
+    await sock.query({
+        tag: 'iq',
+        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
+        content: [{
+            tag: 'list',
+            attrs: {},
+            content: [{
+                tag: 'item',
+                attrs: { action: 'block', jid },
+            }],
+        }],
+    });
 }
 
 export default {
