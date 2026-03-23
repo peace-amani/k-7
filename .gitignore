@@ -33,6 +33,7 @@ antisticker.json
 antivideo.json
 autoread_settings.json
 data/
+last_bot_id.json
 viewonce_downloads/
 viewonce_stealth/
 collected_stickers/
