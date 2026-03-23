@@ -1,9 +1,11 @@
 // commands/group/tagadmin.js
 
+import { getBotName } from '../../lib/botname.js';
+
 export default {
   name: 'tagadmin',
   alias: ['tagadmins'],
-  description: 'Tags all admins with a formatted list.',
+  description: 'Tags all admins in the group.',
   execute: async (sock, msg, args, prefix, opts) => {
     const jid = msg.key.remoteJid;
 
@@ -27,36 +29,29 @@ export default {
         return sock.sendMessage(jid, { text: '⚠️ No admins found in this group.' }, { quoted: msg });
       }
 
-      const customMessage = args.length > 0 ? args.join(' ') : '📢 Attention admins!';
+      const customMessage = args.length > 0 ? args.join(' ') : '';
       const groupName = groupMetadata.subject || 'Group';
+      const botName = getBotName();
 
-      let captionText = `${customMessage}\n\n`;
-      captionText += `🏷️ *${groupName}*\n`;
-      captionText += `👑 Total Admins: ${admins.length}\n\n`;
-
-      captionText += '┏━━━━━━━━━━━━━━━━━━━━┓\n';
-      captionText += `┃ 👑 *ADMINS* (${admins.length})\n`;
-      captionText += '┣━━━━━━━━━━━━━━━━━━━━┫\n';
+      let text = `╭─⌈ 👑 *TAG ADMINS* ⌋\n│\n`;
+      if (customMessage) {
+        text += `├─⊷ 📢 ${customMessage}\n│\n`;
+      }
+      text += `├─⊷ 🏷️ *Group:* ${groupName}\n`;
+      text += `├─⊷ 👑 *Admins:* ${admins.length}\n`;
+      text += `│\n`;
 
       admins.forEach((admin, index) => {
-        const paddedNumber = (index + 1).toString().padStart(2, '0');
+        const num = (index + 1).toString().padStart(2, '0');
         const tag = admin.role === 'superadmin' ? '⭐' : '🔰';
-        const name = admin.name.length > 18
-          ? admin.name.substring(0, 15) + '...'
-          : admin.name.padEnd(18, ' ');
-        captionText += `┃ ${paddedNumber}. ${tag} @${name}\n`;
+        text += `├─⊷ ${num}. ${tag} @${admin.id.split('@')[0]}\n`;
       });
 
-      captionText += '┗━━━━━━━━━━━━━━━━━━━━━┛\n\n';
-
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      const dateString = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      captionText += `⏰ Tagged on ${dateString} at ${timeString}`;
+      text += `│\n╰⊷ _Powered by ${botName.toUpperCase()}_`;
 
       const mentionIds = admins.map(a => a.id);
 
-      let profilePicture;
+      let profilePicture = null;
       try {
         profilePicture = await sock.profilePictureUrl(jid, 'image');
       } catch {
@@ -68,12 +63,12 @@ export default {
         const buffer = await response.arrayBuffer();
         await sock.sendMessage(jid, {
           image: Buffer.from(buffer),
-          caption: captionText,
+          caption: text,
           mentions: mentionIds
         }, { quoted: msg });
       } else {
         await sock.sendMessage(jid, {
-          text: captionText,
+          text,
           mentions: mentionIds
         }, { quoted: msg });
       }
