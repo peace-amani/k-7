@@ -847,6 +847,8 @@ globalThis.updateBotModeCache = function(newMode) {
     BOT_MODE = newMode;
     _saveConfigCache('bot_mode', { mode: newMode });
     updateWebStatus({ botMode: newMode });
+    // Also write JSON fallback so getsettings and migration always have current data
+    try { fs.writeFileSync('./bot_mode.json', JSON.stringify({ mode: newMode, setAt: new Date().toISOString() }, null, 2)); } catch {}
 };
 globalThis._fontConfig = { font: 'default' };
 globalThis._antibotConfig = null;
@@ -1392,6 +1394,10 @@ function savePrefixToFile(newPrefix) {
         _cache_prefix_config = config;
         _saveConfigCache('prefix_config', config);
         updateWebStatus({ prefix: isNone ? 'none' : newPrefix });
+
+        // Also write to JSON file — used as migration source if DB is wiped/lost.
+        // This ensures the prefix survives even a full data/ directory wipe.
+        try { fs.writeFileSync('./prefix_config.json', JSON.stringify(config, null, 2)); } catch {}
         
         const settings = {
             prefix: isNone ? '' : newPrefix,
@@ -1404,6 +1410,8 @@ function savePrefixToFile(newPrefix) {
         };
         _cache_bot_settings = settings;
         _saveConfigCache('bot_settings', settings);
+        // Also write bot_settings.json as fallback
+        try { fs.writeFileSync('./bot_settings.json', JSON.stringify(settings, null, 2)); } catch {}
         
         UltraCleanLogger.info(`Prefix settings saved: "${newPrefix}", prefixless: ${isNone}`);
         return true;
