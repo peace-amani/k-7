@@ -9,10 +9,10 @@ const __dirname = path.dirname(__filename);
 
 // ─── Queue config ────────────────────────────────────────────────────────────
 const QUEUE_FILE   = path.join(__dirname, '../../data/groupqueue.json');
-const BATCH_SIZE   = 3;          // members added per tick
+const BATCH_SIZE   = 1;          // members added per tick
 const BATCH_MS     = 10 * 60 * 1000;  // 10 minutes between batches
 const SAFE_LIMIT   = 5;          // if vcf has ≤ this many numbers, add all at once (safe)
-const INITIAL_ADD  = 5;          // members added at group creation time
+const INITIAL_ADD  = 1;          // members added at group creation time
 
 // ─── Queue state (in-memory, backed by file) ─────────────────────────────────
 let _queueTimer = null;
