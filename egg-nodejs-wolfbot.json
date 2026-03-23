@@ -4,9 +4,9 @@
         "version": "PTDL_v1"
     },
     "exported_at": "2024-01-01T00:00:00+00:00",
-    "name": "Node.js - WolfBot",
+    "name": "Node.js - Generic Bot",
     "author": "admin@xwolf.space",
-    "description": "Node.js egg for running WhatsApp bots. Auto-installs WolfBot on server creation.",
+    "description": "Generic Node.js egg. Auto-clones any GitHub repo and installs dependencies on server creation.",
     "image": "ghcr.io\/parkervcp\/yolks:nodejs_20",
     "startup": "node --no-warnings --expose-gc --max-old-space-size={{MAX_RAM}} {{BOT_JS_FILE}}",
     "config": {
@@ -17,15 +17,24 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl\n\ncd \/mnt\/server\n\n# Clone the bot repo if not already present\nif [ -z \"$(ls -A \/mnt\/server)\" ]; then\n  git clone https:\/\/github.com\/7silent-wolf\/silentwolf.git .\nelse\n  echo \"Files already present, skipping clone.\"\nfi\n\n# Install dependencies\nif [ -f package.json ]; then\n  npm install --omit=dev\n  echo \"Dependencies installed.\"\nfi\n\necho \"WolfBot installation complete. Start the server to run.\"",
+            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl\n\ncd \/mnt\/server\n\nif [ -z \"${GIT_REPO}\" ]; then\n  echo \"No GIT_REPO set. Skipping clone. Upload files manually.\"\nelse\n  if [ -z \"$(ls -A \/mnt\/server)\" ]; then\n    git clone ${GIT_REPO} .\n    echo \"Cloned ${GIT_REPO} successfully.\"\n  else\n    echo \"Files already present, skipping clone.\"\n  fi\nfi\n\nif [ -f package.json ]; then\n  npm install --omit=dev\n  echo \"Dependencies installed.\"\nfi\n\necho \"Installation complete. Start the server to run.\"",
             "container": "ghcr.io\/parkervcp\/yolks:nodejs_20",
             "entrypoint": "bash"
         }
     },
     "variables": [
         {
+            "name": "Git Repo URL",
+            "description": "GitHub repo to clone on install. Example: https://github.com/user/repo",
+            "env_variable": "GIT_REPO",
+            "default_value": "",
+            "user_viewable": 1,
+            "user_editable": 0,
+            "rules": "nullable|string"
+        },
+        {
             "name": "Bot JS File",
-            "description": "The main JS file to run",
+            "description": "The main JS file to start the bot",
             "env_variable": "BOT_JS_FILE",
             "default_value": "index.js",
             "user_viewable": 1,
@@ -34,7 +43,7 @@
         },
         {
             "name": "Max RAM MB",
-            "description": "Max old space size for Node.js in MB",
+            "description": "Max memory for Node.js in MB",
             "env_variable": "MAX_RAM",
             "default_value": "1024",
             "user_viewable": 1,
