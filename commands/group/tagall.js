@@ -97,123 +97,97 @@
 
 
 
+import { getBotName } from '../../lib/botname.js';
+
 export default {
   name: 'tagall',
-  description: 'Tags all members with group profile picture.',
-  execute: async (sock, msg, args, metadata) => {
-    const isGroup = msg.key.remoteJid.endsWith('@g.us');
+  description: 'Tags all members in the group.',
+  execute: async (sock, msg, args, prefix, opts) => {
+    const jid = msg.key.remoteJid;
 
-    if (!isGroup) {
-      return sock.sendMessage(msg.key.remoteJid, { text: '❌ This command only works in groups.' }, { quoted: msg });
+    if (!jid.endsWith('@g.us')) {
+      return sock.sendMessage(jid, { text: '❌ This command only works in groups.' }, { quoted: msg });
     }
 
     try {
-      // Get group metadata
-      const groupMetadata = await sock.groupMetadata(msg.key.remoteJid);
+      const groupMetadata = await sock.groupMetadata(jid);
       const participants = groupMetadata.participants;
-      
-      // Get all participants except the bot itself and status accounts
+
       const allParticipants = participants
-        .filter(participant => !participant.id.includes('status') && participant.id !== sock.user.id.split(':')[0] + '@s.whatsapp.net')
-        .map(participant => ({
-          id: participant.id,
-          name: participant.name || participant.notify || participant.id.split('@')[0],
-          admin: participant.admin || 'member'
+        .filter(p => !p.id.includes('status') && p.id !== sock.user.id.split(':')[0] + '@s.whatsapp.net')
+        .map(p => ({
+          id: p.id,
+          name: p.name || p.notify || p.id.split('@')[0],
+          admin: p.admin || null
         }));
 
       if (allParticipants.length === 0) {
-        return sock.sendMessage(msg.key.remoteJid, { text: 'ℹ️ No members to tag.' }, { quoted: msg });
+        return sock.sendMessage(jid, { text: 'ℹ️ No members to tag.' }, { quoted: msg });
       }
 
-      // Get optional custom message from args
-      const customMessage = args.length > 0 ? args.join(' ') : '📢 Attention everyone!';
-      
-      // Separate admins and members
-      const admins = allParticipants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
-      const members = allParticipants.filter(p => p.admin !== 'admin' && p.admin !== 'superadmin');
-      
-      // Create the caption text
-      let captionText = `${customMessage}\n\n`;
-      
-      // Group info
+      const customMessage = args.length > 0 ? args.join(' ') : '';
       const groupName = groupMetadata.subject || 'Group';
-      captionText += `🏷️ *${groupName}*\n`;
-      captionText += `👥 Total: ${allParticipants.length} members\n`;
-      captionText += `\n`;
-      
-      // Top border
-      captionText += "┏━━━━━━━━━━━━━━━━━━━━┓\n";
-      
-      // Admins section
-      if (admins.length > 0) {
-        captionText += `┃ 👑 *ADMINS* (${admins.length})\n`;
-        captionText += "┣━━━━━━━━━━━━━━━━━━━━┫\n";
-        admins.forEach((participant, index) => {
-          const paddedNumber = (index + 1).toString().padStart(2, '0');
-          const name = participant.name.length > 20 ? participant.name.substring(0, 17) + '...' : participant.name.padEnd(20, ' ');
-          captionText += `┃ ${paddedNumber}. @${name}\n`;
-        });
-        if (members.length > 0) {
-          captionText += "┣━━━━━━━━━━━━━━━━━━━━┫\n";
-        }
-      }
-      
-      // Members section
-      if (members.length > 0) {
-        captionText += `┃ 👤 *MEMBERS* (${members.length})\n`;
-        captionText += "┣━━━━━━━━━━━━━━━━━━━━┫\n";
-        members.forEach((participant, index) => {
-          const startNum = admins.length > 0 ? admins.length : 0;
-          const paddedNumber = (startNum + index + 1).toString().padStart(2, '0');
-          const name = participant.name.length > 20 ? participant.name.substring(0, 17) + '...' : participant.name.padEnd(20, ' ');
-          captionText += `┃ ${paddedNumber}. @${name}\n`;
-        });
-      }
-      
-      // Bottom border
-      captionText += "┗━━━━━━━━━━━━━━━━━━━━━┛\n\n";
-      
-      // Footer with timestamp
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      const dateString = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      captionText += `⏰ Tagged on ${dateString} at ${timeString}`;
+      const botName = getBotName();
 
-      // Collect all mention IDs
+      const admins = allParticipants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
+      const members = allParticipants.filter(p => !p.admin);
+
+      let text = `╭⊷ 📢 *TAG ALL*\n│\n`;
+      if (customMessage) {
+        text += `├⊷ 💬 ${customMessage}\n│\n`;
+      }
+      text += `├⊷ 🏷️ *Group:* ${groupName}\n`;
+      text += `├⊷ 👥 *Members:* ${allParticipants.length}\n`;
+      text += `│\n`;
+
+      if (admins.length > 0) {
+        text += `├⊷ 👑 *ADMINS* (${admins.length})\n`;
+        admins.forEach((p, i) => {
+          const num = (i + 1).toString().padStart(2, '0');
+          const tag = p.admin === 'superadmin' ? '⭐' : '🔰';
+          text += `├⊷ ${num}. ${tag} @${p.id.split('@')[0]}\n`;
+        });
+        text += `│\n`;
+      }
+
+      if (members.length > 0) {
+        text += `├⊷ 👤 *MEMBERS* (${members.length})\n`;
+        members.forEach((p, i) => {
+          const num = (admins.length + i + 1).toString().padStart(2, '0');
+          text += `├⊷ ${num}. @${p.id.split('@')[0]}\n`;
+        });
+        text += `│\n`;
+      }
+
+      text += `╰⊷ _Powered by ${botName.toUpperCase()}_`;
+
       const mentionIds = allParticipants.map(p => p.id);
 
-      // Try to get group profile picture
-      let profilePicture;
+      let profilePicture = null;
       try {
-        // Try to fetch profile picture
-        profilePicture = await sock.profilePictureUrl(msg.key.remoteJid, 'image');
-      } catch (err) {
-        console.log('No profile picture found for group, using default...');
+        profilePicture = await sock.profilePictureUrl(jid, 'image');
+      } catch {
         profilePicture = null;
       }
 
-      // Send message with or without profile picture
       if (profilePicture) {
-        // Download the image
         const response = await fetch(profilePicture);
         const buffer = await response.arrayBuffer();
-        
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(jid, {
           image: Buffer.from(buffer),
-          caption: captionText,
+          caption: text,
           mentions: mentionIds
         }, { quoted: msg });
       } else {
-        // Send without image if no profile picture
-        await sock.sendMessage(msg.key.remoteJid, { 
-          text: captionText,
+        await sock.sendMessage(jid, {
+          text,
           mentions: mentionIds
         }, { quoted: msg });
       }
 
     } catch (err) {
       console.error('Tagall error:', err);
-      await sock.sendMessage(msg.key.remoteJid, { text: '❌ Failed to tag members.' }, { quoted: msg });
+      await sock.sendMessage(jid, { text: '❌ Failed to tag members.' }, { quoted: msg });
     }
   },
 };
