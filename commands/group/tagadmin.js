@@ -33,18 +33,18 @@ export default {
       const groupName = groupMetadata.subject || 'Group';
       const botName = getBotName();
 
-      let text = `╭─⌈ 👑 *TAG ADMINS* ⌋\n│\n`;
+      let text = `╭⊷ 👑 *TAG ADMINS*\n│\n`;
       if (customMessage) {
-        text += `├─⊷ 📢 ${customMessage}\n│\n`;
+        text += `├⊷ 📢 ${customMessage}\n│\n`;
       }
-      text += `├─⊷ 🏷️ *Group:* ${groupName}\n`;
-      text += `├─⊷ 👑 *Admins:* ${admins.length}\n`;
+      text += `├⊷ 🏷️ *Group:* ${groupName}\n`;
+      text += `├⊷ 👑 *Admins:* ${admins.length}\n`;
       text += `│\n`;
 
       admins.forEach((admin, index) => {
         const num = (index + 1).toString().padStart(2, '0');
         const tag = admin.role === 'superadmin' ? '⭐' : '🔰';
-        text += `├─⊷ ${num}. ${tag} @${admin.id.split('@')[0]}\n`;
+        text += `├⊷ ${num}. ${tag} @${admin.id.split('@')[0]}\n`;
       });
 
       text += `│\n╰⊷ _Powered by ${botName.toUpperCase()}_`;
