@@ -6,9 +6,9 @@
     "exported_at": "2024-01-01T00:00:00+00:00",
     "name": "Node.js - Generic Bot",
     "author": "admin@xwolf.space",
-    "description": "Generic Node.js egg. Auto-clones any GitHub repo and installs all dependencies on server creation.",
+    "description": "Generic Node.js egg. Installs dependencies on every startup then runs the bot.",
     "image": "ghcr.io\/parkervcp\/yolks:nodejs_20",
-    "startup": "node --no-warnings --expose-gc --max-old-space-size={{MAX_RAM}} {{BOT_JS_FILE}}",
+    "startup": "if [[ -f \/home\/container\/package.json ]]; then \/usr\/local\/bin\/npm install 2>\/dev\/null; fi; \/usr\/local\/bin\/node --no-warnings --expose-gc --max-old-space-size={{MAX_RAM}} \/home\/container\/{{BOT_JS_FILE}}",
     "config": {
         "files": "{}",
         "startup": "{\"done\": \"$\"}",
@@ -17,7 +17,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl python3 make g++ ffmpeg\n\ncd \/mnt\/server\n\nif [ -z \"${GIT_REPO}\" ]; then\n  echo \"No GIT_REPO set. Skipping clone. Upload files manually.\"\nelse\n  if [ -z \"$(ls -A \/mnt\/server)\" ]; then\n    git clone ${GIT_REPO} .\n    echo \"Cloned ${GIT_REPO} successfully.\"\n  else\n    echo \"Files already present, skipping clone.\"\n  fi\nfi\n\nif [ -f package.json ]; then\n  echo \"Installing all dependencies...\"\n  npm install\n  echo \"Installing optional dependencies...\"\n  npm install --include=optional 2>\/dev\/null || true\n  echo \"Ensuring critical packages are present...\"\n  npm install adm-zip better-sqlite3 axios node-fetch 2>\/dev\/null || true\n  echo \"All dependencies installed.\"\nfi\n\necho \"Installation complete. Start the server to run.\"",
+            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl python3 make g++ ffmpeg\n\ncd \/mnt\/server\n\nif [ -z \"${GIT_REPO}\" ]; then\n  echo \"No GIT_REPO set. Skipping clone. Upload files manually.\"\nelse\n  if [ -z \"$(ls -A \/mnt\/server)\" ]; then\n    git clone ${GIT_REPO} .\n    echo \"Cloned ${GIT_REPO} successfully.\"\n  else\n    echo \"Files already present, skipping clone.\"\n  fi\nfi\n\nif [ -f package.json ]; then\n  echo \"Installing all dependencies...\"\n  npm install\n  npm install adm-zip better-sqlite3 axios node-fetch 2>\/dev\/null || true\n  echo \"All dependencies installed.\"\nfi\n\necho \"Installation complete. Start the server to run.\"",
             "container": "ghcr.io\/parkervcp\/yolks:nodejs_20",
             "entrypoint": "bash"
         }
