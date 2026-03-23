@@ -880,12 +880,31 @@ _loadConfigCache('antispam_config', {}).then(config => {
     globalThis._antispamConfig = config || {};
 }).catch(() => { globalThis._antispamConfig = {}; });
 globalThis._antiforwardConfig = null;
+const _ANTIFORWARD_JSON = './data/antiforward.json';
 globalThis._saveAntiforwardConfig = function(data) {
     _saveConfigCache('antiforward_config', data);
+    try {
+        if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true });
+        fs.writeFileSync(_ANTIFORWARD_JSON, JSON.stringify(data, null, 2), 'utf8');
+    } catch {}
 };
-_loadConfigCache('antiforward_config', {}).then(config => {
-    globalThis._antiforwardConfig = config || {};
-}).catch(() => { globalThis._antiforwardConfig = {}; });
+(function _loadAntiforwardEarly() {
+    try {
+        if (fs.existsSync(_ANTIFORWARD_JSON)) {
+            const raw = fs.readFileSync(_ANTIFORWARD_JSON, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                globalThis._antiforwardConfig = parsed;
+                return;
+            }
+        }
+    } catch {}
+    _loadConfigCache('antiforward_config', {}).then(config => {
+        if (!globalThis._antiforwardConfig || Object.keys(globalThis._antiforwardConfig).length === 0) {
+            globalThis._antiforwardConfig = config || {};
+        }
+    }).catch(() => { if (!globalThis._antiforwardConfig) globalThis._antiforwardConfig = {}; });
+})();
 globalThis.reloadConfigCaches = reloadConfigCaches;
 async function reloadConfigCaches() {
     try {
@@ -951,8 +970,19 @@ async function reloadConfigCaches() {
         const antispamData = await _loadConfigCache('antispam_config', {});
         globalThis._antispamConfig = (antispamData && Object.keys(antispamData).length > 0) ? antispamData : (globalThis._antispamConfig || {});
 
-        const antiforwardData = await _loadConfigCache('antiforward_config', {});
-        globalThis._antiforwardConfig = (antiforwardData && Object.keys(antiforwardData).length > 0) ? antiforwardData : (globalThis._antiforwardConfig || {});
+        let antiforwardData = null;
+        try {
+            if (fs.existsSync(_ANTIFORWARD_JSON)) {
+                const _afRaw = fs.readFileSync(_ANTIFORWARD_JSON, 'utf8');
+                const _afParsed = JSON.parse(_afRaw);
+                if (_afParsed && typeof _afParsed === 'object' && Object.keys(_afParsed).length > 0) antiforwardData = _afParsed;
+            }
+        } catch {}
+        if (!antiforwardData) {
+            const _afDb = await _loadConfigCache('antiforward_config', {});
+            if (_afDb && Object.keys(_afDb).length > 0) antiforwardData = _afDb;
+        }
+        globalThis._antiforwardConfig = antiforwardData || globalThis._antiforwardConfig || {};
 
         const tzData = await _loadConfigCache('timezone_config', { timezone: 'UTC' });
         globalThis._timezone = tzData?.timezone || 'UTC';
