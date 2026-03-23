@@ -1,25 +1,27 @@
 import axios from 'axios';
+import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
-import { xcasperAudio } from '../../lib/xcasperApi.js';
+import { keithAudio } from '../../lib/keithApi.js';
 
 export default {
   name: 'yta3',
   aliases: ['wolfyta3', 'yta2'],
-  description: 'Download audio with fallback APIs',
+  description: 'Download audio via Keith API',
   category: 'Downloader',
 
   async execute(sock, m, args, prefix) {
     const jid = m.key.remoteJid;
     const p = prefix || '.';
-    const quotedText = m.quoted?.text?.trim() || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim() || '';
+    const quotedText = m.quoted?.text?.trim()
+      || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim()
+      || '';
 
     let searchQuery = args.length > 0 ? args.join(' ') : quotedText;
 
     if (!searchQuery) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎵 *YTA DOWNLOADER* ⌋\n│\n├─⊷ *${p}yta3 <song name or URL>*\n│  └⊷ Download audio\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🎵 *YTA DOWNLOADER* ⌋\n│\n├─⊷ *${p}yta3 <song name or URL>*\n│  └⊷ Download audio\n├─⊷ *Reply to a text message*\n│  └⊷ Uses replied text as search\n│\n╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`
       }, { quoted: m });
     }
 
@@ -28,54 +30,49 @@ export default {
 
     try {
       const isUrl = /^https?:\/\//i.test(searchQuery);
-      let videoId = '';
-      let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
+      let ytUrl = searchQuery;
+      let videoInfo = { title: searchQuery, duration: '', thumbnail: '' };
 
       if (!isUrl) {
-        const items = await xwolfSearch(searchQuery, 1);
-        if (items.length) {
-          const top = items[0];
-          videoId = top.id;
+        const { videos } = await yts(searchQuery);
+        if (videos?.length) {
+          const top = videos[0];
+          ytUrl = top.url;
           videoInfo = {
-            title:        top.title       || searchQuery,
-            channelTitle: top.channelTitle || '',
-            duration:     top.duration    || '',
-            thumbnail:    `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`
+            title:    top.title     || searchQuery,
+            duration: top.timestamp || '',
+            thumbnail: top.thumbnail || `https://img.youtube.com/vi/${top.videoId}/hqdefault.jpg`
           };
-          searchQuery = `https://youtube.com/watch?v=${top.id}`;
         }
       } else {
-        videoId = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (videoId) videoInfo.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        const vid = searchQuery.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
+        if (vid) videoInfo.thumbnail = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      let audioBuffer = await streamXWolf(searchQuery, 'mp3');
-      if (!audioBuffer) audioBuffer = await xcasperAudio(searchQuery);
+      const audioBuffer = await keithAudio(ytUrl);
+
       if (!audioBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });
       }
-      const trackTitle = videoInfo.title || 'Audio';
-      const quality    = '192kbps';
-      const thumbUrl   = videoInfo.thumbnail;
 
-      const sizeMB = (audioBuffer.length / (1024 * 1024)).toFixed(1);
+      const sizeMB = (audioBuffer.length / 1024 / 1024).toFixed(1);
       if (parseFloat(sizeMB) > 50) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ File too large: ${sizeMB}MB (max 50MB)` }, { quoted: m });
       }
 
       let thumbnailBuffer = null;
-      if (thumbUrl) {
+      if (videoInfo.thumbnail) {
         try {
-          const tr = await axios.get(thumbUrl, { responseType: 'arraybuffer', timeout: 10000 });
+          const tr = await axios.get(videoInfo.thumbnail, { responseType: 'arraybuffer', timeout: 10000 });
           if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
         } catch {}
       }
 
-      const cleanTitle = trackTitle.replace(/[^\w\s.-]/gi, '').substring(0, 50);
+      const cleanTitle = videoInfo.title.replace(/[^\w\s.-]/gi, '').substring(0, 50);
 
       await sock.sendMessage(jid, {
         audio:    audioBuffer,
@@ -84,17 +81,17 @@ export default {
         fileName: `${cleanTitle}.mp3`,
         contextInfo: {
           externalAdReply: {
-            title:               trackTitle.substring(0, 60),
-            body:                `🎵 ${videoInfo.duration ? videoInfo.duration + ' | ' : ''}${quality} | ${sizeMB}MB | Downloaded by ${getBotName()}`,
-            mediaType:           2,
-            thumbnail:           thumbnailBuffer,
+            title:                 videoInfo.title.substring(0, 60),
+            body:                  `🎵 ${videoInfo.duration ? videoInfo.duration + ' | ' : ''}${sizeMB}MB | Downloaded by ${getBotName()}`,
+            mediaType:             2,
+            thumbnail:             thumbnailBuffer,
             renderLargerThumbnail: true
           }
         }
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTA3] Success: ${trackTitle} (${sizeMB}MB) via /stream`);
+      console.log(`✅ [YTA3] Success: ${videoInfo.title} (${sizeMB}MB)`);
 
     } catch (error) {
       console.error('❌ [YTA3] Error:', error.message);
