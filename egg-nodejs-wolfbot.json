@@ -17,7 +17,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl\n\ncd \/mnt\/server\n\nif [ -z \"${GIT_REPO}\" ]; then\n  echo \"No GIT_REPO set. Skipping clone. Upload files manually.\"\nelse\n  if [ -z \"$(ls -A \/mnt\/server)\" ]; then\n    git clone ${GIT_REPO} .\n    echo \"Cloned ${GIT_REPO} successfully.\"\n  else\n    echo \"Files already present, skipping clone.\"\n  fi\nfi\n\nif [ -f package.json ]; then\n  npm install --omit=dev\n  echo \"Dependencies installed.\"\nfi\n\necho \"Installation complete. Start the server to run.\"",
+            "script": "#!\/bin\/bash\n\napt-get update -y\napt-get install -y git curl\n\ncd \/mnt\/server\n\nif [ -z \"${GIT_REPO}\" ]; then\n  echo \"No GIT_REPO set. Skipping clone. Upload files manually.\"\nelse\n  if [ -z \"$(ls -A \/mnt\/server)\" ]; then\n    git clone ${GIT_REPO} .\n    echo \"Cloned ${GIT_REPO} successfully.\"\n  else\n    echo \"Files already present, skipping clone.\"\n  fi\nfi\n\nif [ -f package.json ]; then\n  npm install\n  npm install adm-zip --save\n  echo \"Dependencies installed.\"\nfi\n\necho \"Installation complete. Start the server to run.\"",
             "container": "ghcr.io\/parkervcp\/yolks:nodejs_20",
             "entrypoint": "bash"
         }
