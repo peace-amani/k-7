@@ -2,6 +2,7 @@
 
 export default {
   name: 'tagadmin',
+  alias: ['tagadmins'],
   execute: async (sock, msg, args, prefix, opts) => {
     const jid = msg.key.remoteJid;
     const text = args.join(' ') || '🔔 Calling all group admins...';
