@@ -13,13 +13,13 @@
     "monitor",
     "session-protection"
   ],
-  "homepage": "https://github.com/peace-amani/k-7#readme",
+  "homepage": "https://github.com/7silent-wolf/silentwolf#readme",
   "bugs": {
-    "url": "https://github.com/peace-amani/k-7/issues"
+    "url": "https://github.com/7silent-wolf/silentwolf/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/peace-amani/k-7.git"
+    "url": "git+https://github.com/7silent-wolf/silentwolf.git"
   },
   "license": "MIT",
   "author": "7silent-wolf",
