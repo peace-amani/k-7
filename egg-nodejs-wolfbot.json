@@ -1,0 +1,64 @@
+{
+  "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2024-01-01T00:00:00+00:00",
+  "name": "Node.js - WolfBot",
+  "author": "admin@xwolf.space",
+  "description": "Node.js egg for running WhatsApp bots",
+  "features": null,
+  "docker_images": {
+    "ghcr.io/parkervcp/yolks:nodejs_20": "ghcr.io/parkervcp/yolks:nodejs_20",
+    "ghcr.io/parkervcp/yolks:nodejs_18": "ghcr.io/parkervcp/yolks:nodejs_18",
+    "ghcr.io/parkervcp/yolks:nodejs_22": "ghcr.io/parkervcp/yolks:nodejs_22"
+  },
+  "file_denylist": [],
+  "startup": "node --no-warnings --expose-gc --max-old-space-size={{MAX_RAM}} {{BOT_JS_FILE}}",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\": \"\\$\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\napt-get update -y\napt-get install -y git curl\ncd /mnt/server\nif [ -d .git ]; then\n  git pull\nelse\n  if [ ! -z ${GIT_REPO} ]; then\n    git clone ${GIT_REPO} .\n  fi\nfi\nif [ -f package.json ]; then\n  npm install\nfi",
+      "container": "ghcr.io/parkervcp/yolks:nodejs_20",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Bot JS File",
+      "description": "The main JS file to run",
+      "env_variable": "BOT_JS_FILE",
+      "default_value": "index.js",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Max RAM (MB)",
+      "description": "Max old space size passed to Node.js in MB",
+      "env_variable": "MAX_RAM",
+      "default_value": "1024",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|numeric|min:256",
+      "field_type": "text"
+    },
+    {
+      "name": "Git Repo URL",
+      "description": "Optional: git repo to clone on install",
+      "env_variable": "GIT_REPO",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    }
+  ]
+}

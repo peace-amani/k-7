@@ -12,3 +12,9 @@ id = "PhsGcEe4-QZPNT6wPlADh"
 uri = "file://tostatus.txt"
 type = "text"
 title = "tostatus — Full Code & Documentation"
+
+[[outputs]]
+id = "aeNoAN-97L1lLoVfcVsoO"
+uri = "file://egg-nodejs-wolfbot.json"
+type = "unspecified"
+title = "Node.js WolfBot Pterodactyl Egg"
