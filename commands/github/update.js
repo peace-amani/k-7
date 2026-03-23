@@ -2174,8 +2174,11 @@ async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
       const singleEntry = path.join(extractTo, entries[0]);
       const stat = await fsPromises.stat(singleEntry);
       if (stat.isDirectory()) {
-        root = singleEntry;
-        // root directory found
+        // Rename the extracted folder to a generic name so the source
+        // repo name (e.g. k-7-main) is never exposed in logs or warnings.
+        const renamedRoot = path.join(extractTo, 'wolfbot-update');
+        try { await fsPromises.rename(singleEntry, renamedRoot); } catch {}
+        root = fs.existsSync(renamedRoot) ? renamedRoot : singleEntry;
       }
     }
     

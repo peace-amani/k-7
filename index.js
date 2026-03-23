@@ -1456,6 +1456,17 @@ function loadPrefixFromFiles() {
                 return settings.prefix.trim();
             }
         }
+
+        // Last resort: read prefix_config.json directly from disk.
+        // This ensures the correct prefix is shown in the boot banner even
+        // before the DB finishes loading (e.g. WASM SQLite on slow hosts).
+        try {
+            const raw = fs.readFileSync(PREFIX_CONFIG_FILE, 'utf8');
+            const cfg = JSON.parse(raw);
+            if (cfg.isPrefixless !== undefined) isPrefixless = cfg.isPrefixless;
+            if (cfg.isPrefixless && cfg.prefix === '') return '';
+            if (cfg.prefix && cfg.prefix.trim() !== '') return cfg.prefix.trim();
+        } catch {}
         
     } catch (error) {
         UltraCleanLogger.warning(`Error loading prefix: ${error.message}`);
