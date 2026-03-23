@@ -87,18 +87,35 @@ export default {
       }, { quoted: msg });
     }
 
-    try {
-      console.log(`[BLOCK] Calling updateBlockStatus with: ${target}`);
-      await sock.updateBlockStatus(target, 'block');
-      await delay(1000);
+    // Try phone JID first, then fall back to raw LID (newer WhatsApp protocol)
+    const jidsToTry = [target];
+    if (rawTarget !== target) jidsToTry.push(rawTarget);
+
+    let blocked = false;
+    let lastErr = null;
+
+    for (const jid of jidsToTry) {
+      try {
+        console.log(`[BLOCK] Trying updateBlockStatus with: ${jid}`);
+        await sock.updateBlockStatus(jid, 'block');
+        blocked = true;
+        console.log(`[BLOCK] Success with: ${jid}`);
+        break;
+      } catch (err) {
+        console.error(`[BLOCK] Failed with ${jid}:`, err?.message || err);
+        lastErr = err;
+      }
+    }
+
+    if (blocked) {
+      await delay(500);
       const num = target.split('@')[0];
       await sock.sendMessage(key.remoteJid, {
         text: `🕸️ *Blocked successfully.*\n\n❌ +${num} has been blocked.`,
       }, { quoted: msg });
-    } catch (err) {
-      console.error(`[BLOCK] updateBlockStatus failed for ${target}:`, err?.message || err);
+    } else {
       await sock.sendMessage(key.remoteJid, {
-        text: `⚠️ Block failed.\n\n_Target JID: ${target}_\n_Error: ${err?.message || 'Unknown'}_`,
+        text: `⚠️ Block failed.\n\n_Target: ${target}_\n_Error: ${lastErr?.message || 'Unknown'}_`,
       }, { quoted: msg });
     }
   },
