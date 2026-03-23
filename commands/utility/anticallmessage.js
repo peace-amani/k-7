@@ -56,15 +56,12 @@ export default {
       const newMsg = args.join(' ').trim();
       if (!newMsg) {
         const helpText =
-          `╭⊷ 📞 *ANTICALL MESSAGE*\n│\n` +
-          `├⊷ *Set auto-reply:*\n` +
-          `├⊷ ${prefix}anticallmessage <your text>\n│\n` +
-          `├⊷ *Disable auto-reply:*\n` +
-          `├⊷ ${prefix}anticallmessage off\n│\n` +
-          `├⊷ *View current message:*\n` +
-          `├⊷ ${prefix}anticallmessage view\n│\n` +
-          `├⊷ *Status:* ${s.autoMessage ? '✅ ON' : '❌ OFF'}\n` +
-          (s.autoMessage ? `├⊷ *Message:* ${s.message}\n│\n` : `│\n`) +
+          `╭─⌈ 📞 *ANTICALL MESSAGE* ⌋\n│\n` +
+          `├─⊷ *${prefix}anticallmessage [text]*\n│  └⊷ Set auto-reply message for calls\n` +
+          `├─⊷ *${prefix}anticallmessage off*\n│  └⊷ Disable auto-reply message\n` +
+          `├─⊷ *${prefix}anticallmessage view*\n│  └⊷ View current message\n│\n` +
+          `├─⊷ *Status:* ${s.autoMessage ? '✅ ON' : '❌ OFF'}\n` +
+          (s.autoMessage ? `├─⊷ *Message:* _${s.message.substring(0, 50)}${s.message.length > 50 ? '…' : ''}_\n│\n` : `│\n`) +
           `╰⊷ _Powered by ${ownerName.toUpperCase()} TECH_`;
         return sock.sendMessage(jid, { text: helpText }, { quoted: msg });
       }
@@ -76,12 +73,11 @@ export default {
       saveAntiCall(data);
 
       const reply =
-        `╭⊷ 📞 *ANTICALL MESSAGE*\n│\n` +
-        `├⊷ ✅ *Auto-reply message set!*\n│\n` +
-        `├⊷ *Message:*\n` +
-        `├⊷ _${newMsg}_\n│\n` +
-        `├⊷ This will be sent after every rejected call.\n` +
-        `├⊷ Use *${prefix}anticall enable* to activate anticall.\n│\n` +
+        `╭─⌈ 📞 *ANTICALL MESSAGE* ⌋\n│\n` +
+        `├─⊷ *Auto-reply:* ✅ ON\n` +
+        `├─⊷ *Message:* _${newMsg.substring(0, 50)}${newMsg.length > 50 ? '…' : ''}_\n│\n` +
+        `├─⊷ Sent after every rejected call\n` +
+        `│  └⊷ Use *${prefix}anticall enable* to activate\n│\n` +
         `╰⊷ _Powered by ${ownerName.toUpperCase()} TECH_`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
@@ -89,11 +85,11 @@ export default {
     // ── VIEW ─────────────────────────────────────────────────
     if (sub === 'view') {
       const reply =
-        `╭⊷ 📞 *ANTICALL MESSAGE*\n│\n` +
-        `├⊷ *Status:* ${s.autoMessage ? '✅ Enabled' : '❌ Disabled'}\n│\n` +
+        `╭─⌈ 📞 *ANTICALL MESSAGE* ⌋\n│\n` +
+        `├─⊷ *Auto-reply:* ${s.autoMessage ? '✅ ON' : '❌ OFF'}\n` +
         (s.autoMessage
-          ? `├⊷ *Current message:*\n├⊷ _${s.message}_\n│\n`
-          : `├⊷ No auto-reply message set.\n│\n`) +
+          ? `├─⊷ *Message:* _${s.message.substring(0, 50)}${s.message.length > 50 ? '…' : ''}_\n│\n`
+          : `│  └⊷ No message set\n│\n`) +
         `╰⊷ _Powered by ${ownerName.toUpperCase()} TECH_`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
@@ -106,9 +102,9 @@ export default {
       saveAntiCall(data);
 
       const reply =
-        `╭⊷ 📞 *ANTICALL MESSAGE*\n│\n` +
-        `├⊷ ❌ *Auto-reply disabled.*\n│\n` +
-        `├⊷ No message will be sent after rejected calls.\n│\n` +
+        `╭─⌈ 📞 *ANTICALL MESSAGE* ⌋\n│\n` +
+        `├─⊷ *Auto-reply:* ❌ OFF\n` +
+        `│  └⊷ No message will be sent after rejected calls\n│\n` +
         `╰⊷ _Powered by ${ownerName.toUpperCase()} TECH_`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
