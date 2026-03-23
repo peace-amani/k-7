@@ -161,9 +161,12 @@ async function extractNumbers(sock, m) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function normalizeGroupJid(raw) {
     if (!raw) return null;
-    const clean = raw.trim().replace(/[^0-9@.]/g, '');
-    if (clean.includes('@g.us')) return clean;
-    if (/^\d+$/.test(clean) && clean.length > 10) return clean + '@g.us';
+    const trimmed = raw.trim();
+    // Already a full group JID
+    if (trimmed.endsWith('@g.us')) return trimmed;
+    // Strip everything except digits
+    const digits = trimmed.replace(/[^0-9]/g, '');
+    if (digits.length > 10) return digits + '@g.us';
     return null;
 }
 const react = (sock, m, e) => sock.sendMessage(m.key.remoteJid, { react: { text: e, key: m.key } }).catch(() => {});
