@@ -1,30 +1,44 @@
 import { delay } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
-function resolveToPhoneJid(jid) {
-    if (!jid) return null;
-    if (!jid.endsWith('@lid')) return jid;
-    const lidNum = jid.replace('@lid', '');
-    const phone = (globalThis.lidPhoneCache?.get(lidNum))
-        || getPhoneFromLid(lidNum)
-        || getPhoneFromLid(jid);
-    if (phone) return `${phone}@s.whatsapp.net`;
-    return null;
-}
-
-async function resolveTarget(sock, rawJid, groupId) {
+async function resolveJidForBlock(sock, rawJid, groupId) {
     if (!rawJid) return null;
-    if (!rawJid.endsWith('@lid')) return rawJid;
 
-    const fromCache = resolveToPhoneJid(rawJid);
-    if (fromCache) return fromCache;
+    // Already a phone JID — use as-is
+    if (rawJid.endsWith('@s.whatsapp.net') || rawJid.endsWith('@c.us')) {
+        return rawJid.replace('@c.us', '@s.whatsapp.net');
+    }
 
+    // Not a LID — unknown format
+    if (!rawJid.endsWith('@lid')) {
+        return rawJid;
+    }
+
+    const lidNum = rawJid.split('@')[0];
+
+    // 1. Try lidPhoneCache (fastest)
+    const cached = globalThis.lidPhoneCache?.get(lidNum);
+    if (cached) {
+        console.log(`[BLOCK] LID ${lidNum} → phone cache: ${cached}`);
+        return `${cached}@s.whatsapp.net`;
+    }
+
+    // 2. Try the full resolvePhoneFromLid (uses signalRepository)
+    const resolved = globalThis.resolvePhoneFromLid?.(rawJid);
+    if (resolved) {
+        console.log(`[BLOCK] LID ${lidNum} → resolvePhoneFromLid: ${resolved}`);
+        return `${resolved}@s.whatsapp.net`;
+    }
+
+    // 3. Try group metadata if in a group
     if (groupId) {
         try {
             const metadata = await sock.groupMetadata(groupId);
             const match = metadata.participants.find(p => p.id === rawJid || p.lid === rawJid);
-            if (match?.id && !match.id.endsWith('@lid')) return match.id;
+            if (match?.id && !match.id.endsWith('@lid')) {
+                console.log(`[BLOCK] LID ${lidNum} → group metadata: ${match.id}`);
+                return match.id;
+            }
         } catch {}
     }
 
@@ -33,7 +47,7 @@ async function resolveTarget(sock, rawJid, groupId) {
 
 export default {
   name: 'block',
-  description: 'Block a user (tag/reply in group or auto-block in DM)',
+  description: 'Block a user (tag/reply in group or auto-block the DM contact)',
   category: 'owner',
   async execute(sock, msg, args) {
     const { key, message } = msg;
@@ -51,24 +65,30 @@ export default {
         }, { quoted: msg });
       }
     } else {
+      // In a DM — block whoever this chat is with
       rawTarget = key.remoteJid;
     }
 
-    if (!rawTarget || rawTarget.endsWith('@g.us')) {
+    if (!rawTarget || rawTarget.endsWith('@g.us') || rawTarget.endsWith('@newsletter')) {
       return await sock.sendMessage(key.remoteJid, {
-        text: '⚠️ Cannot block a group.',
+        text: '⚠️ Cannot block a group or newsletter.',
       }, { quoted: msg });
     }
 
-    const target = await resolveTarget(sock, rawTarget, isGroup ? key.remoteJid : null);
+    console.log(`[BLOCK] rawTarget: ${rawTarget}`);
+
+    const target = await resolveJidForBlock(sock, rawTarget, isGroup ? key.remoteJid : null);
+
+    console.log(`[BLOCK] resolved target: ${target}`);
 
     if (!target) {
       return await sock.sendMessage(key.remoteJid, {
-        text: `⚠️ Could not resolve this user's phone number.\n\n_The user's LID is not yet mapped. Ask them to send a message first, then try again._`,
+        text: `⚠️ Could not resolve this contact's phone number.\n\n_Their ID: ${rawTarget}_\n_Ask them to send a message to the bot first, then try again._`,
       }, { quoted: msg });
     }
 
     try {
+      console.log(`[BLOCK] Calling updateBlockStatus with: ${target}`);
       await sock.updateBlockStatus(target, 'block');
       await delay(1000);
       const num = target.split('@')[0];
@@ -76,9 +96,9 @@ export default {
         text: `🕸️ *Blocked successfully.*\n\n❌ +${num} has been blocked.`,
       }, { quoted: msg });
     } catch (err) {
-      console.error('[BLOCK] Error:', err?.message || err);
+      console.error(`[BLOCK] updateBlockStatus failed for ${target}:`, err?.message || err);
       await sock.sendMessage(key.remoteJid, {
-        text: `⚠️ Failed to block.\n\n_Error: ${err?.message || 'Unknown'}_`,
+        text: `⚠️ Block failed.\n\n_Target JID: ${target}_\n_Error: ${err?.message || 'Unknown'}_`,
       }, { quoted: msg });
     }
   },
