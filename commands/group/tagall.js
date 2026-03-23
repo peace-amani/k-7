@@ -97,7 +97,7 @@
 
 
 
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 export default {
   name: 'tagall',
@@ -127,8 +127,6 @@ export default {
 
       const customMessage = args.length > 0 ? args.join(' ') : '';
       const groupName = groupMetadata.subject || 'Group';
-      const botName = getBotName();
-
       const admins = allParticipants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
       const members = allParticipants.filter(p => !p.admin);
 
@@ -159,7 +157,7 @@ export default {
         text += `│\n`;
       }
 
-      text += `╰⊷ _Powered by ${botName.toUpperCase()}_`;
+      text += `╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`;
 
       const mentionIds = allParticipants.map(p => p.id);
 

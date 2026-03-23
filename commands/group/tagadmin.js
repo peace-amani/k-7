@@ -1,6 +1,6 @@
 // commands/group/tagadmin.js
 
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 export default {
   name: 'tagadmin',
@@ -31,8 +31,6 @@ export default {
 
       const customMessage = args.length > 0 ? args.join(' ') : '';
       const groupName = groupMetadata.subject || 'Group';
-      const botName = getBotName();
-
       let text = `╭⊷ 👑 *TAG ADMINS*\n│\n`;
       if (customMessage) {
         text += `├⊷ 📢 ${customMessage}\n│\n`;
@@ -47,7 +45,7 @@ export default {
         text += `├⊷ ${num}. ${tag} @${admin.id.split('@')[0]}\n`;
       });
 
-      text += `│\n╰⊷ _Powered by ${botName.toUpperCase()}_`;
+      text += `│\n╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`;
 
       const mentionIds = admins.map(a => a.id);
 
