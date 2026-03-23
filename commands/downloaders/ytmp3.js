@@ -6,6 +6,7 @@ import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 import { xcasperAudio } from '../../lib/xcasperApi.js';
+import { keithAudio } from '../../lib/keithApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
@@ -89,6 +90,7 @@ export default {
 
       let audioBuffer = await streamXWolf(searchQuery, 'mp3');
       if (!audioBuffer) audioBuffer = await xcasperAudio(searchQuery);
+      if (!audioBuffer) audioBuffer = await keithAudio(searchQuery);
       if (!audioBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
         return sock.sendMessage(jid, { text: `❌ Download failed. Please try again later.` }, { quoted: m });

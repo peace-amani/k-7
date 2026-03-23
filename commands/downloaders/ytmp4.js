@@ -6,28 +6,11 @@ import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { xwolfSearch, streamXWolf } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
+import { keithVideo } from '../../lib/keithApi.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
-
-const GIFTED_BASE = 'https://api.giftedtech.co.ke/api/download';
-const GIFTED_ENDS = ['ytv', 'dlmp4', 'ytmp4'];
-
-async function giftedFallback(ytUrl) {
-  for (const ep of GIFTED_ENDS) {
-    try {
-      const res = await axios.get(`${GIFTED_BASE}/${ep}`, {
-        params: { apikey: 'gifted', url: ytUrl },
-        timeout: 30000
-      });
-      if (res.data?.success && res.data?.result?.download_url) {
-        return { data: res.data.result, endpoint: ep };
-      }
-    } catch {}
-  }
-  return null;
-}
 
 async function downloadBuffer(url, timeout = 120000) {
   const res = await axios({
@@ -123,18 +106,7 @@ export default {
 
       let videoBuffer = await streamXWolf(searchQuery, 'mp4', 150000);
       if (!videoBuffer) videoBuffer = await xcasperVideo(searchQuery);
-
-      // Gifted fallback — handles VEVO and other content xcasper/xwolf can't reach
-      if (!videoBuffer) {
-        console.log(`[YTMP4] xcasper failed, trying Gifted fallback...`);
-        const gifted = await giftedFallback(searchQuery);
-        if (gifted) {
-          if (gifted.data.title) videoInfo.title = gifted.data.title;
-          if (gifted.data.thumbnail) videoInfo.thumbnail = gifted.data.thumbnail;
-          videoBuffer = await downloadBuffer(gifted.data.download_url);
-          console.log(`[YTMP4] Gifted/${gifted.endpoint} success`);
-        }
-      }
+      if (!videoBuffer) videoBuffer = await keithVideo(searchQuery);
 
       if (!videoBuffer) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });

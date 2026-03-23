@@ -4,10 +4,9 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { proxyFetch } from '../../lib/proxyFetch.js';
 import { xwolfSearch } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
+import { keithVideo } from '../../lib/keithApi.js';
 
 const XCASPER_BASE = 'https://apis.xcasper.space/api/downloader';
-const GIFTED_BASE  = 'https://api.giftedtech.co.ke/api/download';
-const GIFTED_ENDS  = ['ytv', 'dlmp4', 'ytmp4'];
 
 // ── xcasper ytmp6 (PRIMARY) ────────────────────────────────────
 async function xcasperYtmp6(ytUrl) {
@@ -38,22 +37,6 @@ async function xcasperYtmp6(ytUrl) {
         console.log(`[mp4/ytmp6] error: ${e.message}`);
         return null;
     }
-}
-
-// ── Gifted API fallback chain ─────────────────────────────────
-async function giftedFallback(ytUrl) {
-    for (const ep of GIFTED_ENDS) {
-        try {
-            const res = await axios.get(`${GIFTED_BASE}/${ep}`, {
-                params: { apikey: 'gifted', url: ytUrl },
-                timeout: 30000
-            });
-            if (res.data?.success && res.data?.result?.download_url) {
-                return { data: res.data.result, endpoint: ep };
-            }
-        } catch {}
-    }
-    return null;
 }
 
 async function downloadBuffer(url, timeout = 120000) {
@@ -139,17 +122,10 @@ export default {
                 videoBuffer = await xcasperVideo(ytUrl);
             }
 
-            // ── Step 4: LAST RESORT — Gifted API (handles VEVO & others xcasper blocks) ──
+            // ── Step 4: LAST RESORT — Keith API (apiskeith.top) ──
             if (!videoBuffer) {
-                console.log(`[MP4] xcasper all failed, trying Gifted fallback...`);
-                const gifted = await giftedFallback(ytUrl);
-                if (gifted) {
-                    if (gifted.data.title)     trackTitle = gifted.data.title;
-                    if (gifted.data.quality)   quality    = gifted.data.quality;
-                    if (gifted.data.thumbnail) thumbnail  = gifted.data.thumbnail;
-                    videoBuffer = await downloadBuffer(gifted.data.download_url);
-                    console.log(`✅ [MP4] Gifted/${gifted.endpoint} success`);
-                }
+                console.log(`[MP4] xcasper all failed, trying Keith API fallback...`);
+                videoBuffer = await keithVideo(ytUrl);
             }
 
             if (!videoBuffer) {
