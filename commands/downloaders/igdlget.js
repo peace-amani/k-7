@@ -1,3 +1,5 @@
+import fs from 'fs';
+import { existsSync } from 'fs';
 import { getActionSession, deleteActionSession } from '../../lib/actionSession.js';
 import { downloadInstagram } from './instagram.js';
 import { getBotName } from '../../lib/botname.js';
@@ -37,15 +39,16 @@ export default {
     const botName = getBotName();
     let sentCount = 0;
 
-    for (const { buf, isVideo } of result.items) {
-      const sizeMB = (buf.length / 1024 / 1024).toFixed(1);
-      if (parseFloat(sizeMB) > 50) continue;
-
-      const caption = sentCount === 0
-        ? `📷 *Instagram ${isVideo ? 'Video' : 'Photo'}*\n📦 ${sizeMB}MB | 🐺 ${botName}`
-        : `Part ${sentCount + 1} | ${sizeMB}MB`;
-
+    for (const { filePath, isVideo } of result.items) {
       try {
+        const buf = fs.readFileSync(filePath);
+        const sizeMB = (buf.length / 1024 / 1024).toFixed(1);
+        if (parseFloat(sizeMB) > 50) continue;
+
+        const caption = sentCount === 0
+          ? `📷 *Instagram ${isVideo ? 'Video' : 'Photo'}*\n📦 ${sizeMB}MB | 🐺 ${botName}`
+          : `Part ${sentCount + 1} | ${sizeMB}MB`;
+
         if (isVideo) {
           await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption }, { quoted: m });
         } else {
@@ -55,6 +58,8 @@ export default {
         if (sentCount < result.items.length) await new Promise(r => setTimeout(r, 1500));
       } catch (e) {
         console.log(`[IG/igdlget] send failed: ${e.message}`);
+      } finally {
+        try { if (filePath && existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
       }
     }
 
@@ -63,7 +68,7 @@ export default {
     } else {
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `❌ All items were too large or invalid.\n\n💡 Try manually: https://snapinsta.app`
+        text: `❌ All items were too large or failed.\n\n💡 Try manually: https://snapinsta.app`
       }, { quoted: m });
     }
   }
