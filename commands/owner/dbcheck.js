@@ -53,9 +53,10 @@ const JSON_DATA_FILES = [
 ];
 
 export default {
-    command: ['dbcheck', 'db', 'dbstatus'],
+    name: 'dbcheck',
+    aliases: ['db', 'dbstatus'],
     category: 'owner',
-    owner: true,
+    ownerOnly: true,
     desc: 'Show all settings stored in SQLite and JSON fallback files',
 
     async execute(sock, msg, args, PREFIX) {
