@@ -57,12 +57,62 @@ async function downloadToBuffer(url, timeoutMs = 60_000) {
 
   const buf = Buffer.from(response.data);
 
-  if (!isValidVideoBuffer(buf) && !isValidImageBuffer(buf)) {
+  // Accept if content-type clearly says media (cobalt CDN uses video/* or image/*)
+  const ctIsMedia = ct.includes('video/') || ct.includes('image/') || ct.includes('audio/');
+
+  if (!ctIsMedia && !isValidVideoBuffer(buf) && !isValidImageBuffer(buf)) {
     const preview = buf.slice(0, 24).toString('utf8').replace(/[\r\n]/g, ' ');
     throw new Error(`Not a valid media file (starts with: "${preview}")`);
   }
 
   return buf;
+}
+
+// ── Provider: cobalt.tools ────────────────────────────────────────────────────
+// cobalt proxies all media through its own CDN — the returned URL is from
+// cobalt's servers, NOT Instagram CDN.  This means it works from ANY server IP
+// (VPS, Pterodactyl, Railway, etc.) without IP-locking issues.
+async function tryCobalt(url) {
+  const res = await axios({
+    method: 'POST',
+    url: 'https://api.cobalt.tools/',
+    data: { url, downloadMode: 'auto', videoQuality: '1080' },
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    timeout: 25000,
+  });
+
+  const d = res.data;
+  if (!d || d.status === 'error') {
+    const msg = d?.error?.code || d?.text || 'unknown error';
+    console.log(`[IG/cobalt] failed: ${msg}`);
+    return null;
+  }
+
+  // status: 'stream' → single item with a direct cobalt CDN URL
+  if (d.status === 'stream' && d.url) {
+    const isVideo = d.url.includes('.mp4') || url.includes('/reel/') || url.includes('/tv/');
+    console.log(`[IG/cobalt] ✅ stream`);
+    return [{ mediaUrl: d.url, isVideo }];
+  }
+
+  // status: 'picker' → multiple items (carousel post), each with its own cobalt CDN URL
+  if (d.status === 'picker' && Array.isArray(d.picker)) {
+    const items = d.picker
+      .filter(x => x?.url)
+      .map(x => ({
+        mediaUrl: x.url,
+        isVideo: (x.type === 'video') || x.url.includes('.mp4'),
+      }));
+    if (items.length > 0) {
+      console.log(`[IG/cobalt] ✅ picker — ${items.length} item(s)`);
+      return items;
+    }
+  }
+
+  return null;
 }
 
 // ── Provider: ruhend-scraper (igdl → SnapSave internally) ─────────────────────
@@ -171,7 +221,8 @@ async function downloadInstagram(url) {
   if (!existsSync(TEMP_DIR)) mkdirSync(TEMP_DIR, { recursive: true });
 
   const providers = [
-    { name: 'ruhend-scraper', fn: () => tryRuhend(url)   },
+    { name: 'cobalt',         fn: () => tryCobalt(url)    }, // CDN-proxied — works from any IP
+    { name: 'ruhend-scraper', fn: () => tryRuhend(url)    },
     { name: 'snapsave',       fn: () => trySnapSave(url)  },
     { name: 'xcasper',        fn: () => tryXcasper(url)   },
     { name: 'xwolf',          fn: () => tryXwolf(url)     },
