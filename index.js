@@ -849,8 +849,10 @@ globalThis.updateBotModeCache = function(newMode) {
     BOT_MODE = newMode;
     _saveConfigCache('bot_mode', { mode: newMode });
     updateWebStatus({ botMode: newMode });
-    // Also write JSON fallback so getsettings and migration always have current data
+    // JSON fallback — survives DB wipe
     try { fs.writeFileSync('./bot_mode.json', JSON.stringify({ mode: newMode, setAt: new Date().toISOString() }, null, 2)); } catch {}
+    // .env write-through — survives Pterodactyl egg reinstalls (git pull never touches .env)
+    updateEnvFile('BOT_MODE', newMode);
 };
 globalThis._fontConfig = { font: 'default' };
 globalThis._antibotConfig = null;
@@ -1009,11 +1011,19 @@ async function reloadConfigCaches() {
             process.env.PREFIX = prefixCache;
         }
 
-        // Write-through: keep JSON fallback files fresh on disk
-        // so every restart has correct values even before the DB is ready.
+        // Write-through: keep JSON files + .env fresh on every reconnect.
+        // .env is the ultimate fallback for Pterodactyl servers that reinstall via git.
         try {
             if (_cache_prefix_config && _cache_prefix_config.prefix !== undefined) {
                 fs.writeFileSync('./prefix_config.json', JSON.stringify(_cache_prefix_config, null, 2));
+                const pxIsPrefixless = !!_cache_prefix_config.isPrefixless;
+                updateEnvFile('BOT_PREFIX', pxIsPrefixless ? '' : (_cache_prefix_config.prefix || ''));
+            }
+        } catch {}
+        try {
+            if (_cache_bot_mode && _cache_bot_mode.mode) {
+                fs.writeFileSync('./bot_mode.json', JSON.stringify(_cache_bot_mode, null, 2));
+                updateEnvFile('BOT_MODE', _cache_bot_mode.mode);
             }
         } catch {}
         try {
@@ -1437,6 +1447,34 @@ function getCurrentPrefix() {
     return isPrefixless ? '' : prefixCache;
 }
 
+// ── .env write-through ───────────────────────────────────────────────────────
+// Updates (or appends) a single key=value line in the .env file.
+// This is the ONLY storage layer that survives Pterodactyl egg reinstalls,
+// because .env is in .gitignore and never overwritten by git pull / fresh clone.
+function updateEnvFile(key, value) {
+    try {
+        const envPath = './.env';
+        let content = '';
+        try { content = fs.readFileSync(envPath, 'utf8'); } catch {}
+
+        const line = `${key}=${value}`;
+        const regex = new RegExp(`^${key}=.*$`, 'm');
+
+        if (regex.test(content)) {
+            content = content.replace(regex, line);
+        } else {
+            // append after the last non-empty line
+            content = content.trimEnd() + '\n' + line + '\n';
+        }
+
+        fs.writeFileSync(envPath, content, 'utf8');
+        process.env[key] = String(value);
+    } catch (err) {
+        UltraCleanLogger.warning(`Could not update .env (${key}): ${err.message}`);
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function savePrefixToFile(newPrefix) {
     try {
         const isNone = newPrefix === 'none' || newPrefix === '""' || newPrefix === "''" || newPrefix === '';
@@ -1457,6 +1495,10 @@ function savePrefixToFile(newPrefix) {
         // Also write to JSON file — used as migration source if DB is wiped/lost.
         // This ensures the prefix survives even a full data/ directory wipe.
         try { fs.writeFileSync('./prefix_config.json', JSON.stringify(config, null, 2)); } catch {}
+        // Write to .env — survives Pterodactyl egg reinstalls (git pull never touches .env).
+        // BOT_PREFIX is already read from .env at startup (line 793), so this is the
+        // ultimate fallback that works even when ALL other files are reset to defaults.
+        updateEnvFile('BOT_PREFIX', isNone ? '' : (newPrefix || ''));
         
         const settings = {
             prefix: isNone ? '' : newPrefix,
@@ -1608,7 +1650,10 @@ let lastActivityTime = Date.now();
 let connectionAttempts = 0;
 let connectionStableTimer = null;
 let MAX_RETRY_ATTEMPTS = 10;
-let BOT_MODE = 'public';
+// BOT_MODE is written to .env on every mode change (updateBotModeCache).
+// Reading it here means it survives Pterodactyl egg reinstalls that wipe all tracked files.
+const _validModes = new Set(['public','private','group','solo','sudo','super','buttons','channel']);
+let BOT_MODE = (_validModes.has(process.env.BOT_MODE) ? process.env.BOT_MODE : null) || 'public';
 let WHITELIST = new Set();
 let AUTO_LINK_ENABLED = true;
 let AUTO_CONNECT_COMMAND_ENABLED = true;
@@ -4913,17 +4958,21 @@ async function runDataMigrations() {
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;
 
-        // ── Write-through: flush DB-loaded settings back to JSON files ──────────
-        // This ensures JSON fallback files always exist after a restart so the
-        // next boot loads the correct values instantly (before DB is ready).
+        // ── Write-through: flush DB-loaded settings back to JSON files + .env ──
+        // JSON files survive DB wipes. .env survives Pterodactyl egg reinstalls.
         try {
             if (_cache_prefix_config && _cache_prefix_config.prefix !== undefined) {
                 fs.writeFileSync('./prefix_config.json', JSON.stringify(_cache_prefix_config, null, 2));
+                // Populate BOT_PREFIX in .env so it survives git-based reinstalls
+                const pxIsPrefixless = !!_cache_prefix_config.isPrefixless;
+                updateEnvFile('BOT_PREFIX', pxIsPrefixless ? '' : (_cache_prefix_config.prefix || ''));
             }
         } catch {}
         try {
             if (_cache_bot_mode && _cache_bot_mode.mode) {
                 fs.writeFileSync('./bot_mode.json', JSON.stringify(_cache_bot_mode, null, 2));
+                // Populate BOT_MODE in .env so it survives git-based reinstalls
+                updateEnvFile('BOT_MODE', _cache_bot_mode.mode);
             }
         } catch {}
         try {
