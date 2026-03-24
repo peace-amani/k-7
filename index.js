@@ -993,8 +993,11 @@ async function reloadConfigCaches() {
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;
 
-        // Keep BOT_MODE in sync with the reloaded cache
-        if (_cache_bot_mode && _cache_bot_mode.mode) BOT_MODE = _cache_bot_mode.mode;
+        // Keep BOT_MODE in sync with the reloaded cache + flush to JSON
+        if (_cache_bot_mode && _cache_bot_mode.mode) {
+            BOT_MODE = _cache_bot_mode.mode;
+            try { fs.writeFileSync('./bot_mode.json', JSON.stringify(_cache_bot_mode, null, 2)); } catch {}
+        }
 
         // Re-apply prefix now that caches are loaded with the correct bot_id
         const _reloadedPrefix = loadPrefixFromFiles();
@@ -1005,6 +1008,19 @@ async function reloadConfigCaches() {
             global.CURRENT_PREFIX = prefixCache;
             process.env.PREFIX = prefixCache;
         }
+
+        // Write-through: keep prefix_config.json and bot_settings.json fresh on disk
+        // so every restart has a JSON fallback even before the DB is ready.
+        try {
+            if (_cache_prefix_config && _cache_prefix_config.prefix !== undefined) {
+                fs.writeFileSync('./prefix_config.json', JSON.stringify(_cache_prefix_config, null, 2));
+            }
+        } catch {}
+        try {
+            if (_cache_bot_settings && Object.keys(_cache_bot_settings || {}).length > 0) {
+                fs.writeFileSync('./bot_settings.json', JSON.stringify(_cache_bot_settings, null, 2));
+            }
+        } catch {}
 
     } catch (err) {
         UltraCleanLogger.warning(`⚠️ Config reload error: ${err.message}`);
@@ -4891,6 +4907,26 @@ async function runDataMigrations() {
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
         if (_cache_welcome_data && Object.keys(_cache_welcome_data).length === 0) _cache_welcome_data = null;
+
+        // ── Write-through: flush DB-loaded settings back to JSON files ──────────
+        // This ensures JSON fallback files always exist after a restart so the
+        // next boot loads the correct values instantly (before DB is ready).
+        try {
+            if (_cache_prefix_config && _cache_prefix_config.prefix !== undefined) {
+                fs.writeFileSync('./prefix_config.json', JSON.stringify(_cache_prefix_config, null, 2));
+            }
+        } catch {}
+        try {
+            if (_cache_bot_mode && _cache_bot_mode.mode) {
+                fs.writeFileSync('./bot_mode.json', JSON.stringify(_cache_bot_mode, null, 2));
+            }
+        } catch {}
+        try {
+            if (_cache_bot_settings && Object.keys(_cache_bot_settings || {}).length > 0) {
+                fs.writeFileSync('./bot_settings.json', JSON.stringify(_cache_bot_settings, null, 2));
+            }
+        } catch {}
+        // ────────────────────────────────────────────────────────────────────────
 
     } catch (err) {
         UltraCleanLogger.error(`💾 Database: Migration error - ${err.message}`);
