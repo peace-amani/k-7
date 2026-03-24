@@ -9,20 +9,8 @@ function fmtSize(bytes) {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function fmtVal(raw) {
-    try {
-        const obj = JSON.parse(raw);
-        if (typeof obj === 'object' && obj !== null) {
-            const keys = Object.keys(obj);
-            if (keys.length === 0) return '{}';
-            if (keys.length <= 3) return JSON.stringify(obj);
-            return `{${keys.slice(0, 3).join(', ')}, … +${keys.length - 3} more}`;
-        }
-        return String(obj);
-    } catch {
-        const s = String(raw);
-        return s.length > 80 ? s.slice(0, 77) + '…' : s;
-    }
+function safeParseVal(raw) {
+    try { return JSON.parse(raw); } catch { return raw; }
 }
 
 async function readTable(table) {
@@ -37,20 +25,12 @@ async function readTable(table) {
     }
 }
 
-const JSON_ROOT_FILES = [
-    { file: 'prefix_config.json', label: 'prefix',      pick: r => `prefix="${r.prefix ?? '?'}"` },
-    { file: 'bot_mode.json',      label: 'bot_mode',    pick: r => `mode="${r.mode ?? '?'}"` },
-    { file: 'bot_settings.json',  label: 'bot_settings',pick: r => `prefix="${r.prefix ?? '?'}"` },
-    { file: 'last_bot_id.json',   label: 'last_bot_id', pick: r => `id="${r.botId ?? r.bot_id ?? r.id ?? '?'}"` },
-    { file: 'owner.json',         label: 'owner',       pick: r => `number="${r.OWNER_NUMBER ?? r.ownerNumber ?? '?'}"` },
-];
-
-const JSON_DATA_FILES = [
-    { file: 'data/autotyping/config.json',    label: 'autotyping',    pick: r => `mode="${r.mode ?? 'off'}"` },
-    { file: 'data/autorecording/config.json', label: 'autorecording', pick: r => `mode="${r.mode ?? 'off'}"` },
-    { file: 'data/groupqueue.json',           label: 'group-queue',   pick: r => `${(Array.isArray(r) ? r : r.queue ?? []).length} queued` },
-    { file: 'data/exportqueue.json',          label: 'export-queue',  pick: r => `${(Array.isArray(r) ? r : r.queue ?? []).length} queued` },
-];
+function safeReadJSON(file) {
+    try {
+        if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {}
+    return null;
+}
 
 export default {
     name: 'dbcheck',
@@ -62,117 +42,122 @@ export default {
     async execute(sock, msg, args, PREFIX) {
         const chatId = msg.key.remoteJid;
         const P = PREFIX || '/';
-        const lines = [];
-
-        // ── DB file info ──────────────────────────────────────────────────────────
-        let dbSizeLine = '❌ not found';
-        try { dbSizeLine = fmtSize(fs.statSync(DB_PATH).size); } catch {}
 
         const currentBotId = (() => { try { return getConfigBotId() || 'unknown'; } catch { return 'unknown'; } })();
 
-        lines.push(`*🗄️ SQLite Database Check*`);
-        lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━`);
-        lines.push(`📁 File: data/bot.sqlite`);
-        lines.push(`💾 Size: ${dbSizeLine}`);
-        lines.push(`🤖 Bot ID: ${currentBotId}`);
-        lines.push(``);
+        // ── 1. DB overview ────────────────────────────────────────────────────────
+        let dbSize = 'not found';
+        try { dbSize = fmtSize(fs.statSync(DB_PATH).size); } catch {}
 
-        // ── bot_configs table ─────────────────────────────────────────────────────
-        lines.push(`*📋 bot_configs*`);
-        const botConfigs = await readTable('bot_configs');
-        if (!botConfigs) {
-            lines.push(`  ❌ Could not read table`);
-        } else if (botConfigs.length === 0) {
-            lines.push(`  ⚠️ EMPTY — settings will reset on restart!`);
-        } else {
-            const byBotId = {};
-            for (const r of botConfigs) {
-                (byBotId[r.bot_id] = byBotId[r.bot_id] || []).push(r);
-            }
-            for (const [bid, rows] of Object.entries(byBotId)) {
-                lines.push(`  *[${bid}]* — ${rows.length} keys`);
-                for (const r of rows) {
-                    lines.push(`    • ${r.key}: ${fmtVal(r.value)}`);
-                }
+        const overview = {
+            file: DB_PATH,
+            size: dbSize,
+            active_bot_id: currentBotId
+        };
+
+        // ── 2. bot_configs  ───────────────────────────────────────────────────────
+        const botConfigsRaw = await readTable('bot_configs');
+        const botConfigs = {};
+        if (botConfigsRaw) {
+            for (const r of botConfigsRaw) {
+                if (!botConfigs[r.bot_id]) botConfigs[r.bot_id] = {};
+                botConfigs[r.bot_id][r.key] = safeParseVal(r.value);
             }
         }
-        lines.push(``);
 
-        // ── auto_configs table ────────────────────────────────────────────────────
-        lines.push(`*⚙️ auto_configs*`);
-        const autoConfigs = await readTable('auto_configs');
-        if (!autoConfigs) {
-            lines.push(`  ❌ Could not read table`);
-        } else if (autoConfigs.length === 0) {
-            lines.push(`  (empty)`);
-        } else {
-            for (const r of autoConfigs) {
-                lines.push(`  • [${r.bot_id}] ${r.key}: ${fmtVal(r.value)}`);
+        // ── 3. auto_configs ───────────────────────────────────────────────────────
+        const autoConfigsRaw = await readTable('auto_configs');
+        const autoConfigs = {};
+        if (autoConfigsRaw) {
+            for (const r of autoConfigsRaw) {
+                if (!autoConfigs[r.bot_id]) autoConfigs[r.bot_id] = {};
+                autoConfigs[r.bot_id][r.key] = safeParseVal(r.value);
             }
         }
-        lines.push(``);
 
-        // ── JSON fallback files ───────────────────────────────────────────────────
-        lines.push(`*📄 JSON fallback files*`);
-        for (const { file, pick } of JSON_ROOT_FILES) {
-            try {
-                if (fs.existsSync(file)) {
-                    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-                    lines.push(`  ✅ ${file} → ${pick(raw)}`);
-                } else {
-                    lines.push(`  ❌ ${file} → MISSING`);
-                }
-            } catch {
-                lines.push(`  ⚠️ ${file} → unreadable`);
-            }
+        // ── 4. JSON fallback files ────────────────────────────────────────────────
+        const jsonFiles = {
+            'prefix_config.json':   safeReadJSON('prefix_config.json'),
+            'bot_mode.json':        safeReadJSON('bot_mode.json'),
+            'bot_settings.json':    safeReadJSON('bot_settings.json'),
+            'last_bot_id.json':     safeReadJSON('last_bot_id.json'),
+            'owner.json':           safeReadJSON('owner.json'),
+        };
+        // Mark missing files
+        for (const [k, v] of Object.entries(jsonFiles)) {
+            if (v === null) jsonFiles[k] = 'MISSING';
         }
-        lines.push(``);
 
-        // ── JSON-only data files ──────────────────────────────────────────────────
-        lines.push(`*📦 data/ JSON files*`);
-        for (const { file, pick } of JSON_DATA_FILES) {
-            try {
-                if (fs.existsSync(file)) {
-                    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-                    lines.push(`  ✅ ${file} → ${pick(raw)}`);
-                } else {
-                    lines.push(`  ➖ ${file} → not created yet`);
-                }
-            } catch {
-                lines.push(`  ⚠️ ${file} → unreadable`);
-            }
+        // ── 5. data/ JSON-only files ──────────────────────────────────────────────
+        const dataFiles = {};
+        const dataFileList = [
+            'data/autotyping/config.json',
+            'data/autorecording/config.json',
+            'data/groupqueue.json',
+            'data/exportqueue.json',
+        ];
+        for (const f of dataFileList) {
+            const val = safeReadJSON(f);
+            dataFiles[f] = val !== null ? val : 'NOT_CREATED';
         }
-        lines.push(``);
 
-        // ── Prefix health check ───────────────────────────────────────────────────
-        lines.push(`*🩺 Prefix Health*`);
-
+        // ── 6. Prefix health ──────────────────────────────────────────────────────
         let prefixInDb = null;
         try {
             const { default: Database } = await import('better-sqlite3');
             const s = new Database(DB_PATH, { readonly: true });
             const r = s.prepare(`SELECT value FROM bot_configs WHERE key='prefix_config' AND bot_id=?`).get(currentBotId);
             s.close();
-            if (r) prefixInDb = JSON.parse(r.value).prefix ?? '?';
+            if (r) prefixInDb = safeParseVal(r.value)?.prefix ?? null;
         } catch {}
 
-        const prefixInFile = (() => {
-            try { return JSON.parse(fs.readFileSync('prefix_config.json', 'utf8')).prefix ?? null; }
-            catch { return null; }
-        })();
-        const prefixInMem = global.prefix ?? global.CURRENT_PREFIX ?? null;
+        const prefixInFile  = safeReadJSON('prefix_config.json')?.prefix ?? null;
+        const prefixInMem   = global.prefix ?? global.CURRENT_PREFIX ?? null;
+        const prefixSynced  = prefixInDb !== null && prefixInDb === prefixInFile && prefixInFile === prefixInMem;
 
-        lines.push(`  DB    : ${prefixInDb !== null ? `"${prefixInDb}"` : '❌ not found'}`);
-        lines.push(`  File  : ${prefixInFile !== null ? `"${prefixInFile}"` : '❌ not found'}`);
-        lines.push(`  Memory: ${prefixInMem !== null ? `"${prefixInMem}"` : '❌ not found'}`);
+        const health = {
+            prefix: {
+                db:     prefixInDb   ?? 'NOT_FOUND',
+                file:   prefixInFile ?? 'NOT_FOUND',
+                memory: prefixInMem  ?? 'NOT_FOUND',
+                synced: prefixSynced
+            }
+        };
 
-        const allMatch = prefixInDb !== null && prefixInFile !== null && prefixInMem !== null
-            && prefixInDb === prefixInFile && prefixInFile === prefixInMem;
-        lines.push(`  ${allMatch ? '✅ All in sync' : `⚠️ Mismatch — run ${P}setprefix to re-sync`}`);
+        // ── Build full report object ──────────────────────────────────────────────
+        const report = {
+            db:          overview,
+            bot_configs: botConfigsRaw === null ? 'ERROR' : botConfigs,
+            auto_configs: autoConfigsRaw === null ? 'ERROR' : (Object.keys(autoConfigs).length ? autoConfigs : {}),
+            json_files:  jsonFiles,
+            data_files:  dataFiles,
+            health
+        };
 
-        lines.push(``);
-        lines.push(`_Tip: use ${P}getsettings for the full settings overview_`);
+        // ── Send as two messages (db+health short, configs full) ──────────────────
+        const shortReport = {
+            db:       report.db,
+            health:   report.health,
+            json_files: report.json_files,
+            data_files: report.data_files,
+        };
 
-        await sock.sendMessage(chatId, { text: lines.join('\n') }, { quoted: msg });
+        const configReport = {
+            bot_configs:  report.bot_configs,
+            auto_configs: report.auto_configs,
+        };
+
+        const short = JSON.stringify(shortReport, null, 2);
+        const full  = JSON.stringify(configReport, null, 2);
+
+        // WhatsApp monospace block
+        await sock.sendMessage(chatId, {
+            text: `*🗄️ WOLFBOT — DB Check*\n\`\`\`\n${short}\n\`\`\``
+        }, { quoted: msg });
+
+        // Second message: full configs (may be long)
+        await sock.sendMessage(chatId, {
+            text: `*📋 Stored Configs*\n\`\`\`\n${full}\n\`\`\`\n\n_Use ${P}getsettings for a user-friendly overview_`
+        }, { quoted: msg });
     }
 };

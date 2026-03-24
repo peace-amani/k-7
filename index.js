@@ -1009,8 +1009,8 @@ async function reloadConfigCaches() {
             process.env.PREFIX = prefixCache;
         }
 
-        // Write-through: keep prefix_config.json and bot_settings.json fresh on disk
-        // so every restart has a JSON fallback even before the DB is ready.
+        // Write-through: keep JSON fallback files fresh on disk
+        // so every restart has correct values even before the DB is ready.
         try {
             if (_cache_prefix_config && _cache_prefix_config.prefix !== undefined) {
                 fs.writeFileSync('./prefix_config.json', JSON.stringify(_cache_prefix_config, null, 2));
@@ -1019,6 +1019,11 @@ async function reloadConfigCaches() {
         try {
             if (_cache_bot_settings && Object.keys(_cache_bot_settings || {}).length > 0) {
                 fs.writeFileSync('./bot_settings.json', JSON.stringify(_cache_bot_settings, null, 2));
+            }
+        } catch {}
+        try {
+            if (_cache_owner_data && _cache_owner_data.OWNER_NUMBER) {
+                fs.writeFileSync('./owner.json', JSON.stringify(_cache_owner_data, null, 2));
             }
         } catch {}
 
@@ -4924,6 +4929,11 @@ async function runDataMigrations() {
         try {
             if (_cache_bot_settings && Object.keys(_cache_bot_settings || {}).length > 0) {
                 fs.writeFileSync('./bot_settings.json', JSON.stringify(_cache_bot_settings, null, 2));
+            }
+        } catch {}
+        try {
+            if (_cache_owner_data && _cache_owner_data.OWNER_NUMBER) {
+                fs.writeFileSync('./owner.json', JSON.stringify(_cache_owner_data, null, 2));
             }
         } catch {}
         // ────────────────────────────────────────────────────────────────────────
