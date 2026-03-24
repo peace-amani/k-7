@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const rpsActiveGames = new Map();
@@ -1589,11 +1588,7 @@ async function saveRPSStats() {
     };
     
     try {
-        await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
-        await fs.writeFile(
-            path.join(process.cwd(), 'data', 'rps_stats.json'),
-            JSON.stringify(data, null, 2)
-        );
+        await supabase.setConfig('game_rps_data', data);
     } catch (error) {
         console.error("Failed to save RPS stats:", error);
     }
@@ -1601,11 +1596,8 @@ async function saveRPSStats() {
 
 async function loadRPSStats() {
     try {
-        const data = await fs.readFile(
-            path.join(process.cwd(), 'data', 'rps_stats.json'),
-            'utf8'
-        );
-        const parsed = JSON.parse(data);
+        const parsed = supabase.getConfigSync('game_rps_data', null);
+        if (!parsed) return;
         
         // Load stats
         for (const [userId, stats] of parsed.rpsStats) {

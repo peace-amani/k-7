@@ -1,56 +1,25 @@
 // commands/automation/autoreactstatus.js
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import supabase from '../../lib/database.js';
 import { getBotName } from '../../lib/botname.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CONFIG_FILE = './data/autoReactConfig.json';
-
-function initConfig() {
-    const configDir = path.dirname(CONFIG_FILE);
-    if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
-    if (!fs.existsSync(CONFIG_FILE)) {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify({
-            enabled: true,
-            viewMode: 'view+react',
-            mode: 'fixed',
-            fixedEmoji: '🐺',
-            reactions: ["🐺", "❤️", "👍", "🔥", "🎉", "😂", "😮", "👏", "🎯", "💯", "🌟", "✨", "⚡", "💥", "🫶"],
-            excludedContacts: [],
-            logs: [],
-            totalReacted: 0,
-            lastReacted: null,
-            consecutiveReactions: 0,
-            lastSender: null,
-            lastReactionTime: 0,
-            reactedStatuses: [],
-            settings: {
-                rateLimitDelay: 2000,
-                reactToAll: true,
-                ignoreConsecutiveLimit: true,
-                noHourlyLimit: true
-            }
-        }, null, 2));
-    }
-    setInterval(() => {}, 60 * 60 * 1000);
-}
-
-initConfig();
-
-(async () => {
-    try {
-        if (supabase.isAvailable()) {
-            const dbData = await supabase.getConfig('autoreact_config');
-            if (dbData?.enabled !== undefined)
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(dbData, null, 2));
-        }
-    } catch {}
-})();
+const CONFIG_DB_KEY = 'autoreact_config';
+const DEFAULT_REACT_CONFIG = {
+    enabled: true,
+    viewMode: 'view+react',
+    mode: 'fixed',
+    fixedEmoji: '🐺',
+    reactions: ["🐺", "❤️", "👍", "🔥", "🎉", "😂", "😮", "👏", "🎯", "💯", "🌟", "✨", "⚡", "💥", "🫶"],
+    excludedContacts: [],
+    logs: [],
+    totalReacted: 0,
+    lastReacted: null,
+    consecutiveReactions: 0,
+    lastSender: null,
+    lastReactionTime: 0,
+    reactedStatuses: [],
+    settings: { rateLimitDelay: 2000, reactToAll: true, ignoreConsecutiveLimit: true, noHourlyLimit: true }
+};
 
 class AutoReactManager {
     constructor() {
@@ -65,22 +34,13 @@ class AutoReactManager {
 
     loadConfig() {
         try {
-            const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            const config = supabase.getConfigSync(CONFIG_DB_KEY, DEFAULT_REACT_CONFIG);
             config.reactedStatuses  = config.reactedStatuses || [];
             config.lastReactionTime = config.lastReactionTime || 0;
             config.viewMode         = config.viewMode || 'view+react';
             if (!Array.isArray(config.excludedContacts)) config.excludedContacts = [];
-            return config;
-        } catch {
-            return {
-                enabled: true, viewMode: 'view+react', mode: 'fixed', fixedEmoji: '🐺',
-                reactions: ["🐺", "❤️", "👍", "🔥", "🎉", "😂", "😮", "👏", "🎯", "💯", "🌟", "✨", "⚡", "💥", "🫶"],
-                excludedContacts: [],
-                logs: [], totalReacted: 0, lastReacted: null, consecutiveReactions: 0,
-                lastSender: null, lastReactionTime: 0, reactedStatuses: [],
-                settings: { rateLimitDelay: 2000, reactToAll: true, ignoreConsecutiveLimit: true, noHourlyLimit: true }
-            };
-        }
+            return { ...DEFAULT_REACT_CONFIG, ...config };
+        } catch { return { ...DEFAULT_REACT_CONFIG }; }
     }
 
     saveConfig() {
@@ -89,8 +49,7 @@ class AutoReactManager {
             try {
                 this.config.reactedStatuses = Array.from(this.reactedStatuses);
                 this.config.lastReactionTime = this.lastReactionTime;
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-                supabase.setConfig('autoreact_config', this.config).catch(() => {});
+                supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
             } catch {}
             this._saveTimer = null;
         }, 3000);
@@ -101,8 +60,7 @@ class AutoReactManager {
         try {
             this.config.reactedStatuses = Array.from(this.reactedStatuses);
             this.config.lastReactionTime = this.lastReactionTime;
-            fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-            supabase.setConfig('autoreact_config', this.config).catch(() => {});
+            supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
         } catch {}
     }
 

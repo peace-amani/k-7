@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const activeGames = new Map();
@@ -1086,13 +1085,8 @@ async function saveStats() {
         leaderboard: Array.from(leaderboard.entries()),
         timestamp: Date.now()
     };
-    
     try {
-        await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
-        await fs.writeFile(
-            path.join(process.cwd(), 'data', 'tetris_stats.json'),
-            JSON.stringify(data, null, 2)
-        );
+        await supabase.setConfig('game_tetris_data', data);
     } catch (error) {
         console.error("Failed to save tetris stats:", error);
     }
@@ -1100,22 +1094,18 @@ async function saveStats() {
 
 async function loadStats() {
     try {
-        const filePath = path.join(process.cwd(), 'data', 'tetris_stats.json');
-        const data = await fs.readFile(filePath, 'utf8');
-        const parsed = JSON.parse(data);
-        
+        const parsed = supabase.getConfigSync('game_tetris_data', null);
+        if (!parsed) return;
         if (parsed.tetrisStats) {
             for (const [userId, stats] of parsed.tetrisStats) {
                 tetrisStats.set(userId, stats);
             }
         }
-        
         if (parsed.leaderboard) {
             for (const [userId, data] of parsed.leaderboard) {
                 leaderboard.set(userId, data);
             }
         }
-        
         console.log(`📊 Loaded Tetris stats: ${tetrisStats.size} players`);
     } catch (error) {
         console.log("No existing Tetris stats found, starting fresh...");

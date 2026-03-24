@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const userBalances = new Map();
@@ -864,17 +863,12 @@ async function saveData() {
         activeBets: Array.from(activeBets.entries()).map(([id, bet]) => [id, {
             ...bet,
             timeout: null,
-            challengeMsg: null // Don't save message reference
+            challengeMsg: null
         }]),
         timestamp: Date.now()
     };
-    
     try {
-        await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
-        await fs.writeFile(
-            path.join(process.cwd(), 'data', 'coinflip.json'),
-            JSON.stringify(data, null, 2)
-        );
+        await supabase.setConfig('game_coinflip_data', data);
     } catch (error) {
         console.error("Failed to save coinflip data:", error);
     }
@@ -882,22 +876,14 @@ async function saveData() {
 
 async function loadData() {
     try {
-        const data = await fs.readFile(
-            path.join(process.cwd(), 'data', 'coinflip.json'),
-            'utf8'
-        );
-        const parsed = JSON.parse(data);
-        
-        // Load user balances
+        const parsed = supabase.getConfigSync('game_coinflip_data', null);
+        if (!parsed) return;
         for (const [userId, userData] of parsed.userBalances) {
             userBalances.set(userId, userData);
         }
-        
-        // Load active bets (without timeouts)
         for (const [id, bet] of parsed.activeBets) {
             activeBets.set(id, bet);
         }
-        
         console.log(`Loaded ${userBalances.size} users and ${activeBets.size} active bets`);
     } catch (error) {
         console.log("No coinflip data found, starting fresh");

@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 // In-memory storage (replace with database in production)
@@ -790,21 +789,17 @@ async function saveData() {
         userPoints: Array.from(userPoints.entries()),
         timestamp: Date.now()
     };
-    
-    await fs.writeFile(
-        path.join(process.cwd(), 'data', 'dice_game.json'),
-        JSON.stringify(data, null, 2)
-    );
+    try {
+        await supabase.setConfig('game_dice_data', data);
+    } catch (error) {
+        console.log("Failed to save dice data:", error);
+    }
 }
 
 async function loadData() {
     try {
-        const data = await fs.readFile(
-            path.join(process.cwd(), 'data', 'dice_game.json'),
-            'utf8'
-        );
-        const parsed = JSON.parse(data);
-        
+        const parsed = supabase.getConfigSync('game_dice_data', null);
+        if (!parsed) return;
         for (const [userId, userData] of parsed.userPoints) {
             userPoints.set(userId, userData);
         }

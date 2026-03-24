@@ -16,7 +16,7 @@ The bot runs on Node.js 20 (upgraded from 18 during import), using ESM modules. 
 
 **Key Directories:**
 *   `lib/`: Contains shared source modules.
-*   `data/`: Stores runtime JSON data files.
+*   `data/`: Stores the SQLite database (`bot.sqlite`) and `critical_backup.json`. Legacy JSON config files have been fully migrated to the DB.
 *   `commands/`: Holds command handlers by category.
 
 **Database Integration:**
@@ -27,7 +27,8 @@ The bot runs on Node.js 20 (upgraded from 18 during import), using ESM modules. 
 *   **Tables**: 14 tables covering bot configurations, warnings, sudoers, chatbot data, antidelete, welcome/goodbye, group features, auto-configurations, and media storage.
 *   **Per-Bot Isolation**: All tables use composite primary keys with `bot_id`. Each bot instance is single-user (no shared data between users).
 *   **Periodic Cleanup**: Auto-cleans antidelete messages, statuses, and media older than 48 hours every 30 minutes.
-*   **JSON Helpers**: `readJSON()`/`writeJSON()` still available for legacy JSON file operations alongside SQLite.
+*   **Sync Helpers**: `getConfigSync(key, default)` / `setConfigSync(key, value)` / `getAutoConfigSync` / `setAutoConfigSync` — synchronous DB read/write using better-sqlite3's native sync API, for use in module constructors and other sync contexts.
+*   **Full JSON-to-DB Migration**: All bot settings (badwords, button mode, channel mode, chat state, music mode, cPanel, Paystack, WolfAI config+conversations, all 7 automation commands, all 6 game stat sets) now read and write exclusively from SQLite. No settings JSON files are written at runtime.
 *   **Disk Space Manager**: Monitors disk usage every 3 minutes, warns at 200MB free, critical cleanup at 80MB. Cleans session signal files (sender-keys, pre-keys), temp directories, viewonce/antidelete local media, log files, and backups. Proactive disk check runs before saveCreds to prevent ENOSPC errors. Emergency cleanup triggers on any ENOSPC write failure.
 
 **Key Features & Implementations:**

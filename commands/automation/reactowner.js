@@ -1,25 +1,18 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_FILE = path.join(__dirname, '..', '..', 'data', 'reactowner_config.json');
+const CONFIG_DB_KEY = 'reactowner_config';
 
 function loadConfig() {
     try {
-        if (fs.existsSync(CONFIG_FILE)) {
-            return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        }
+        return supabase.getConfigSync(CONFIG_DB_KEY, { enabled: false, emoji: '🐺' });
     } catch {}
     return { enabled: false, emoji: '🐺' };
 }
 
 function saveConfig(config) {
     try {
-        const dir = path.dirname(CONFIG_FILE);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+        supabase.setConfig(CONFIG_DB_KEY, config).catch(() => {});
     } catch {}
 }
 

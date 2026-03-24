@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const activeGames = new Map();
@@ -765,13 +764,8 @@ async function saveStats() {
         leaderboard: Array.from(leaderboard.entries()),
         timestamp: Date.now()
     };
-    
     try {
-        await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
-        await fs.writeFile(
-            path.join(process.cwd(), 'data', 'snake_stats.json'),
-            JSON.stringify(data, null, 2)
-        );
+        await supabase.setConfig('game_snake_data', data);
     } catch (error) {
         console.error("Failed to save snake stats:", error);
     }
@@ -779,22 +773,14 @@ async function saveStats() {
 
 async function loadStats() {
     try {
-        const data = await fs.readFile(
-            path.join(process.cwd(), 'data', 'snake_stats.json'),
-            'utf8'
-        );
-        const parsed = JSON.parse(data);
-        
-        // Load stats
+        const parsed = supabase.getConfigSync('game_snake_data', null);
+        if (!parsed) return;
         for (const [userId, stats] of parsed.snakeStats) {
             snakeStats.set(userId, stats);
         }
-        
-        // Load leaderboard
         for (const [userId, scoreData] of parsed.leaderboard) {
             leaderboard.set(userId, scoreData);
         }
-        
         console.log(`Loaded ${snakeStats.size} snake players`);
     } catch (error) {
         console.log("No snake stats found, starting fresh");

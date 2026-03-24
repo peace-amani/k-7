@@ -1,19 +1,14 @@
 // commands/automation/autodownloadstatus.js
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { downloadMediaMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-const CONFIG_FILE = './data/autoDownloadStatusConfig.json';
+const CONFIG_DB_KEY = 'autodownloadstatus_config';
 
 const DEFAULT_CONFIG = {
     enabled:          false,
-    mode:             'private',   // 'private' (DM to owner) | 'public' (send to publicJid)
-    publicJid:        '',          // group/chat JID when mode === 'public'
+    mode:             'private',
+    publicJid:        '',
     ownerJid:         '',
     downloadTypes:    ['image', 'video', 'audio', 'document', 'sticker', 'text'],
     excludedContacts: [],
@@ -21,24 +16,6 @@ const DEFAULT_CONFIG = {
     totalDownloaded:  0,
     logs:             []
 };
-
-function initConfig() {
-    const dir = path.dirname(CONFIG_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    if (!fs.existsSync(CONFIG_FILE))
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
-}
-initConfig();
-
-(async () => {
-    try {
-        if (supabase.isAvailable()) {
-            const dbData = await supabase.getConfig('autodownloadstatus_config');
-            if (dbData?.enabled !== undefined)
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify({ ...DEFAULT_CONFIG, ...dbData }, null, 2));
-        }
-    } catch {}
-})();
 
 class AutoDownloadStatusManager {
     constructor() {
@@ -49,7 +26,7 @@ class AutoDownloadStatusManager {
 
     loadConfig() {
         try {
-            const c = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            const c = supabase.getConfigSync(CONFIG_DB_KEY, DEFAULT_CONFIG);
             if (!Array.isArray(c.excludedContacts)) c.excludedContacts = [];
             if (!Array.isArray(c.downloadTypes))    c.downloadTypes    = [...DEFAULT_CONFIG.downloadTypes];
             if (!Array.isArray(c.logs))              c.logs             = [];
@@ -62,8 +39,7 @@ class AutoDownloadStatusManager {
         this._saveTimer = setTimeout(() => {
             try {
                 this.config.downloadedIds = Array.from(this._downloadedIds).slice(-300);
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-                supabase.setConfig('autodownloadstatus_config', this.config).catch(() => {});
+                supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
             } catch {}
             this._saveTimer = null;
         }, 3000);
@@ -73,8 +49,7 @@ class AutoDownloadStatusManager {
         if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
         try {
             this.config.downloadedIds = Array.from(this._downloadedIds).slice(-300);
-            fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-            supabase.setConfig('autodownloadstatus_config', this.config).catch(() => {});
+            supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
         } catch {}
     }
 

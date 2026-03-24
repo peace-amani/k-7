@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const activeGames = new Map();
@@ -753,21 +752,15 @@ async function saveStats() {
         gameStats: Array.from(gameStats.entries()),
         timestamp: Date.now()
     };
-    
-    await fs.writeFile(
-        path.join(process.cwd(), 'data', 'ttt_stats.json'),
-        JSON.stringify(data, null, 2)
-    );
+    try {
+        await supabase.setConfig('game_ttt_data', data);
+    } catch {}
 }
 
 async function loadStats() {
     try {
-        const data = await fs.readFile(
-            path.join(process.cwd(), 'data', 'ttt_stats.json'),
-            'utf8'
-        );
-        const parsed = JSON.parse(data);
-        
+        const parsed = supabase.getConfigSync('game_ttt_data', null);
+        if (!parsed) return;
         for (const [userId, stats] of parsed.gameStats) {
             gameStats.set(userId, stats);
         }

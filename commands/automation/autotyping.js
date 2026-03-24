@@ -1,8 +1,7 @@
-import fs from 'fs';
 import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const CONFIG_FILE = './data/autotyping/config.json';
+const CONFIG_DB_KEY = 'autotyping_config';
 
 const autoTypingConfig = {
     mode: 'off',
@@ -13,32 +12,23 @@ const autoTypingConfig = {
     isHooked: false
 };
 
-function ensureDir() {
-    if (!fs.existsSync('./data/autotyping')) fs.mkdirSync('./data/autotyping', { recursive: true });
-}
-
 function loadConfig() {
     try {
-        ensureDir();
-        if (fs.existsSync(CONFIG_FILE)) {
-            const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-            autoTypingConfig.mode = data.mode || 'off';
-            autoTypingConfig.duration = data.duration || 10;
-            autoTypingConfig.targetJid = data.targetJid || null;
-        }
+        const data = supabase.getConfigSync(CONFIG_DB_KEY, { mode: 'off', duration: 10, targetJid: null });
+        autoTypingConfig.mode = data.mode || 'off';
+        autoTypingConfig.duration = data.duration || 10;
+        autoTypingConfig.targetJid = data.targetJid || null;
     } catch {}
 }
 
 function saveConfig() {
     try {
-        ensureDir();
         const cfg = {
             mode: autoTypingConfig.mode,
             duration: autoTypingConfig.duration,
             targetJid: autoTypingConfig.targetJid || null
         };
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-        supabase.setConfig('autotyping_config', cfg).catch(() => {});
+        supabase.setConfig(CONFIG_DB_KEY, cfg).catch(() => {});
     } catch {}
 }
 
@@ -47,18 +37,6 @@ function normalizeToJid(input) {
     if (cleaned.length >= 7) return `${cleaned}@s.whatsapp.net`;
     return null;
 }
-
-(async () => {
-    try {
-        if (!fs.existsSync(CONFIG_FILE) && supabase.isAvailable()) {
-            const dbData = await supabase.getConfig('autotyping_config');
-            if (dbData && dbData.mode) {
-                if (!fs.existsSync('./data/autotyping')) fs.mkdirSync('./data/autotyping', { recursive: true });
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(dbData, null, 2));
-            }
-        }
-    } catch {}
-})();
 
 loadConfig();
 

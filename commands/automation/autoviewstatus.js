@@ -1,15 +1,14 @@
 // commands/automation/autoviewstatus.js
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import supabase from '../../lib/database.js';
 import { getBotName } from '../../lib/botname.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CONFIG_FILE = './data/autoViewConfig.json';
+const CONFIG_DB_KEY = 'autoview_config';
+const DEFAULT_VIEW_CONFIG = {
+    enabled: true, logs: [], totalViewed: 0, lastViewed: null,
+    consecutiveViews: 0, lastSender: null, excludedContacts: [],
+    settings: { rateLimitDelay: 1000, markAsSeen: true }
+};
 
 const G = '\x1b[32m'; const C = '\x1b[36m'; const Y = '\x1b[33m';
 const R = '\x1b[31m'; const B = '\x1b[1m';  const D = '\x1b[2m'; const X = '\x1b[0m';
@@ -32,31 +31,6 @@ function getMessageType(message) {
     return map[key] || `📦  ${key}`;
 }
 
-function initConfig() {
-    const configDir = path.dirname(CONFIG_FILE);
-    if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
-    if (!fs.existsSync(CONFIG_FILE)) {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify({
-            enabled: true, logs: [], totalViewed: 0, lastViewed: null,
-            consecutiveViews: 0, lastSender: null,
-            excludedContacts: [],
-            settings: { rateLimitDelay: 1000, markAsSeen: true }
-        }, null, 2));
-    }
-}
-
-initConfig();
-
-(async () => {
-    try {
-        if (supabase.isAvailable()) {
-            const dbData = await supabase.getConfig('autoview_config');
-            if (dbData?.enabled !== undefined)
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(dbData, null, 2));
-        }
-    } catch {}
-})();
-
 class AutoViewManager {
     constructor() {
         this.config = this.loadConfig();
@@ -68,24 +42,17 @@ class AutoViewManager {
 
     loadConfig() {
         try {
-            const c = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            const c = supabase.getConfigSync(CONFIG_DB_KEY, DEFAULT_VIEW_CONFIG);
             if (!Array.isArray(c.excludedContacts)) c.excludedContacts = [];
-            return c;
-        } catch {
-            return {
-                enabled: true, logs: [], totalViewed: 0, lastViewed: null,
-                consecutiveViews: 0, lastSender: null, excludedContacts: [],
-                settings: { rateLimitDelay: 1000, markAsSeen: true }
-            };
-        }
+            return { ...DEFAULT_VIEW_CONFIG, ...c };
+        } catch { return { ...DEFAULT_VIEW_CONFIG }; }
     }
 
     saveConfig() {
         if (this._saveTimer) clearTimeout(this._saveTimer);
         this._saveTimer = setTimeout(() => {
             try {
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-                supabase.setConfig('autoview_config', this.config).catch(() => {});
+                supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
             } catch {}
             this._saveTimer = null;
         }, 3000);
@@ -94,8 +61,7 @@ class AutoViewManager {
     saveConfigImmediate() {
         if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
         try {
-            fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2));
-            supabase.setConfig('autoview_config', this.config).catch(() => {});
+            supabase.setConfig(CONFIG_DB_KEY, this.config).catch(() => {});
         } catch {}
     }
 

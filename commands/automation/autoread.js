@@ -481,52 +481,38 @@
 
 
 
-import fs from 'fs';
+import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const settingsFile = './autoread_settings.json';
-
-// Ensure settings file exists
-if (!fs.existsSync(settingsFile)) {
-    const initialSettings = {
-        enabled: false,
-        mode: 'both', // 'groups', 'dms', 'both', 'off'
-        delay: 2000, // 2 seconds delay before marking as read
-        whitelist: [], // Users/groups to exclude from autoread
-        blacklist: [], // Users/groups to include even if not in mode
-        silent: true // Silent mode - don't show terminal messages
-    };
-    fs.writeFileSync(settingsFile, JSON.stringify(initialSettings, null, 2));
-}
+const CONFIG_DB_KEY = 'autoread_config';
+const DEFAULT_SETTINGS = {
+    enabled: false,
+    mode: 'both',
+    delay: 2000,
+    whitelist: [],
+    blacklist: [],
+    silent: true
+};
 
 // Expose initial state to globalThis so status endpoints always read live values
 try {
-    const _initAutoread = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    const _initAutoread = supabase.getConfigSync(CONFIG_DB_KEY, DEFAULT_SETTINGS);
     globalThis._autoreadEnabled = !!(_initAutoread?.enabled);
 } catch { globalThis._autoreadEnabled = false; }
 
 // Load settings
 function loadSettings() {
     try {
-        const data = fs.readFileSync(settingsFile, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error loading autoread settings:', error);
-        return {
-            enabled: false,
-            mode: 'both',
-            delay: 2000,
-            whitelist: [],
-            blacklist: [],
-            silent: true
-        };
+        return { ...DEFAULT_SETTINGS, ...supabase.getConfigSync(CONFIG_DB_KEY, DEFAULT_SETTINGS) };
+    } catch {
+        return { ...DEFAULT_SETTINGS };
     }
 }
 
 // Save settings
 function saveSettings(settings) {
     try {
-        fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+        supabase.setConfig(CONFIG_DB_KEY, settings).catch(() => {});
         globalThis._autoreadEnabled = !!(settings?.enabled);
     } catch (error) {
         console.error('Error saving autoread settings:', error);

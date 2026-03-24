@@ -1,8 +1,7 @@
-import fs from 'fs';
 import supabase from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const CONFIG_FILE = './data/autorecording/config.json';
+const CONFIG_DB_KEY = 'autorecording_config';
 
 const autoRecordingConfig = {
     mode: 'off',
@@ -13,32 +12,23 @@ const autoRecordingConfig = {
     isHooked: false
 };
 
-function ensureDir() {
-    if (!fs.existsSync('./data/autorecording')) fs.mkdirSync('./data/autorecording', { recursive: true });
-}
-
 function loadConfig() {
     try {
-        ensureDir();
-        if (fs.existsSync(CONFIG_FILE)) {
-            const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-            autoRecordingConfig.mode = data.mode || 'off';
-            autoRecordingConfig.duration = data.duration || 10;
-            autoRecordingConfig.targetJid = data.targetJid || null;
-        }
+        const data = supabase.getConfigSync(CONFIG_DB_KEY, { mode: 'off', duration: 10, targetJid: null });
+        autoRecordingConfig.mode = data.mode || 'off';
+        autoRecordingConfig.duration = data.duration || 10;
+        autoRecordingConfig.targetJid = data.targetJid || null;
     } catch {}
 }
 
 function saveConfig() {
     try {
-        ensureDir();
         const cfg = {
             mode: autoRecordingConfig.mode,
             duration: autoRecordingConfig.duration,
             targetJid: autoRecordingConfig.targetJid || null
         };
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-        supabase.setConfig('autorecording_config', cfg).catch(() => {});
+        supabase.setConfig(CONFIG_DB_KEY, cfg).catch(() => {});
     } catch {}
 }
 
@@ -47,18 +37,6 @@ function normalizeToJid(input) {
     if (cleaned.length >= 7) return `${cleaned}@s.whatsapp.net`;
     return null;
 }
-
-(async () => {
-    try {
-        if (!fs.existsSync(CONFIG_FILE) && supabase.isAvailable()) {
-            const dbData = await supabase.getConfig('autorecording_config');
-            if (dbData && dbData.mode) {
-                ensureDir();
-                fs.writeFileSync(CONFIG_FILE, JSON.stringify(dbData, null, 2));
-            }
-        }
-    } catch {}
-})();
 
 loadConfig();
 
