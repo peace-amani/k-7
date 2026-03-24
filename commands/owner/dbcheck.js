@@ -37,19 +37,19 @@ async function readTable(table) {
     }
 }
 
-const jsonFallbacks = [
-    { file: 'prefix_config.json',   label: 'prefix' },
-    { file: 'bot_mode.json',        label: 'bot_mode' },
-    { file: 'bot_settings.json',    label: 'bot_settings' },
-    { file: 'last_bot_id.json',     label: 'last_bot_id' },
-    { file: 'owner.json',           label: 'owner' },
+const JSON_ROOT_FILES = [
+    { file: 'prefix_config.json', label: 'prefix',      pick: r => `prefix="${r.prefix ?? '?'}"` },
+    { file: 'bot_mode.json',      label: 'bot_mode',    pick: r => `mode="${r.mode ?? '?'}"` },
+    { file: 'bot_settings.json',  label: 'bot_settings',pick: r => `prefix="${r.prefix ?? '?'}"` },
+    { file: 'last_bot_id.json',   label: 'last_bot_id', pick: r => `id="${r.botId ?? r.bot_id ?? r.id ?? '?'}"` },
+    { file: 'owner.json',         label: 'owner',       pick: r => `number="${r.OWNER_NUMBER ?? r.ownerNumber ?? '?'}"` },
 ];
 
-const jsonDataFiles = [
-    { file: 'data/autotyping/config.json',    label: 'autotyping' },
-    { file: 'data/autorecording/config.json', label: 'autorecording' },
-    { file: 'data/groupqueue.json',            label: 'group-queue' },
-    { file: 'data/exportqueue.json',           label: 'export-queue' },
+const JSON_DATA_FILES = [
+    { file: 'data/autotyping/config.json',    label: 'autotyping',    pick: r => `mode="${r.mode ?? 'off'}"` },
+    { file: 'data/autorecording/config.json', label: 'autorecording', pick: r => `mode="${r.mode ?? 'off'}"` },
+    { file: 'data/groupqueue.json',           label: 'group-queue',   pick: r => `${(Array.isArray(r) ? r : r.queue ?? []).length} queued` },
+    { file: 'data/exportqueue.json',          label: 'export-queue',  pick: r => `${(Array.isArray(r) ? r : r.queue ?? []).length} queued` },
 ];
 
 export default {
@@ -58,104 +58,82 @@ export default {
     owner: true,
     desc: 'Show all settings stored in SQLite and JSON fallback files',
 
-    async handler({ sock, jid, m, prefix }) {
+    async execute(sock, msg, args, PREFIX) {
+        const chatId = msg.key.remoteJid;
+        const P = PREFIX || '/';
         const lines = [];
-        const P = prefix || '/';
 
-        // ── DB file info ────────────────────────────────────────────────────────
+        // ── DB file info ──────────────────────────────────────────────────────────
         let dbSizeLine = '❌ not found';
-        try {
-            const stat = fs.statSync(DB_PATH);
-            dbSizeLine = fmtSize(stat.size);
-        } catch {}
+        try { dbSizeLine = fmtSize(fs.statSync(DB_PATH).size); } catch {}
 
-        const currentBotId = getConfigBotId?.() || 'unknown';
+        const currentBotId = (() => { try { return getConfigBotId() || 'unknown'; } catch { return 'unknown'; } })();
 
         lines.push(`*🗄️ SQLite Database Check*`);
         lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━`);
-        lines.push(`📁 File: \`data/bot.sqlite\``);
+        lines.push(`📁 File: data/bot.sqlite`);
         lines.push(`💾 Size: ${dbSizeLine}`);
-        lines.push(`🤖 Bot ID (active): \`${currentBotId}\``);
+        lines.push(`🤖 Bot ID: ${currentBotId}`);
         lines.push(``);
 
-        // ── bot_configs table ────────────────────────────────────────────────────
-        lines.push(`*📋 bot_configs table*`);
+        // ── bot_configs table ─────────────────────────────────────────────────────
+        lines.push(`*📋 bot_configs*`);
         const botConfigs = await readTable('bot_configs');
         if (!botConfigs) {
             lines.push(`  ❌ Could not read table`);
         } else if (botConfigs.length === 0) {
-            lines.push(`  _(empty — settings will reset on restart!)_`);
+            lines.push(`  ⚠️ EMPTY — settings will reset on restart!`);
         } else {
             const byBotId = {};
             for (const r of botConfigs) {
-                if (!byBotId[r.bot_id]) byBotId[r.bot_id] = [];
-                byBotId[r.bot_id].push(r);
+                (byBotId[r.bot_id] = byBotId[r.bot_id] || []).push(r);
             }
-            for (const [bid, brows] of Object.entries(byBotId)) {
-                lines.push(`  *[bot_id: ${bid}]* (${brows.length} keys)`);
-                for (const r of brows) {
+            for (const [bid, rows] of Object.entries(byBotId)) {
+                lines.push(`  *[${bid}]* — ${rows.length} keys`);
+                for (const r of rows) {
                     lines.push(`    • ${r.key}: ${fmtVal(r.value)}`);
                 }
             }
         }
-
         lines.push(``);
 
-        // ── auto_configs table ───────────────────────────────────────────────────
-        lines.push(`*⚙️ auto_configs table*`);
+        // ── auto_configs table ────────────────────────────────────────────────────
+        lines.push(`*⚙️ auto_configs*`);
         const autoConfigs = await readTable('auto_configs');
         if (!autoConfigs) {
             lines.push(`  ❌ Could not read table`);
         } else if (autoConfigs.length === 0) {
-            lines.push(`  _(empty)_`);
+            lines.push(`  (empty)`);
         } else {
             for (const r of autoConfigs) {
                 lines.push(`  • [${r.bot_id}] ${r.key}: ${fmtVal(r.value)}`);
             }
         }
-
         lines.push(``);
 
-        // ── JSON fallback files ──────────────────────────────────────────────────
-        lines.push(`*📄 JSON fallback files (root)*`);
-        for (const { file, label } of jsonFallbacks) {
+        // ── JSON fallback files ───────────────────────────────────────────────────
+        lines.push(`*📄 JSON fallback files*`);
+        for (const { file, pick } of JSON_ROOT_FILES) {
             try {
                 if (fs.existsSync(file)) {
                     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-                    let summary = '';
-                    if (label === 'prefix') summary = `prefix="${raw.prefix ?? '?'}"`;
-                    else if (label === 'bot_mode') summary = `mode="${raw.mode ?? '?'}"`;
-                    else if (label === 'last_bot_id') summary = `id="${raw.botId ?? raw.bot_id ?? raw.id ?? '?'}"`;
-                    else if (label === 'owner') summary = `number="${raw.OWNER_NUMBER ?? raw.ownerNumber ?? '?'}"`;
-                    else summary = fmtVal(JSON.stringify(raw));
-                    lines.push(`  ✅ ${file} → ${summary}`);
+                    lines.push(`  ✅ ${file} → ${pick(raw)}`);
                 } else {
-                    lines.push(`  ❌ ${file} → *MISSING* (will use DB/default)`);
+                    lines.push(`  ❌ ${file} → MISSING`);
                 }
             } catch {
                 lines.push(`  ⚠️ ${file} → unreadable`);
             }
         }
-
         lines.push(``);
 
-        // ── JSON data files (not in DB) ──────────────────────────────────────────
-        lines.push(`*📦 JSON-only settings (data/ folder)*`);
-        for (const { file, label } of jsonDataFiles) {
+        // ── JSON-only data files ──────────────────────────────────────────────────
+        lines.push(`*📦 data/ JSON files*`);
+        for (const { file, pick } of JSON_DATA_FILES) {
             try {
                 if (fs.existsSync(file)) {
                     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-                    let summary = '';
-                    if (label === 'autotyping') summary = `mode="${raw.mode ?? 'off'}"`;
-                    else if (label === 'autorecording') summary = `mode="${raw.mode ?? 'off'}"`;
-                    else if (label === 'group-queue') {
-                        const q = Array.isArray(raw) ? raw : (raw.queue ?? []);
-                        summary = `${q.length} queued group(s)`;
-                    } else if (label === 'export-queue') {
-                        const q = Array.isArray(raw) ? raw : (raw.queue ?? []);
-                        summary = `${q.length} queued export(s)`;
-                    } else summary = fmtVal(JSON.stringify(raw));
-                    lines.push(`  ✅ ${file} → ${summary}`);
+                    lines.push(`  ✅ ${file} → ${pick(raw)}`);
                 } else {
                     lines.push(`  ➖ ${file} → not created yet`);
                 }
@@ -163,11 +141,10 @@ export default {
                 lines.push(`  ⚠️ ${file} → unreadable`);
             }
         }
-
         lines.push(``);
 
-        // ── Quick health summary ─────────────────────────────────────────────────
-        lines.push(`*🩺 Health Summary*`);
+        // ── Prefix health check ───────────────────────────────────────────────────
+        lines.push(`*🩺 Prefix Health*`);
 
         let prefixInDb = null;
         try {
@@ -184,17 +161,17 @@ export default {
         })();
         const prefixInMem = global.prefix ?? global.CURRENT_PREFIX ?? null;
 
-        lines.push(`  Prefix in DB    : ${prefixInDb !== null ? `"${prefixInDb}"` : '❌ not found'}`);
-        lines.push(`  Prefix in file  : ${prefixInFile !== null ? `"${prefixInFile}"` : '❌ not found'}`);
-        lines.push(`  Prefix in memory: ${prefixInMem !== null ? `"${prefixInMem}"` : '❌ not found'}`);
+        lines.push(`  DB    : ${prefixInDb !== null ? `"${prefixInDb}"` : '❌ not found'}`);
+        lines.push(`  File  : ${prefixInFile !== null ? `"${prefixInFile}"` : '❌ not found'}`);
+        lines.push(`  Memory: ${prefixInMem !== null ? `"${prefixInMem}"` : '❌ not found'}`);
 
         const allMatch = prefixInDb !== null && prefixInFile !== null && prefixInMem !== null
             && prefixInDb === prefixInFile && prefixInFile === prefixInMem;
-        lines.push(`  Status: ${allMatch ? '✅ All in sync' : '⚠️ Mismatch — run ' + P + 'setprefix to re-sync'}`);
+        lines.push(`  ${allMatch ? '✅ All in sync' : `⚠️ Mismatch — run ${P}setprefix to re-sync`}`);
 
         lines.push(``);
-        lines.push(`_Use ${P}getsettings for full bot settings overview_`);
+        lines.push(`_Tip: use ${P}getsettings for the full settings overview_`);
 
-        await sock.sendMessage(jid, { text: lines.join('\n') }, { quoted: m });
+        await sock.sendMessage(chatId, { text: lines.join('\n') }, { quoted: msg });
     }
 };
