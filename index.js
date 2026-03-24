@@ -1036,6 +1036,10 @@ async function reloadConfigCaches() {
                 fs.writeFileSync('./owner.json', JSON.stringify(_cache_owner_data, null, 2));
             }
         } catch {}
+        try {
+            const _bn = _getBotName();
+            if (_bn) updateEnvFile('BOT_NAME', _bn);
+        } catch {}
 
     } catch (err) {
         UltraCleanLogger.warning(`⚠️ Config reload error: ${err.message}`);
@@ -4984,6 +4988,12 @@ async function runDataMigrations() {
             if (_cache_owner_data && _cache_owner_data.OWNER_NUMBER) {
                 fs.writeFileSync('./owner.json', JSON.stringify(_cache_owner_data, null, 2));
             }
+        } catch {}
+        try {
+            // BOT_NAME: botname.js already reads process.env.BOT_NAME as fallback,
+            // so writing it here means it survives even if bot_name.json is wiped.
+            const _bn = _getBotName();
+            if (_bn) updateEnvFile('BOT_NAME', _bn);
         } catch {}
         // ────────────────────────────────────────────────────────────────────────
 

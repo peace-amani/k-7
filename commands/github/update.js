@@ -2189,6 +2189,46 @@ async function updateViaZip(zipUrl = UPDATE_ZIP_URL) {
     
     // (suppressed)
     await restorePreservedFiles(preserveDir);
+
+    // ── Post-restore safety check ──────────────────────────────────────────
+    // If a critical settings file is missing or empty after restore (due to
+    // a disk-full backup failure), rebuild it from .env values which survive
+    // independently in the .gitignored .env file.
+    try {
+      const cwd = process.cwd();
+      const envContent = (() => {
+        try { return fs.readFileSync(path.join(cwd, '.env'), 'utf8'); } catch { return ''; }
+      })();
+      const envGet = (key) => {
+        const m = envContent.match(new RegExp(`^${key}=(.*)$`, 'm'));
+        return m ? m[1].trim() : (process.env[key] || '');
+      };
+
+      // prefix_config.json
+      const pfxPath = path.join(cwd, 'prefix_config.json');
+      const pfxSize = (() => { try { return fs.statSync(pfxPath).size; } catch { return 0; } })();
+      if (pfxSize === 0) {
+        const px = envGet('BOT_PREFIX') || '.';
+        fs.writeFileSync(pfxPath, JSON.stringify({ prefix: px, isPrefixless: px === '', restoredFromEnv: true }, null, 2));
+      }
+
+      // bot_mode.json
+      const modePath = path.join(cwd, 'bot_mode.json');
+      const modeSize = (() => { try { return fs.statSync(modePath).size; } catch { return 0; } })();
+      if (modeSize === 0) {
+        const mode = envGet('BOT_MODE') || 'public';
+        fs.writeFileSync(modePath, JSON.stringify({ mode, restoredFromEnv: true }, null, 2));
+      }
+
+      // bot_name.json
+      const namePath = path.join(cwd, 'bot_name.json');
+      const nameSize = (() => { try { return fs.statSync(namePath).size; } catch { return 0; } })();
+      if (nameSize === 0) {
+        const nm = envGet('BOT_NAME') || 'WOLFBOT';
+        fs.writeFileSync(namePath, JSON.stringify({ botName: nm, restoredFromEnv: true }, null, 2));
+      }
+    } catch { /* non-critical */ }
+    // ──────────────────────────────────────────────────────────────────────
     
     // (suppressed)
     await fsPromises.rm(tmpDir, { recursive: true, force: true });
@@ -2321,8 +2361,20 @@ async function restorePreservedFiles(preserveDir) {
       await fsPromises.mkdir(destDir, { recursive: true });
       
       if (entry.isDirectory()) {
-        await copyDirectoryFast(srcPath, destPath);
+        // For directories only restore if they have content
+        try {
+          const dirEntries = await fsPromises.readdir(srcPath);
+          if (dirEntries.length > 0) {
+            await copyDirectoryFast(srcPath, destPath);
+          }
+        } catch { /* skip empty/unreadable dirs */ }
       } else {
+        // GUARD: skip zero-byte backups — they were left by a failed copy
+        // (e.g. ENOSPC) and would overwrite a good original with nothing.
+        try {
+          const stat = await fsPromises.stat(srcPath);
+          if (stat.size === 0) continue;
+        } catch { continue; }
         await fsPromises.copyFile(srcPath, destPath);
       }
       // (suppressed)
