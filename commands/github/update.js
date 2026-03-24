@@ -2463,43 +2463,83 @@ export default {
       const sizeCheck = args.includes('size') || args.includes('check');
       
       await editStatus('🧹 **Cleaning all media & temp files...**\nSettings & configs will be preserved.');
-      try {
-        const dfOut = await run('df -BM --output=avail . 2>/dev/null || df -m . 2>/dev/null', 5000).catch(() => '');
-        const freeMatch = dfOut.match(/(\d+)M?\s*$/m);
-        const beforeMB = freeMatch ? parseInt(freeMatch[1]) : null;
 
+      // ── Reliable cross-platform disk-free helper ──────────────────────────────
+      async function getDiskFreeMB() {
+        try {
+          // Try df with MB blocks first
+          const out = await run('df -m . 2>/dev/null', 5000).catch(() => '');
+          if (out) {
+            // df -m output columns: Filesystem 1M-blocks Used Available Use% Mounted
+            // We want the Available column (4th field) on the data line
+            const lines = out.trim().split('\n');
+            for (let i = 1; i < lines.length; i++) {
+              const cols = lines[i].trim().split(/\s+/);
+              if (cols.length >= 4) {
+                const avail = parseInt(cols[3]);
+                if (!isNaN(avail) && avail > 0) return avail;
+              }
+            }
+          }
+        } catch {}
+        return null;
+      }
+
+      try {
+        const beforeMB = await getDiskFreeMB();
+
+        // ── Aggressive pre-update cleanup ──────────────────────────────────────
         const cleanCmds = [
-          'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz 2>/dev/null',
+          // npm cache — biggest quick win on low-disk servers
+          'npm cache clean --force 2>/dev/null || true',
+          // leftover update temp dirs
+          'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz /tmp/wolfbot_* 2>/dev/null',
+          // media caches
           'rm -rf ./data/viewonce_private/* 2>/dev/null',
           'rm -rf ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.jpeg ./data/viewonce_messages/*.png ./data/viewonce_messages/*.gif ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp ./data/viewonce_messages/*.opus ./data/viewonce_messages/*.pdf ./data/viewonce_messages/*.doc 2>/dev/null',
           'rm -rf ./data/antidelete/media/* 2>/dev/null',
           'rm -rf ./data/antidelete/status/media/* 2>/dev/null',
           'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.jpeg ./data/antiviewonce/*.png ./data/antiviewonce/*.gif ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.ogg ./data/antiviewonce/*.webp ./data/antiviewonce/*.opus 2>/dev/null',
+          // session bloat (keys grow unbounded over time)
           'find ./session -name "sender-key-*" -delete 2>/dev/null',
           'find ./session -name "pre-key-*" -delete 2>/dev/null',
           'find ./session -name "app-state-sync-version-*" -delete 2>/dev/null',
           'rm -rf session_backup 2>/dev/null',
+          // stale files
           'find ./data -name "*.bak" -delete 2>/dev/null',
-          'find . -maxdepth 2 -name "*.log" -not -path "./node_modules/*" -delete 2>/dev/null',
-          'rm -rf ./temp/* 2>/dev/null',
-          'rm -rf ./logs/* 2>/dev/null',
-          'git gc --prune=now --aggressive 2>/dev/null || true',
-          'npm cache clean --force 2>/dev/null || true'
+          'find . -maxdepth 3 -name "*.log" -not -path "./node_modules/*" -delete 2>/dev/null',
+          'rm -rf ./temp/* ./logs/* 2>/dev/null',
+          // node_modules cache dirs (safe to delete)
+          'rm -rf ./node_modules/.cache 2>/dev/null',
+          // git GC
+          'git gc --prune=now 2>/dev/null || true',
         ];
         for (const cmd of cleanCmds) {
-          await run(cmd, 15000).catch(() => {});
+          await run(cmd, 20000).catch(() => {});
         }
-        const dfAfter = await run('df -BM --output=avail . 2>/dev/null || df -m . 2>/dev/null', 5000).catch(() => '');
-        const afterMatch = dfAfter.match(/(\d+)M?\s*$/m);
-        const afterMB = afterMatch ? parseInt(afterMatch[1]) : beforeMB;
-        const recovered = (beforeMB !== null && afterMB !== null) ? (afterMB - beforeMB) : 0;
+
+        const afterMB = await getDiskFreeMB();
+        const recovered = (beforeMB !== null && afterMB !== null) ? Math.max(0, afterMB - beforeMB) : 0;
         await editStatus(`💾 **Media cleanup done!** ${afterMB !== null ? afterMB + 'MB free' : ''}${recovered > 0 ? ' (recovered ' + recovered + 'MB)' : ''}\n✅ Settings, prefix, configs preserved\nContinuing update...`);
-        if (afterMB !== null && afterMB < 80) {
-          await editStatus(`❌ **Not enough disk space for update**\nOnly ${afterMB}MB free after cleanup.\n\n_The ZIP download + extraction needs ~80 MB of free space._\nDelete large files (old media, logs) or increase disk allocation, then try again.`);
-          return;
+
+        // ── Disk guard ────────────────────────────────────────────────────────
+        // Git fetch (shallow diff) needs only ~20 MB.
+        // ZIP download + extraction needs ~80 MB.
+        // We pick the right threshold based on which method will be used.
+        if (afterMB !== null) {
+          const gitOk = await hasGitRepo().catch(() => false);
+          const willUseGit = gitOk && !useZip;
+          const minMB = willUseGit ? 20 : 80;
+          if (afterMB < minMB) {
+            const tip = willUseGit
+              ? `Git fetch needs at least ${minMB}MB free.`
+              : `ZIP download + extraction needs at least ${minMB}MB free.`;
+            await editStatus(`❌ **Not enough disk space for update**\nOnly ${afterMB}MB free after cleanup.\n\n_${tip}_\nDelete large files or increase disk allocation, then try again.`);
+            return;
+          }
         }
       } catch (diskErr) {
-        // Non-critical, continue with update
+        // Non-critical — continue with update if disk check fails
       }
       
       // If just checking size
