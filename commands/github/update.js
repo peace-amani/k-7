@@ -2037,9 +2037,11 @@ async function preserveEssentialFiles() {
   ];
   
   const essentialDirs = [
+    // NOTE: 'data' is intentionally excluded here.
+    // The ZIP update already skips data/ via ignorePatterns in copyEssentialFiles,
+    // so copying it to tmp is redundant AND dangerous — bot.sqlite can be 50 MB+
+    // which causes ENOSPC failures on low-disk servers and corrupts the backup.
     'session',
-    'data',
-    'logs',
     'assets',
     'lib'
   ];
@@ -2440,8 +2442,8 @@ export default {
         const afterMB = afterMatch ? parseInt(afterMatch[1]) : beforeMB;
         const recovered = (beforeMB !== null && afterMB !== null) ? (afterMB - beforeMB) : 0;
         await editStatus(`💾 **Media cleanup done!** ${afterMB !== null ? afterMB + 'MB free' : ''}${recovered > 0 ? ' (recovered ' + recovered + 'MB)' : ''}\n✅ Settings, prefix, configs preserved\nContinuing update...`);
-        if (afterMB !== null && afterMB < 30) {
-          await editStatus(`❌ **Not enough disk space for update**\nOnly ${afterMB}MB free after cleanup.\nManually delete large files or increase disk allocation.`);
+        if (afterMB !== null && afterMB < 80) {
+          await editStatus(`❌ **Not enough disk space for update**\nOnly ${afterMB}MB free after cleanup.\n\n_The ZIP download + extraction needs ~80 MB of free space._\nDelete large files (old media, logs) or increase disk allocation, then try again.`);
           return;
         }
       } catch (diskErr) {
