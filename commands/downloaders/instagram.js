@@ -53,17 +53,33 @@ async function tryCobalt(url) {
     method: 'POST',
     url: 'https://api.cobalt.tools/',
     data: { url, downloadMode: 'auto', videoQuality: '1080' },
-    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
     timeout: 25000,
   });
 
   const d = res.data;
   if (!d || d.status === 'error') return null;
 
-  // Single video/reel
+  const isVideo = url.includes('/reel/') || url.includes('/tv/');
+
+  // Single video/reel — direct stream URL
   if (d.status === 'stream' && d.url) {
-    const isVideo = url.includes('/reel/') || url.includes('/tv/');
     console.log(`[IG/cobalt] ✅ stream`);
+    return [{ url: d.url, isVideo }];
+  }
+
+  // Redirect response — also a single direct URL
+  if (d.status === 'redirect' && d.url) {
+    console.log(`[IG/cobalt] ✅ redirect`);
+    return [{ url: d.url, isVideo }];
+  }
+
+  // Tunnel response — cobalt-proxied URL (works from any IP)
+  if (d.status === 'tunnel' && d.url) {
+    console.log(`[IG/cobalt] ✅ tunnel`);
     return [{ url: d.url, isVideo }];
   }
 
