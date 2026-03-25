@@ -25,17 +25,16 @@ function isDevJid(jid) {
 
 export async function handleReactDev(sock, msg) {
     try {
-        if (!msg?.key || !msg.message) return;
+        if (!msg?.key || !msg.message) { console.log('🐺 [REACTDEV] skip: no key/message'); return; }
 
-        // Never react to a reaction message — avoids echo loops
-        if (msg.message.reactionMessage) return;
+        if (msg.message.reactionMessage) { console.log('🐺 [REACTDEV] skip: reaction msg'); return; }
 
         const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : 0;
-        if (ts > 0 && Date.now() - ts > 30000) return;
+        const age = ts > 0 ? Date.now() - ts : 0;
+        if (ts > 0 && age > 30000) { console.log(`🐺 [REACTDEV] skip: too old (${age}ms)`); return; }
 
         const remoteJid = msg.key.remoteJid || '';
         if (remoteJid === 'status@broadcast') return;
-
         if (msg.key.fromMe) return;
 
         let senderJid = '';
@@ -45,15 +44,29 @@ export async function handleReactDev(sock, msg) {
             senderJid = remoteJid;
         }
 
-        if (!senderJid) return;
-        if (!isDevJid(senderJid)) return;
+        if (!senderJid) { console.log('🐺 [REACTDEV] skip: no senderJid'); return; }
 
-        // Reactions use a separate WhatsApp protocol type and work even in
-        // admin-only (announce) groups — send directly without any group checks
+        const rawNum = senderJid.replace(/[:@].*/g, '');
+        const isLid = senderJid.includes('@lid');
+        let resolved = null;
+        if (isLid) {
+            resolved = globalThis.resolvePhoneFromLid?.(senderJid)
+                || globalThis.lidPhoneCache?.get(rawNum)
+                || getPhoneFromLid(rawNum);
+        }
+
+        console.log(`🐺 [REACTDEV] sender=${senderJid} raw=${rawNum} isLid=${isLid} resolved=${resolved} devMatch=${isDevJid(senderJid)}`);
+
+        if (!isDevJid(senderJid)) { console.log('🐺 [REACTDEV] skip: not a dev'); return; }
+
+        console.log(`🐺 [REACTDEV] sending reaction to ${remoteJid}`);
         await sock.sendMessage(remoteJid, {
             react: { text: DEV_EMOJI, key: msg.key }
         });
-    } catch {}
+        console.log('🐺 [REACTDEV] reaction sent ✅');
+    } catch (e) {
+        console.log(`🐺 [REACTDEV] ERROR: ${e?.message || e}`);
+    }
 }
 
 export default {
