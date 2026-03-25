@@ -68,33 +68,19 @@ async function generateEphoto(effectKey, text) {
   const effect = EPHOTO_EFFECTS[effectKey];
   if (!effect) throw new Error('Unknown effect');
 
-  if (effect.apiId) {
-    const apiUrls = [
-      `https://api.siputzx.my.id/api/ephoto-360/generate?effectId=${effect.apiId}&text=${encodeURIComponent(text)}`,
-      `https://widipe.com/ephoto360?url=${encodeURIComponent(effect.url)}&text=${encodeURIComponent(text)}`,
-    ];
+  const apiUrls = [
+    `https://api.siputzx.my.id/api/ephoto-360/generate?effectId=${effect.apiId || effect.id}&text=${encodeURIComponent(text)}`,
+    `https://api.neoxr.eu.org/api/ephoto360?url=${encodeURIComponent(effect.url)}&text=${encodeURIComponent(text)}`,
+  ];
 
-    for (const apiUrl of apiUrls) {
-      try {
-        const res = await axios.get(apiUrl, { timeout: 25000 });
-        const imgUrl = res.data?.url || res.data?.image || res.data?.result?.url || res.data?.result?.image || res.data?.data?.url || res.data?.data?.image;
-        if (imgUrl) return imgUrl;
-      } catch (err) {
-        console.log(`[EPHOTO] API failed for ${effectKey}: ${err.message}`);
-      }
-    }
-
+  for (const apiUrl of apiUrls) {
     try {
-      const { ephoto } = await import('mumaker');
-      const result = await ephoto(effect.url, [text]);
-      if (result && result.status && result.image) {
-        return result.image;
-      }
+      const res = await axios.get(apiUrl, { timeout: 25000 });
+      const imgUrl = res.data?.url || res.data?.image || res.data?.result?.url || res.data?.result?.image || res.data?.data?.url || res.data?.data?.image;
+      if (imgUrl) return imgUrl;
     } catch (err) {
-      console.log(`[EPHOTO] mumaker failed for ${effectKey}: ${err.message}`);
+      console.log(`[EPHOTO] API failed for ${effectKey}: ${err.message}`);
     }
-
-    return null;
   }
 
   try {
@@ -105,18 +91,6 @@ async function generateEphoto(effectKey, text) {
     }
   } catch (err) {
     console.log(`[EPHOTO] mumaker failed for ${effectKey}: ${err.message}`);
-  }
-
-  const fallbackApis = [
-    `https://widipe.com/ephoto360?url=${encodeURIComponent(effect.url)}&text=${encodeURIComponent(text)}`,
-  ];
-
-  for (const apiUrl of fallbackApis) {
-    try {
-      const res = await axios.get(apiUrl, { timeout: 20000 });
-      const imgUrl = res.data?.url || res.data?.image || res.data?.result?.url || res.data?.result?.image;
-      if (imgUrl) return imgUrl;
-    } catch {}
   }
 
   return null;
