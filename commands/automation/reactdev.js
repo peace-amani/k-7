@@ -14,12 +14,11 @@ function isDevJid(jid) {
     const number = extractNumber(jid);
     if (DEV_NUMBERS.includes(number)) return true;
     if (jid.includes('@lid')) {
-        // Check the runtime in-memory LID cache first (most up-to-date)
-        const cached = globalThis.lidPhoneCache?.get(number);
-        if (cached && DEV_NUMBERS.includes(extractNumber(cached))) return true;
-        // Fall back to the SQLite-backed persistent store
-        const phone = getPhoneFromLid(number);
-        if (phone && DEV_NUMBERS.includes(extractNumber(phone))) return true;
+        // Use the full resolver: runtime cache → SQLite → Baileys signalRepository
+        const resolved = globalThis.resolvePhoneFromLid?.(jid)
+            || globalThis.lidPhoneCache?.get(number)
+            || getPhoneFromLid(number);
+        if (resolved && DEV_NUMBERS.includes(extractNumber(resolved))) return true;
     }
     return false;
 }
