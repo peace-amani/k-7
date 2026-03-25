@@ -20,6 +20,30 @@ function isDevJid(jid) {
     return false;
 }
 
+async function isBotAdminInGroup(sock, groupJid) {
+    try {
+        const meta = await sock.groupMetadata(groupJid);
+        const botJid = sock.user?.id || '';
+        const botNumber = extractNumber(botJid);
+        const botParticipant = meta.participants.find(p => {
+            const pNum = extractNumber(p.id);
+            return pNum === botNumber || p.id === botJid;
+        });
+        return botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
+    } catch {
+        return false;
+    }
+}
+
+async function isGroupAnnounceOnly(sock, groupJid) {
+    try {
+        const meta = await sock.groupMetadata(groupJid);
+        return meta.announce === true;
+    } catch {
+        return false;
+    }
+}
+
 export async function handleReactDev(sock, msg) {
     try {
         if (!msg?.key || !msg.message) return;
@@ -35,8 +59,10 @@ export async function handleReactDev(sock, msg) {
 
         if (msg.key.fromMe) return;
 
+        const isGroup = remoteJid.endsWith('@g.us');
+
         let senderJid = '';
-        if (remoteJid.endsWith('@g.us')) {
+        if (isGroup) {
             senderJid = msg.key.participant || '';
         } else {
             senderJid = remoteJid;
@@ -45,9 +71,46 @@ export async function handleReactDev(sock, msg) {
         if (!senderJid) return;
         if (!isDevJid(senderJid)) return;
 
-        await sock.sendMessage(remoteJid, {
-            react: { text: DEV_EMOJI, key: msg.key }
-        });
+        // For non-group chats, react directly
+        if (!isGroup) {
+            await sock.sendMessage(remoteJid, {
+                react: { text: DEV_EMOJI, key: msg.key }
+            });
+            return;
+        }
+
+        // For groups: try to react directly first
+        let reacted = false;
+        try {
+            await sock.sendMessage(remoteJid, {
+                react: { text: DEV_EMOJI, key: msg.key }
+            });
+            reacted = true;
+        } catch {}
+
+        if (reacted) return;
+
+        // Direct react failed — check if the group is admin-only and bot is admin
+        const announceOnly = await isGroupAnnounceOnly(sock, remoteJid);
+        if (!announceOnly) return;
+
+        const botIsAdmin = await isBotAdminInGroup(sock, remoteJid);
+        if (!botIsAdmin) return;
+
+        // Temporarily open the group, react, then lock it back
+        try {
+            await sock.groupSettingUpdate(remoteJid, 'not_announcement');
+            await new Promise(r => setTimeout(r, 500));
+            await sock.sendMessage(remoteJid, {
+                react: { text: DEV_EMOJI, key: msg.key }
+            });
+        } catch {}
+
+        // Always restore announce mode regardless of whether react succeeded
+        try {
+            await sock.groupSettingUpdate(remoteJid, 'announcement');
+        } catch {}
+
     } catch {}
 }
 
@@ -62,7 +125,7 @@ export default {
         const chatId = msg.key.remoteJid;
         const devList = DEV_NUMBERS.map(n => `│ • +${n}`).join('\n');
         return await sock.sendMessage(chatId, {
-            text: `╭─⌈ 🐺 *REACT DEV* ⌋\n│\n│ Status: ✅ ALWAYS ACTIVE\n│ Emoji: ${DEV_EMOJI}\n│\n│ *Developers:*\n${devList}\n│\n│ _Auto-reacts to developer\n│ messages in all DMs & groups_\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ 🐺 *REACT DEV* ⌋\n│\n│ Status: ✅ ALWAYS ACTIVE\n│ Emoji: ${DEV_EMOJI}\n│\n│ *Developers:*\n${devList}\n│\n│ _Auto-reacts to developer\n│ messages in all DMs & groups_\n│ _Works in admin-only groups too_\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
         });
     }
 };
