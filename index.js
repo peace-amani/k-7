@@ -261,7 +261,7 @@ import axios from "axios";
 import { normalizeMessageContent, downloadContentFromMessage, downloadMediaMessage, jidNormalizedUser, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
 import NodeCache from 'node-cache';
 import { isSudoNumber, isSudoJid, getSudoMode, addSudoJid, mapLidToPhone, isSudoByLid, getPhoneFromLid, getSudoList, hasUnmappedSudos } from './lib/sudo-store.js';
-import supabaseDb, { setConfigBotId, isUsingWasm } from './lib/database.js';
+import supabaseDb, { setConfigBotId, isUsingWasm, forceBackup } from './lib/database.js';
 import { useSQLiteAuthState, getSessionStats } from './lib/authState.js';
 import { getBotName as _getBotName, clearBotNameCache } from './lib/botname.js';
 import WolfAI from './lib/wolfai.js';
@@ -1051,6 +1051,72 @@ async function reloadConfigCaches() {
         UltraCleanLogger.warning(`⚠️ Config reload error: ${err.message}`);
     }
 }
+
+// ── Pre-exit settings save ────────────────────────────────────────────────────
+// Called by the restart / update commands immediately before process.exit().
+// Guarantees that all live in-memory settings are written to every storage layer
+// that may outlast the current process:
+//   1. critical_backup.json  — SQLite row snapshot; restored on next initTables()
+//   2. JSON fallback files   — used by loadPrefixFromFiles() before WhatsApp connects
+//   3. .env file             — survives git-based reinstalls on Pterodactyl / VPS
+//   4. Heroku Config Vars    — the ONLY storage that survives an ephemeral-FS dyno
+//                              restart; requires HEROKU_API_KEY + HEROKU_APP_NAME
+globalThis.preExitSave = async function preExitSave() {
+    try {
+        // 1. Force the SQLite critical_backup.json to be written right now
+        try { forceBackup(); } catch {}
+
+        // 2. Re-write JSON fallback files with the current live values
+        try {
+            fs.writeFileSync('./prefix_config.json', JSON.stringify({
+                prefix: isPrefixless ? '' : prefixCache,
+                isPrefixless,
+                setAt: new Date().toISOString()
+            }, null, 2));
+        } catch {}
+        try {
+            fs.writeFileSync('./bot_mode.json', JSON.stringify({ mode: BOT_MODE }, null, 2));
+        } catch {}
+
+        // 3. Sync the .env file with the live values
+        try { updateEnvFile('BOT_PREFIX', isPrefixless ? '' : (prefixCache || DEFAULT_PREFIX)); } catch {}
+        try { updateEnvFile('BOT_MODE', BOT_MODE || 'public'); } catch {}
+
+        // 4. Push critical settings to Heroku Config Vars so they survive the
+        //    ephemeral filesystem being wiped when the dyno restarts.
+        //    Requires HEROKU_API_KEY (or HEROKU_API_TOKEN) + HEROKU_APP_NAME.
+        const _hApiKey  = process.env.HEROKU_API_KEY || process.env.HEROKU_API_TOKEN;
+        const _hAppName = process.env.HEROKU_APP_NAME;
+        if (_hApiKey && _hAppName) {
+            try {
+                const { default: _https } = await import('https');
+                const _vars = JSON.stringify({
+                    BOT_PREFIX: isPrefixless ? '' : (prefixCache || DEFAULT_PREFIX),
+                    BOT_MODE:   BOT_MODE   || 'public',
+                    BOT_NAME:   (global.BOT_NAME || BOT_NAME || 'WOLFBOT')
+                });
+                await new Promise((resolve) => {
+                    const _req = _https.request({
+                        hostname: 'api.heroku.com',
+                        path:     `/apps/${encodeURIComponent(_hAppName)}/config-vars`,
+                        method:   'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${_hApiKey}`,
+                            'Content-Type':  'application/json',
+                            'Accept':        'application/vnd.heroku+json; version=3',
+                            'Content-Length': Buffer.byteLength(_vars)
+                        }
+                    }, (res) => { res.resume(); resolve(); });
+                    _req.on('error', resolve);
+                    _req.write(_vars);
+                    _req.end();
+                });
+                UltraCleanLogger.success('✅ Settings synced to Heroku Config Vars');
+            } catch {}
+        }
+    } catch {}
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ====== SECTION 9: SPEED & RATE-LIMIT CONSTANTS ======
 // AUTO_CONNECT_ON_LINK  — if true, triggers the .connect flow whenever a new user

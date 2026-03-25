@@ -2652,7 +2652,9 @@ export default {
           try {
             await run('pm2 restart all', 10000);
           } catch {
-            // (suppressed)
+            if (typeof globalThis.preExitSave === 'function') {
+              try { await globalThis.preExitSave(); } catch {}
+            }
             process.exit(0);
           }
         }
@@ -2669,7 +2671,9 @@ export default {
         try {
           await run('pm2 restart all', 10000);
         } catch {
-          // (suppressed)
+          if (typeof globalThis.preExitSave === 'function') {
+            try { await globalThis.preExitSave(); } catch {}
+          }
           process.exit(0);
         }
       }
