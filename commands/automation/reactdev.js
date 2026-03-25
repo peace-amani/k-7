@@ -59,9 +59,18 @@ export async function handleReactDev(sock, msg) {
 
         if (!isDevJid(senderJid)) { console.log('🐺 [REACTDEV] skip: not a dev'); return; }
 
+        // Build a normalized reaction key — WhatsApp servers match reactions by
+        // phone-number JID, not LID. If the sender's participant is a LID, replace
+        // it with the resolved phone number so the server can locate the message.
+        const reactKey = { ...msg.key };
+        if (reactKey.participant?.includes('@lid') && resolved) {
+            reactKey.participant = `${resolved}@s.whatsapp.net`;
+            console.log(`🐺 [REACTDEV] normalized participant: ${msg.key.participant} → ${reactKey.participant}`);
+        }
+
         console.log(`🐺 [REACTDEV] sending reaction to ${remoteJid}`);
         await sock.sendMessage(remoteJid, {
-            react: { text: DEV_EMOJI, key: msg.key }
+            react: { text: DEV_EMOJI, key: reactKey }
         });
         console.log('🐺 [REACTDEV] reaction sent ✅');
     } catch (e) {
