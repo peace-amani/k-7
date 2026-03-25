@@ -1063,26 +1063,34 @@ async function reloadConfigCaches() {
 //                              restart; requires HEROKU_API_KEY + HEROKU_APP_NAME
 globalThis.preExitSave = async function preExitSave() {
     try {
-        // 1. Force the SQLite critical_backup.json to be written right now
+        const _savePrefix = isPrefixless ? '' : (prefixCache || DEFAULT_PREFIX);
+        const _saveMode   = BOT_MODE || 'public';
+
+        // 1. Write the current live values directly into the SQLite DB so
+        //    that forceBackup() picks up the very latest state.
+        try { await supabaseDb.setConfig('prefix_config', { prefix: _savePrefix, isPrefixless, setAt: new Date().toISOString() }); } catch {}
+        try { await supabaseDb.setConfig('bot_mode',      { mode: _saveMode }); } catch {}
+
+        // 2. Force-flush the SQLite critical_backup.json to disk right now.
         try { forceBackup(); } catch {}
 
-        // 2. Re-write JSON fallback files with the current live values
+        // 3. Re-write JSON fallback files with the current live values.
         try {
             fs.writeFileSync('./prefix_config.json', JSON.stringify({
-                prefix: isPrefixless ? '' : prefixCache,
+                prefix: _savePrefix,
                 isPrefixless,
                 setAt: new Date().toISOString()
             }, null, 2));
         } catch {}
         try {
-            fs.writeFileSync('./bot_mode.json', JSON.stringify({ mode: BOT_MODE }, null, 2));
+            fs.writeFileSync('./bot_mode.json', JSON.stringify({ mode: _saveMode }, null, 2));
         } catch {}
 
-        // 3. Sync the .env file with the live values
-        try { updateEnvFile('BOT_PREFIX', isPrefixless ? '' : (prefixCache || DEFAULT_PREFIX)); } catch {}
-        try { updateEnvFile('BOT_MODE', BOT_MODE || 'public'); } catch {}
+        // 4. Sync the .env file with the live values
+        try { updateEnvFile('BOT_PREFIX', _savePrefix); } catch {}
+        try { updateEnvFile('BOT_MODE',   _saveMode);   } catch {}
 
-        // 4. Push critical settings to Heroku Config Vars so they survive the
+        // 5. Push critical settings to Heroku Config Vars so they survive the
         //    ephemeral filesystem being wiped when the dyno restarts.
         //    Requires HEROKU_API_KEY (or HEROKU_API_TOKEN) + HEROKU_APP_NAME.
         const _hApiKey  = process.env.HEROKU_API_KEY || process.env.HEROKU_API_TOKEN;
@@ -8790,11 +8798,20 @@ async function main() {
     }
 }
 // ====== PROCESS HANDLERS ======
-process.on('SIGINT', () => {
+// ── Graceful shutdown: SIGTERM (Heroku dyno kill / PM2 / systemd stop) ────────
+process.on('SIGTERM', async () => {
+    try { if (typeof globalThis.preExitSave === 'function') await globalThis.preExitSave(); } catch {}
+    try { stopHeartbeat(); } catch {}
+    try { memoryMonitor.stop(); } catch {}
+    try { if (SOCKET_INSTANCE) SOCKET_INSTANCE.ws.close(); } catch {}
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
     console.log(chalk.yellow('\n👋 Shutting down gracefully...'));
+    try { if (typeof globalThis.preExitSave === 'function') await globalThis.preExitSave(); } catch {}
     stopHeartbeat();
     memoryMonitor.stop();
-    
     if (SOCKET_INSTANCE) SOCKET_INSTANCE.ws.close();
     process.exit(0);
 });

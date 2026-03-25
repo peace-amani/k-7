@@ -145,12 +145,12 @@ export default {
         text: '🔄 **Restarting Now...**\nBot will be back in a moment!'
       }, { quoted: m });
 
+      if (typeof globalThis.preExitSave === 'function') {
+        try { await globalThis.preExitSave(); } catch {}
+      }
       try {
         await run('pm2 restart all', 10000);
       } catch {
-        if (typeof globalThis.preExitSave === 'function') {
-          try { await globalThis.preExitSave(); } catch {}
-        }
         process.exit(0);
       }
 
