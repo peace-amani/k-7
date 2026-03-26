@@ -1339,9 +1339,8 @@ class UltraCleanLogger {
         const time = _getTime();
         const _DIM = '\x1b[2m\x1b[37m';
         const _WHT = '\x1b[37m';
-        originalConsoleMethods.log(`${_DIM}╭─⌈ 💬  LOG ⌋─── ${time}\x1b[0m`);
-        originalConsoleMethods.log(`${_DIM}├─⊷\x1b[0m ${_WHT}${text}\x1b[0m`);
-        originalConsoleMethods.log(`${_DIM}╰───\x1b[0m`);
+        originalConsoleMethods.log(`${_DIM}╭─⌈ 💬  LOG ⌋\x1b[0m`);
+        originalConsoleMethods.log(`${_DIM}╰─⊷ ${time}  \x1b[0m${_WHT}${text}\x1b[0m`);
     }
     
     static error(...args) {
@@ -1351,9 +1350,8 @@ class UltraCleanLogger {
         }
         const text = args.join(' ');
         const time = _getTime();
-        originalConsoleMethods.error(`${_YB}╭─⌈ ❌ ERROR ⌋─── ${_YD}${time}${_R}`);
-        originalConsoleMethods.error(`${_Y}├─⊷ \x1b[38;2;255;80;80m${text}${_R}`);
-        originalConsoleMethods.error(`${_Y}╰───${_R}`);
+        originalConsoleMethods.error(`${_YB}╭─⌈ ❌ ERROR ⌋${_R}`);
+        originalConsoleMethods.error(`${_Y}╰─⊷ ${_YD}${time}  ${_R}\x1b[38;2;255;80;80m${text}${_R}`);
     }
     
     static success(...args) {
@@ -1361,9 +1359,8 @@ class UltraCleanLogger {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_GB}╭─⌈ ✅  OK ⌋─── ${_GD}${time}${_R}`);
-        originalConsoleMethods.log(`${_G}├─⊷ ${text}${_R}`);
-        originalConsoleMethods.log(`${_G}╰───${_R}`);
+        originalConsoleMethods.log(`${_GB}╭─⌈ ✅  OK ⌋${_R}`);
+        originalConsoleMethods.log(`${_G}╰─⊷ ${_GD}${time}  ${_R}${_G}${text}${_R}`);
     }
     
     static info(...args) {
@@ -1371,9 +1368,8 @@ class UltraCleanLogger {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_BLB}╭─⌈ ℹ️  INFO ⌋─── ${_BL}${time}${_R}`);
-        originalConsoleMethods.log(`${_BL}├─⊷ ${_CYAN}${text}${_R}`);
-        originalConsoleMethods.log(`${_BL}╰───${_R}`);
+        originalConsoleMethods.log(`${_BLB}╭─⌈ ℹ️  INFO ⌋${_R}`);
+        originalConsoleMethods.log(`${_BL}╰─⊷ ${_BL}${time}  ${_R}${_CYAN}${text}${_R}`);
     }
     
     static warning(...args) {
@@ -1385,9 +1381,8 @@ class UltraCleanLogger {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_YB}╭─⌈ ⚠️  WARNING ⌋─── ${_YD}${time}${_R}`);
-        originalConsoleMethods.log(`${_Y}├─⊷ ${_ORG}${text}${_R}`);
-        originalConsoleMethods.log(`${_Y}╰───${_R}`);
+        originalConsoleMethods.log(`${_YB}╭─⌈ ⚠️  WARNING ⌋${_R}`);
+        originalConsoleMethods.log(`${_Y}╰─⊷ ${_YD}${time}  ${_R}${_ORG}${text}${_R}`);
     }
     
     static event(...args) {
@@ -1410,17 +1405,15 @@ class UltraCleanLogger {
     static ownerMessage(...args) {
         const time = _getTime();
         const msg = args.join(' ');
-        originalConsoleMethods.log(`${_GD}╭─⌈ 💬 👑 OWNER ⌋─── ${time}${_R}`);
-        originalConsoleMethods.log(`${_G}├─⊷ ${msg}${_R}`);
-        originalConsoleMethods.log(`${_G}╰───${_R}`);
+        originalConsoleMethods.log(`${_GD}╭─⌈ 💬 👑 OWNER ⌋${_R}`);
+        originalConsoleMethods.log(`${_G}╰─⊷ ${_GD}${time}  ${_R}${_G}${msg}${_R}`);
     }
     
     static critical(...args) {
         const time = _getTime();
         const text = args.join(' ');
-        originalConsoleMethods.error(`${_YB}╭─⌈ 🚨 CRITICAL ⌋─── ${_YD}${time}${_R}`);
-        originalConsoleMethods.error(`${_Y}├─⊷ ${text}${_R}`);
-        originalConsoleMethods.error(`${_Y}╰───${_R}`);
+        originalConsoleMethods.error(`${_YB}╭─⌈ 🚨 CRITICAL ⌋${_R}`);
+        originalConsoleMethods.error(`${_Y}╰─⊷ ${_YD}${time}  ${_R}${_Y}${text}${_R}`);
     }
     
     static group(...args) {
@@ -1446,11 +1439,11 @@ class UltraCleanLogger {
         const preview = text.length > 90 ? text.substring(0, 90) + '…' : text;
         const color = isGroup ? _BL : _ORG;
         const colorB = isGroup ? _BLB : _ORGB;
-        originalConsoleMethods.log(`${colorB}╭─⌈ ${typeIcon} ${typeLabel} ⌋─── ${color}${t}${_R}`);
+        originalConsoleMethods.log(`${colorB}╭─⌈ ${typeIcon} ${typeLabel} ⌋${_R}`);
         if (isGroup && groupName) {
-            originalConsoleMethods.log(`${color}├─ 📱 +${phone}   👥 ${groupName}${_R}`);
+            originalConsoleMethods.log(`${color}├─ ${color}${t}  📱 +${phone}   👥 ${groupName}${_R}`);
         } else {
-            originalConsoleMethods.log(`${color}├─ 📱 +${phone}${_R}`);
+            originalConsoleMethods.log(`${color}├─ ${color}${t}  📱 +${phone}${_R}`);
         }
         originalConsoleMethods.log(`${color}╰─⊷ "${preview}"${_R}`);
     }
