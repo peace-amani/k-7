@@ -358,6 +358,7 @@ function resolvePhoneFromLid(jid) {
 }
 // Expose globally so other modules (chatbot.js, etc.) can resolve LID → phone
 globalThis.resolvePhoneFromLid = resolvePhoneFromLid;
+globalThis.pg = pg;
 
 async function resolvePhoneFromGroup(senderJid, chatId, sock) {
     return resolveSenderFromGroup(senderJid, chatId, sock);
@@ -726,6 +727,7 @@ import { isEnabled as antispamEnabled, getAction as antispamGetAction, checkSpam
 import { isBotMessage as antibotCheck, isEnabled as antibotEnabled, getMode as antibotGetMode } from './commands/group/antibot.js';
 import banCommand from './commands/group/ban.js';
 import { setupWebServer, updateWebStatus } from './lib/webServer.js';
+import pg from './lib/pgAdapter.js';
 
 // Pre-imported group event modules (avoids dynamic import disk I/O in hot event handlers)
 import { handleGroupParticipantUpdate as antidemoteHandler } from './commands/group/antidemote.js';
