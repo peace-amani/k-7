@@ -527,9 +527,8 @@ export default {
     }
 };
 
-console.log('📥 View-Once Downloader (VV) module loaded');
-console.log(`📁 Temporary storage: /tmp/`);
-console.log(`📝 Default caption: "${CONFIG.DEFAULT_CAPTION}"`);
+globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+globalThis._wolfSysStats.vvModule = { loaded: true, storage: '/tmp/', caption: CONFIG.DEFAULT_CAPTION };
 
 
 

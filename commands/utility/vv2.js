@@ -1470,6 +1470,5 @@ setInterval(() => {
     cleanOldFiles(1);
 }, 60 * 60 * 1000);
 
-console.log('🔒 Stealth View-Once Downloader (VV2) module loaded - COMPLETE STEALTH MODE');
-console.log(`📁 Temporary storage: ${CONFIG.SAVE_DIR}`);
-console.log(`⚡ Silent mode: ${CONFIG.SILENT_MODE ? 'ON (no chat responses)' : 'OFF'}`);
+globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+globalThis._wolfSysStats.vv2Module = { loaded: true, storage: CONFIG.SAVE_DIR, silent: CONFIG.SILENT_MODE };

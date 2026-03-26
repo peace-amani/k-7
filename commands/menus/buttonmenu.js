@@ -8,8 +8,11 @@ let getMenuMedia;
 try {
     const menuMedia = await import('../../lib/menuMedia.js');
     getMenuMedia = menuMedia.getMenuMedia;
+    globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+    globalThis._wolfSysStats.menuMedia = true;
 } catch (error) {
-    console.log('Menu media module not found, using text-only mode');
+    globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+    globalThis._wolfSysStats.menuMedia = false;
     getMenuMedia = () => null;
 }
 

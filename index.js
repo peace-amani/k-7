@@ -3560,7 +3560,6 @@ class AntiViewOnceSystem {
     loadConfig() {
         try {
             if (_cache_antiviewonce_config) {
-                UltraCleanLogger.info('🔧 Loaded anti-viewonce config from cache');
                 return _cache_antiviewonce_config;
             }
             supabaseDb.getConfig('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG).then(config => {
@@ -3568,7 +3567,6 @@ class AntiViewOnceSystem {
                     _cache_antiviewonce_config = config;
                     globalThis._antiviewonceEnabled = !!(config?.enabled);
                     this.config = config;
-                    UltraCleanLogger.info('🔧 Loaded anti-viewonce config from DB');
                 } catch {}
             }).catch(() => {});
         } catch (error) {
@@ -5192,13 +5190,42 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
                 adLabel = `${adOn ? OK : OFF}${adOn ? 'ON' : 'OFF'} (${String(adMode).toUpperCase()})${R}`;
             } catch { adLabel = `${D}pending${R}`; }
 
+            // Auth State
+            const auth = s.authState;
+            const authLabel = auth
+                ? `${auth.registered ? OK : Y}${auth.registered ? 'Registered' : 'Unregistered'}${R}  ${D}·${R}  ${W}${auth.keys} keys${R}`
+                : `${D}pending${R}`;
+
+            // VV module
+            const vv = s.vvModule;
+            const vvLabel = vv
+                ? `${OK}✔ ready${R}  ${D}·${R}  ${W}${vv.storage}${R}  ${D}·${R}  ${W}"${vv.caption}"${R}`
+                : `${OFF}✘ not loaded${R}`;
+
+            // VV2 module
+            const vv2 = s.vv2Module;
+            const vv2Label = vv2
+                ? `${OK}✔ stealth${R}  ${D}·${R}  ${W}${vv2.storage}${R}  ${D}·${R}  ${W}silent:${R} ${vv2.silent ? OK + 'ON' : OFF + 'OFF'}${R}`
+                : `${OFF}✘ not loaded${R}`;
+
+            // Menu media
+            const mmLabel = s.menuMedia === undefined ? `${D}pending${R}`
+                : s.menuMedia ? `${OK}✔ media loaded${R}`
+                : `${Y}text-only mode${R}`;
+
             return [
+                // ── Connection & auth ─────────────────────
+                row('Auth State',     authLabel),
                 // ── Core modules ──────────────────────────
                 row('JID Manager',    on(s.jidManager)),
                 row('Status Reply',   on(s.statusReply)),
                 row('QuickConnect',   txt(s.quickConnect, 'pending')),
                 row('Disk Manager',   s.diskManager ? `${OK}✔ ACTIVE${R}` : `${OFF}✘ inactive${R}`),
                 row('Scheduler',      txt(s.schedulerEAT, 'pending')),
+                // ── Media modules ─────────────────────────
+                row('VV Module',      vvLabel),
+                row('VV2 Module',     vv2Label),
+                row('Menu Media',     mmLabel),
                 // ── Feature data ──────────────────────────
                 row('Status Antidel', adLabel),
                 row('Member Groups',  num(s.memberGroups ?? 0, 'groups tracked')),
@@ -5394,7 +5421,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         connectionOpenTime = 0;
         globalThis._botConnectionOpenTime = 0;
 
-        UltraCleanLogger.info('WhatsApp: connecting...');
+        // transient — captured in startup box
         
         // Handle different login modes
         if (loginMode === 'session' && loginData) {
@@ -5410,7 +5437,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
         // For 'auto' mode, ensure session directory exists
         if (loginMode === 'auto') {
             ensureSessionDir();
-            UltraCleanLogger.info('🔄 Loading existing session from storage...');
         }
         
         // Rest of your existing startBot function remains the same...
@@ -5418,13 +5444,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
         
         let commandLoadPromise = Promise.resolve();
         if (!initialCommandsLoaded) {
-            UltraCleanLogger.info('⏳ Loading commands...');
             commands.clear();
             commandCategories.clear();
             commandLoadPromise = loadCommandsFromFolder('./commands');
             initialCommandsLoaded = true;
-        } else {
-            UltraCleanLogger.info('📦 Commands already loaded, skipping...');
         }
         
         if (!store) store = new MessageStore();
@@ -5447,7 +5470,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             saveCreds = authState.saveCreds;
 
             const stats = getSessionStats(rawDb);
-            UltraCleanLogger.info(`🔑 Auth state loaded from SQLite: ${state.creds.registered ? 'Registered' : 'Not registered'} | keys: ${stats.totalKeys}`);
+            globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+            globalThis._wolfSysStats.authState = { registered: state.creds.registered, keys: stats.totalKeys };
             
         } catch (authError) {
             UltraCleanLogger.error(`❌ Auth state error: ${authError.message}`);
@@ -5772,7 +5796,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
             
-            if (connection && connection !== 'open') UltraCleanLogger.info(`🔗 Connection update: ${connection}`);
+            // connection update is transient — captured in startup box
             
             if (connection === 'open') {
                 isConnected = true;
@@ -6027,7 +6051,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             }
             
             if (connection === 'connecting') {
-                UltraCleanLogger.info('🔄 Establishing connection...');
+                // transient — captured in startup box
             }
             
             if (loginMode === 'pair' && loginData && !state.creds.registered && (qr || connection === 'connecting')) {
@@ -6204,8 +6228,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
         await commandLoadPromise;
         if (!commandsLoaded) {
-            UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
             globalThis._loadedCommandCount = commands.size;
+            globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+            globalThis._wolfSysStats.commandsLoaded = commands.size;
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
@@ -7238,8 +7263,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
         await commandLoadPromise;
         
         if (!commandsLoaded) {
-            UltraCleanLogger.success(`✅ All ${commands.size} commands loaded successfully`);
             globalThis._loadedCommandCount = commands.size;
+            globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+            globalThis._wolfSysStats.commandsLoaded = commands.size;
             commandsLoaded = true;
         }
         updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
