@@ -1365,6 +1365,56 @@ function _bufferSystemLog(text) {
     }
 }
 
+// ── Wolf Command Box ────────────────────────────────────────────────────────
+// Prints a single consolidated box for every executed command, matching the
+// startup block style exactly (same borders, dots, label alignment).
+function _printCommandBox({ sender, command, location, role, ms }) {
+    const NB = '\x1b[1m\x1b[38;2;0;255;156m';
+    const N  = '\x1b[38;2;0;255;156m';
+    const Y  = '\x1b[38;2;250;204;21m';
+    const D  = '\x1b[2m\x1b[38;2;100;120;130m';
+    const W  = '\x1b[38;2;200;215;225m';
+    const OK = '\x1b[38;2;0;230;118m';
+    const R  = '\x1b[0m';
+
+    const INNER  = 46;
+    const dash   = (n) => '─'.repeat(Math.max(0, n));
+    const DOT    = `${N}▣${R}`;
+
+    const icon  = role === 'owner' ? '👑' : role === 'sudo' ? '🔑' : '💬';
+    const label = role === 'owner' ? 'OWNER CMD' : role === 'sudo' ? 'SUDO CMD' : 'USER CMD';
+    const title = `〔 ${icon} ${label} 〕`;
+    // 〔 and 〕 are fullwidth (2 cols each) → add 2 to visual length estimate
+    const tVisLen = title.length + 2;
+    const rpad = Math.max(2, INNER - 2 - tVisLen + 2);
+
+    const top = `${NB}┌──${title}${dash(rpad)}┐${R}`;
+    const bot = `${NB}└${dash(INNER + 2)}┘${R}`;
+
+    const row = (lbl, val) => {
+        const labelW = 10;
+        const pad = ' '.repeat(Math.max(0, labelW - lbl.length));
+        return `  ${DOT}  ${D}${lbl}${pad}${R}${N}:${R} ${W}${val}${R}`;
+    };
+
+    const msLabel    = ms !== undefined ? `  ${D}(${ms}ms)${R}` : '';
+    const statusLine = `  ${DOT}  ${D}Status    :${R}  ${OK}✔ done${R}${msLabel}`;
+    const senderFmt  = sender && !sender.startsWith('+') ? `+${sender}` : (sender || '?');
+
+    const lines = [
+        '',
+        top,
+        row('Sender',  senderFmt),
+        row('Command', command),
+        row('Where',   location),
+        statusLine,
+        bot,
+        '',
+    ];
+
+    originalConsoleMethods.log(lines.join('\n'));
+}
+
 class UltraCleanLogger {
     static log(...args) {
         if (globalThis._wolfStartupPhase) return;
@@ -1429,17 +1479,26 @@ class UltraCleanLogger {
         originalConsoleMethods.log(`${_MAG}▸ 🎭 ${args.join(' ')}${_R}`);
     }
 
-    static command(...args) {
-        const time = _getTime();
-        originalConsoleMethods.log(`${_CYANB}[WOLF-CMD]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_CYAN}▸ 💬 ${args.join(' ')}${_R}`);
+    static command(msgOrOpts) {
+        if (msgOrOpts && typeof msgOrOpts === 'object') {
+            _printCommandBox({ role: 'user', ...msgOrOpts });
+        } else {
+            // Legacy plain-string path (e.g. auto-connect notice)
+            const time = _getTime();
+            originalConsoleMethods.log(`${_CYANB}[WOLF-CMD]${_R} ${_DIM}⏱️  ${time}${_R}`);
+            originalConsoleMethods.log(`${_CYAN}▸ 💬 ${msgOrOpts}${_R}`);
+        }
     }
 
-    static ownerCommand(...args) {
-        const time = _getTime();
-        const msg = args.join(' ');
-        originalConsoleMethods.log(`${_GB}[WOLF-CMD]${_R} ${_GD}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_G}▸ 👑 ${msg}${_R}`);
+    static ownerCommand(msgOrOpts) {
+        if (msgOrOpts && typeof msgOrOpts === 'object') {
+            _printCommandBox({ role: 'owner', ...msgOrOpts });
+        } else {
+            const time = _getTime();
+            const msg = String(msgOrOpts);
+            originalConsoleMethods.log(`${_GB}[WOLF-CMD]${_R} ${_GD}⏱️  ${time}${_R}`);
+            originalConsoleMethods.log(`${_G}▸ 👑 ${msg}${_R}`);
+        }
     }
 
     static ownerMessage(...args) {
@@ -8300,12 +8359,17 @@ async function handleIncomingMessage(sock, msg) {
 
         const senderDisplay = getDisplayNumber(senderJid);
         const prefixDisplay = isPrefixless ? '' : currentPrefix;
-        const roleTag = isOwnerUser ? '👑' : (isSudoUser ? '🔑' : '👤');
-        const locationTag = isGroup ? `[${chatId.split('@')[0].substring(0, 10)}]` : '[DM]';
+        const locationTag   = isGroup ? chatId.split('@')[0].substring(0, 15) : 'DM';
+        const _cmdPayload   = {
+            sender:   senderDisplay,
+            command:  `${prefixDisplay}${commandName}`,
+            location: locationTag,
+            ms:       Date.now() - startTime,
+        };
         if (isOwnerUser) {
-            UltraCleanLogger.ownerCommand(`${senderDisplay} ${locationTag} → ${prefixDisplay}${commandName} (${Date.now() - startTime}ms)`);
+            UltraCleanLogger.ownerCommand(_cmdPayload);
         } else {
-            UltraCleanLogger.command(`${roleTag} ${senderDisplay} ${locationTag} → ${prefixDisplay}${commandName} (${Date.now() - startTime}ms)`);
+            UltraCleanLogger.command({ ..._cmdPayload, role: isSudoUser ? 'sudo' : 'user' });
         }
 
         if (!checkBotMode(msg, commandName, isSudoUser)) {
