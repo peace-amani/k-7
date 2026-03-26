@@ -5193,25 +5193,25 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
             // Auth State
             const auth = s.authState;
             const authLabel = auth
-                ? `${auth.registered ? OK : Y}${auth.registered ? 'Registered' : 'Unregistered'}${R}  ${D}·${R}  ${W}${auth.keys} keys${R}`
+                ? `${auth.registered ? OK : Y}${auth.registered ? 'Registered' : 'Unregistered'}${R}  ${D}·${R}  ${W}${auth.keys}k${R}`
                 : `${D}pending${R}`;
 
             // VV module
             const vv = s.vvModule;
             const vvLabel = vv
-                ? `${OK}✔ ready${R}  ${D}·${R}  ${W}${vv.storage}${R}  ${D}·${R}  ${W}"${vv.caption}"${R}`
+                ? `${OK}✔ ready${R}  ${D}·${R}  ${W}${vv.storage}${R}`
                 : `${OFF}✘ not loaded${R}`;
 
             // VV2 module
             const vv2 = s.vv2Module;
             const vv2Label = vv2
-                ? `${OK}✔ stealth${R}  ${D}·${R}  ${W}${vv2.storage}${R}  ${D}·${R}  ${W}silent:${R} ${vv2.silent ? OK + 'ON' : OFF + 'OFF'}${R}`
+                ? `${OK}✔ stealth${R}  ${D}·${R}  ${W}silent:${R} ${vv2.silent ? OK + 'ON' : OFF + 'OFF'}${R}`
                 : `${OFF}✘ not loaded${R}`;
 
             // Menu media
             const mmLabel = s.menuMedia === undefined ? `${D}pending${R}`
-                : s.menuMedia ? `${OK}✔ media loaded${R}`
-                : `${Y}text-only mode${R}`;
+                : s.menuMedia ? `${OK}✔ media${R}`
+                : `${Y}text-only${R}`;
 
             return [
                 // ── Connection & auth ─────────────────────
