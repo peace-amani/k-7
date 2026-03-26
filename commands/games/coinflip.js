@@ -884,7 +884,9 @@ async function loadData() {
         for (const [id, bet] of parsed.activeBets) {
             activeBets.set(id, bet);
         }
-        console.log(`Loaded ${userBalances.size} users and ${activeBets.size} active bets`);
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.coinflipUsers = userBalances.size;
+        globalThis._wolfSysStats.coinflipBets  = activeBets.size;
     } catch (error) {
         console.log("No coinflip data found, starting fresh");
     }

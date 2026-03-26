@@ -781,7 +781,8 @@ async function loadStats() {
         for (const [userId, scoreData] of parsed.leaderboard) {
             leaderboard.set(userId, scoreData);
         }
-        console.log(`Loaded ${snakeStats.size} snake players`);
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.snakePlayers = snakeStats.size;
     } catch (error) {
         console.log("No snake stats found, starting fresh");
     }

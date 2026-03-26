@@ -1609,7 +1609,8 @@ async function loadRPSStats() {
             rpsLeaderboard.set(userId, playerData);
         }
         
-        console.log(`Loaded ${rpsStats.size} RPS players`);
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.rpsPlayers = rpsStats.size;
     } catch (error) {
         console.log("No RPS stats found, starting fresh");
     }

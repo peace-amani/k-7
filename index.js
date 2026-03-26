@@ -2179,7 +2179,8 @@ const DiskManager = {
         this._intervals.push(setInterval(() => {
             if (!this.isLow) this.runCleanupAsync(false).catch(() => {});
         }, this.CLEANUP_INTERVAL));
-        UltraCleanLogger.info('💾 Disk space manager: ✅ ACTIVE');
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.diskManager = true;
     }
 };
 
@@ -3590,7 +3591,8 @@ class AntiViewOnceSystem {
         try {
             if (_cache_antiviewonce_history) {
                 this.detectedMessages = _cache_antiviewonce_history.messages || [];
-                UltraCleanLogger.info(`📊 Loaded ${this.detectedMessages.length} viewonce records from cache`);
+                globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+                globalThis._wolfSysStats.viewonceRecords = this.detectedMessages.length;
                 return;
             }
             supabaseDb.getConfig('antiviewonce_history', {}).then(data => {
@@ -5168,6 +5170,32 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
         row('Member Detect',  flag(true)),
         row('Auto-Reconnect', flag(true)),
         row('Wolf AI',        flag(wolfAiOn)),
+        div,
+        ...((() => {
+            const s = globalThis._wolfSysStats || {};
+            const lines = [];
+            const stat = (label, val) => row(label, val);
+            lines.push(stat('Disk Manager',   s.diskManager    ? `${OK}ACTIVE${R}` : `${OFF}inactive${R}`));
+            lines.push(stat('Coinflip',       `${W}${s.coinflipUsers ?? 0} users  ·  ${s.coinflipBets ?? 0} active bets${R}`));
+            lines.push(stat('RPS',            `${W}${s.rpsPlayers    ?? 0} players${R}`));
+            lines.push(stat('Snake',          `${W}${s.snakePlayers  ?? 0} players${R}`));
+            lines.push(stat('Tetris',         `${W}${s.tetrisPlayers ?? 0} players${R}`));
+            lines.push(stat('ViewOnce Cache', `${W}${s.viewonceRecords ?? 0} records${R}`));
+            let antidelLabel;
+            try {
+                const adEnabled = getConfigSync('antidelete_status_enabled', false);
+                const adMode    = getConfigSync('antidelete_status_mode', 'private');
+                const adOn = adEnabled === true || adEnabled === 'true' || adEnabled === 1;
+                antidelLabel = `${adOn ? OK : OFF}${adOn ? 'ON' : 'OFF'} (${String(adMode).toUpperCase()})${R}`;
+            } catch { antidelLabel = s.statusAntidelete
+                ? `${s.statusAntidelete.startsWith('ON') ? OK : OFF}${s.statusAntidelete}${R}`
+                : `${D}initializing${R}`; }
+            lines.push(stat('Status Antidel', antidelLabel));
+            lines.push(stat('Scheduler',      s.schedulerEAT
+                ? `${W}${s.schedulerEAT}${R}`
+                : `${D}initializing${R}`));
+            return lines;
+        })()),
         div,
         barLine,
         bot,

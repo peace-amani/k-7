@@ -1106,7 +1106,8 @@ async function loadStats() {
                 leaderboard.set(userId, data);
             }
         }
-        console.log(`📊 Loaded Tetris stats: ${tetrisStats.size} players`);
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.tetrisPlayers = tetrisStats.size;
     } catch (error) {
         console.log("No existing Tetris stats found, starting fresh...");
     }

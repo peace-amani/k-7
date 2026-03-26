@@ -763,7 +763,8 @@ export async function initStatusAntidelete(sock) {
         statusAntideleteState.settings.initialized = true;
         await saveStatusData();
 
-        console.log(`   Status Antidelete: ${statusAntideleteState.enabled ? 'ON' : 'OFF'} (PRIVATE)`);
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.statusAntidelete = `${statusAntideleteState.enabled ? 'ON' : 'OFF'} (${(statusAntideleteState.mode || 'private').toUpperCase()})`;
 
     } catch (error) {
         console.error('❌ Status Antidelete: Initialization error:', error.message);
