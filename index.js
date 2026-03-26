@@ -1341,8 +1341,8 @@ function _flushSystemBuffer() {
     if (counts.mediaStored) lines.push(`💾 Media stored: ${counts.mediaStored} file${counts.mediaStored > 1 ? 's' : ''}`);
     if (counts.stickersStored) lines.push(`🎨 Stickers saved: ${counts.stickersStored}`);
     if (counts.cacheTrimmed) lines.push(`📦 Cache trimmed: ${counts.cacheTrimmed}x`);
-    for (const d of details.slice(0, 3)) lines.push(`│  ${d}`);
-    if (details.length > 3) lines.push(`│  ... +${details.length - 3} more`);
+    for (const d of details.slice(0, 3)) lines.push(d);
+    if (details.length > 3) lines.push(`... +${details.length - 3} more`);
 
     if (lines.length === 0) return;
 
@@ -4851,75 +4851,115 @@ class LoginManager {
     }
     
     async sessionIdMode() {
-        console.log(chalk.magenta('\n🔐 SESSION ID LOGIN'));
-        
+        const N   = '\x1b[38;2;0;255;156m';
+        const MAG = '\x1b[38;2;180;0;255m';
+        const MB  = '\x1b[1m\x1b[38;2;180;0;255m';
+        const Y   = '\x1b[38;2;250;204;21m';
+        const RED = '\x1b[38;2;255;60;80m';
+        const D   = '\x1b[2m\x1b[38;2;100;120;130m';
+        const W   = '\x1b[38;2;200;215;225m';
+        const R   = '\x1b[0m';
+        const t   = () => _getTime();
+
+        process.stdout.write(`\n${MB}════════〔 🔐 SESSION ID LOGIN 〕════════${R}\n\n`);
+        process.stdout.write(`${MAG}[WOLF-AUTH]${R} ${D}⏱️  ${t()}${R}\n`);
+
         let sessionId = process.env.SESSION_ID;
-        
+
         if (!sessionId || sessionId.trim() === '') {
-            console.log(chalk.yellow('ℹ️ No SESSION_ID found in environment'));
-            
-            const input = await this.ask('\nWould you like to:\n1) Paste Session ID now\n2) Go back to main menu\nChoice (1-2): ');
-            
+            process.stdout.write(`${Y}▸ ℹ️  No SESSION_ID found in environment${R}\n\n`);
+            process.stdout.write(`${N}◆ 01 ${D}→${R} ${W}Paste Session ID now${R}\n`);
+            process.stdout.write(`${N}◆ 02 ${D}→${R} ${W}Go back to main menu${R}\n\n`);
+            process.stdout.write(`${Y}⚡ Choose [1-2] ⟶ ${R}`);
+
+            const input = await this.ask('');
+
             if (input.trim() === '1') {
-                sessionId = await this.ask('Paste your Session ID (WOLF-BOT:... or base64): ');
+                process.stdout.write(`\n${MAG}[WOLF-AUTH]${R} ${D}⏱️  ${t()}${R}\n`);
+                process.stdout.write(`${Y}⚡ Paste Session ID ⟶ ${R}`);
+                sessionId = await this.ask('');
                 if (!sessionId || sessionId.trim() === '') {
-                    console.log(chalk.red('❌ No Session ID provided'));
+                    process.stdout.write(`\n${RED}▸ ❌ No Session ID provided${R}\n\n`);
                     return await this.selectMode();
                 }
-                
-                console.log(chalk.green('✅ Session ID received'));
+                process.stdout.write(`\n${N}▸ ✅ Session ID received${R}\n\n`);
             } else {
                 return await this.selectMode();
             }
         } else {
-            console.log(chalk.green('✅ Found Session ID in environment'));
-            
-            const proceed = await this.ask('Use existing Session ID? (y/n, default y): ');
+            process.stdout.write(`${N}▸ ✅ Found Session ID in environment${R}\n\n`);
+            process.stdout.write(`${Y}⚡ Use existing Session ID? (y/n, default y) ⟶ ${R}`);
+            const proceed = await this.ask('');
             if (proceed.toLowerCase() === 'n') {
-                const newSessionId = await this.ask('Enter new Session ID: ');
+                process.stdout.write(`${Y}⚡ Enter new Session ID ⟶ ${R}`);
+                const newSessionId = await this.ask('');
                 if (newSessionId && newSessionId.trim() !== '') {
                     sessionId = newSessionId;
-                    console.log(chalk.green('✅ Session ID updated'));
+                    process.stdout.write(`\n${N}▸ ✅ Session ID updated${R}\n\n`);
                 }
             }
         }
-        
-        console.log(chalk.yellow('🔄 Processing session ID...'));
+
+        process.stdout.write(`\n${MAG}[WOLF-AUTH]${R} ${D}⏱️  ${t()}${R}\n`);
+        process.stdout.write(`${N}▸ 🔄 Processing session ID...${R}\n\n`);
         try {
             await authenticateWithSessionId(sessionId);
             return { mode: 'session', sessionId: sessionId.trim() };
         } catch (error) {
-            console.log(chalk.red('❌ Session authentication failed'));
-            console.log(chalk.yellow('📝 Falling back to pairing code mode...'));
+            process.stdout.write(`${RED}▸ ❌ Session authentication failed${R}\n`);
+            process.stdout.write(`${Y}▸ 📡 Falling back to pairing code...${R}\n\n`);
             return await this.pairingCodeMode();
         }
     }
     
     async pairingCodeMode() {
-        console.log(chalk.cyan('\n📱 PAIRING CODE LOGIN'));
-        console.log(chalk.gray('Enter phone number with country code (without +)'));
-        console.log(chalk.gray('Example: 254788710904'));
-        
-        const phone = await this.ask('Phone number: ');
+        const N  = '\x1b[38;2;0;255;156m';
+        const NB = '\x1b[1m\x1b[38;2;0;255;156m';
+        const B  = '\x1b[38;2;34;193;255m';
+        const BB = '\x1b[1m\x1b[38;2;34;193;255m';
+        const Y  = '\x1b[38;2;250;204;21m';
+        const D  = '\x1b[2m\x1b[38;2;100;120;130m';
+        const W  = '\x1b[38;2;200;215;225m';
+        const R  = '\x1b[0m';
+        const t  = _getTime();
+
+        process.stdout.write(`\n${BB}════════〔 📱 PAIRING CODE LOGIN 〕════════${R}\n\n`);
+        process.stdout.write(`${B}[WOLF-AUTH]${R} ${D}⏱️  ${t}${R}\n`);
+        process.stdout.write(`${N}▸ ${W}Enter phone number with country code ${D}(without +)${R}\n`);
+        process.stdout.write(`${N}▸ ${D}Example: ${W}254788710904${R}\n\n`);
+        process.stdout.write(`${Y}⚡ Phone number ⟶ ${R}`);
+
+        const phone = await this.ask('');
         const cleanPhone = phone.replace(/[^0-9]/g, '');
-        
+
         if (!cleanPhone || cleanPhone.length < 10) {
-            console.log(chalk.red('❌ Invalid phone number'));
+            process.stdout.write(`\n${'\x1b[38;2;255;60;80m'}▸ ❌ Invalid phone number — try again${R}\n\n`);
             return await this.selectMode();
         }
-        
+
         return { mode: 'pair', phone: cleanPhone };
     }
-    
+
     async cleanStartMode() {
-        console.log(chalk.yellow('\n⚠️ CLEAN SESSION'));
-        console.log(chalk.red('This will delete all session data!'));
-        
-        const confirm = await this.ask('Are you sure? (y/n): ');
-        
+        const N  = '\x1b[38;2;0;255;156m';
+        const Y  = '\x1b[38;2;250;204;21m';
+        const YB = '\x1b[1m\x1b[38;2;250;204;21m';
+        const RED = '\x1b[38;2;255;60;80m';
+        const D  = '\x1b[2m\x1b[38;2;100;120;130m';
+        const W  = '\x1b[38;2;200;215;225m';
+        const R  = '\x1b[0m';
+        const t  = _getTime();
+
+        process.stdout.write(`\n${YB}════════〔 ⚠️  CLEAN SESSION RESET 〕════════${R}\n\n`);
+        process.stdout.write(`${YB}[WOLF-AUTH]${R} ${D}⏱️  ${t}${R}\n`);
+        process.stdout.write(`${RED}▸ ⚠️  This will delete ALL session data!${R}\n\n`);
+        process.stdout.write(`${Y}⚡ Confirm reset? (y/n) ⟶ ${R}`);
+
+        const confirm = await this.ask('');
+
         if (confirm.toLowerCase() === 'y') {
             cleanSession();
-            console.log(chalk.green('✅ Session cleaned. Starting fresh...'));
+            process.stdout.write(`\n${N}▸ ✅ Session purged — initiating fresh boot...${R}\n\n`);
             return await this.pairingCodeMode();
         } else {
             return await this.pairingCodeMode();
