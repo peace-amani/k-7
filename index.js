@@ -1366,7 +1366,7 @@ function _bufferSystemLog(text) {
 }
 
 // ── Shared box constants & helpers ──────────────────────────────────────────
-const _BOX_INNER = 34;
+const _BOX_INNER = 30;
 function _boxDash(n) { return '─'.repeat(Math.max(0, n)); }
 function _boxTop(NB, R, icon, label) {
     const title   = `〔 ${icon} ${label} 〕`;
@@ -1408,22 +1408,30 @@ function _printCommandBox({ sender, command, location, role, ms }) {
     ].join('\n'));
 }
 
-// ── Wolf Incoming Message Box (blue / orange) ───────────────────────────────
+// ── Wolf Incoming Message Box ───────────────────────────────────────────────
+// chatType: 'GROUP' (blue) | 'DM' (orange) | 'OWNER' (violet)
 function _printMessageBox({ phone, chatType, groupName, text }) {
     const isGroup = chatType === 'GROUP';
-    const NB = isGroup ? '\x1b[1m\x1b[38;2;34;193;255m' : '\x1b[1m\x1b[38;2;255;110;0m';
-    const N  = isGroup ? '\x1b[38;2;34;193;255m'         : '\x1b[38;2;255;110;0m';
+    const isOwner = chatType === 'OWNER';
+
+    const NB = isGroup ? '\x1b[1m\x1b[38;2;34;193;255m'
+             : isOwner ? '\x1b[1m\x1b[38;2;180;0;255m'
+             :           '\x1b[1m\x1b[38;2;255;110;0m';
+    const N  = isGroup ? '\x1b[38;2;34;193;255m'
+             : isOwner ? '\x1b[38;2;180;0;255m'
+             :           '\x1b[38;2;255;110;0m';
     const D  = '\x1b[2m\x1b[38;2;100;120;130m';
     const W  = '\x1b[38;2;200;215;225m';
     const R  = '\x1b[0m';
     const DOT = `${N}▣${R}`;
 
-    const icon    = isGroup ? '👥' : '💬';
-    const label   = isGroup ? 'GROUP MSG' : 'DM MSG';
+    const icon    = isGroup ? '👥' : isOwner ? '👑' : '💬';
+    const label   = isGroup ? 'GROUP MSG' : isOwner ? 'OWNER MSG' : 'DM MSG';
     const preview = text && text.length > 28 ? text.substring(0, 28) + '…' : (text || '');
     const r       = (l, v) => _boxRow(DOT, D, N, W, R, l, v);
 
-    const rows = ['', _boxTop(NB, R, icon, label), r('From', `+${phone}`)];
+    const rows = ['', _boxTop(NB, R, icon, label)];
+    if (!isOwner && phone) rows.push(r('From', `+${phone}`));
     if (isGroup && groupName) rows.push(r('Group', groupName));
     rows.push(r('Text', `"${preview}"`), _boxBot(NB, R), '');
 
@@ -1442,8 +1450,7 @@ class UltraCleanLogger {
         }
         const text = args.join(' ');
         const time = _getTime();
-        originalConsoleMethods.log(`${_GD}[WOLF-SYS]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_G}▸ ${_WHT}${text}${_R}`);
+        originalConsoleMethods.log(`${_GD}[WOLF-SYS]${_R} ${_DIM}⏱️  ${time}${_R}  ${_G}▸ ${_WHT}${text}${_R}`);
     }
 
     static error(...args) {
@@ -1453,8 +1460,7 @@ class UltraCleanLogger {
         }
         const text = args.join(' ');
         const time = _getTime();
-        originalConsoleMethods.error(`${_REDB}[WOLF-ERR]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.error(`${_RED}▸ ${text}${_R}`);
+        originalConsoleMethods.error(`${_REDB}[WOLF-ERR]${_R} ${_DIM}⏱️  ${time}${_R}  ${_RED}▸ ${text}${_R}`);
     }
 
     static success(...args) {
@@ -1462,17 +1468,16 @@ class UltraCleanLogger {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_GB}[WOLF-OK]${_R} ${_GD}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_G}▸ ${_SG}${text}${_R}`);
+        originalConsoleMethods.log(`${_GB}[WOLF-OK]${_R} ${_GD}⏱️  ${time}${_R}  ${_G}▸ ${_SG}${text}${_R}`);
     }
 
     static info(...args) {
         if (globalThis._wolfStartupPhase) return;
         const text = args.join(' ');
+        if (!text || !text.trim()) return;
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_BLB}[WOLF-INFO]${_R} ${_BLD}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_BL}▸ ${_CYAN}${text}${_R}`);
+        originalConsoleMethods.log(`${_BLB}[WOLF-INFO]${_R} ${_BLD}⏱️  ${time}${_R}  ${_BL}▸ ${_CYAN}${text}${_R}`);
     }
 
     static warning(...args) {
@@ -1482,26 +1487,24 @@ class UltraCleanLogger {
             if (message.includes(_warnSuppressArr[i])) return;
         }
         const text = args.join(' ');
+        if (!text || !text.trim()) return;
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_YB}[WOLF-WARN]${_R} ${_YD}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_Y}▸ ${_ORG}${text}${_R}`);
+        originalConsoleMethods.log(`${_YB}[WOLF-WARN]${_R} ${_YD}⏱️  ${time}${_R}  ${_Y}▸ ${_ORG}${text}${_R}`);
     }
-    
+
     static event(...args) {
         const time = _getTime();
-        originalConsoleMethods.log(`${_MAGB}[WOLF-EVT]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_MAG}▸ 🎭 ${args.join(' ')}${_R}`);
+        originalConsoleMethods.log(`${_MAGB}[WOLF-EVT]${_R} ${_DIM}⏱️  ${time}${_R}  ${_MAG}▸ 🎭 ${args.join(' ')}${_R}`);
     }
 
     static command(msgOrOpts) {
         if (msgOrOpts && typeof msgOrOpts === 'object') {
             _printCommandBox({ role: 'user', ...msgOrOpts });
         } else {
-            // Legacy plain-string path (e.g. auto-connect notice)
+            // Legacy plain-string path (e.g. auto-connect)
             const time = _getTime();
-            originalConsoleMethods.log(`${_CYANB}[WOLF-CMD]${_R} ${_DIM}⏱️  ${time}${_R}`);
-            originalConsoleMethods.log(`${_CYAN}▸ 💬 ${msgOrOpts}${_R}`);
+            originalConsoleMethods.log(`${_CYANB}[WOLF-CMD]${_R} ${_DIM}⏱️  ${time}${_R}  ${_CYAN}▸ 💬 ${msgOrOpts}${_R}`);
         }
     }
 
@@ -1510,42 +1513,34 @@ class UltraCleanLogger {
             _printCommandBox({ role: 'owner', ...msgOrOpts });
         } else {
             const time = _getTime();
-            const msg = String(msgOrOpts);
-            originalConsoleMethods.log(`${_GB}[WOLF-CMD]${_R} ${_GD}⏱️  ${time}${_R}`);
-            originalConsoleMethods.log(`${_G}▸ 👑 ${msg}${_R}`);
+            originalConsoleMethods.log(`${_GB}[WOLF-CMD]${_R} ${_GD}⏱️  ${time}${_R}  ${_G}▸ 👑 ${String(msgOrOpts)}${_R}`);
         }
     }
 
     static ownerMessage(...args) {
-        const time = _getTime();
         const msg = args.join(' ');
-        originalConsoleMethods.log(`${_GB}[WOLF-OWNER]${_R} ${_GD}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_G}▸ 💬 ${_SG}${msg}${_R}`);
+        _printMessageBox({ phone: null, chatType: 'OWNER', groupName: null, text: msg });
     }
 
     static critical(...args) {
         const time = _getTime();
         const text = args.join(' ');
-        originalConsoleMethods.error(`${_REDB}[WOLF-CRIT]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.error(`${_RED}▸ 🚨 ${text}${_R}`);
+        originalConsoleMethods.error(`${_REDB}[WOLF-CRIT]${_R} ${_DIM}⏱️  ${time}${_R}  ${_RED}▸ 🚨 ${text}${_R}`);
     }
 
     static group(...args) {
         const time = _getTime();
-        originalConsoleMethods.log(`${_MAGB}[WOLF-GRP]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_MAG}▸ 👥 ${args.join(' ')}${_R}`);
+        originalConsoleMethods.log(`${_MAGB}[WOLF-GRP]${_R} ${_DIM}⏱️  ${time}${_R}  ${_MAG}▸ 👥 ${args.join(' ')}${_R}`);
     }
 
     static member(...args) {
         const time = _getTime();
-        originalConsoleMethods.log(`${_CYANB}[WOLF-MBR]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_CYAN}▸ 👤 ${args.join(' ')}${_R}`);
+        originalConsoleMethods.log(`${_CYANB}[WOLF-MBR]${_R} ${_DIM}⏱️  ${time}${_R}  ${_CYAN}▸ 👤 ${args.join(' ')}${_R}`);
     }
 
     static antiviewonce(...args) {
         const time = _getTime();
-        originalConsoleMethods.log(`${_MAGB}[WOLF-AVO]${_R} ${_DIM}⏱️  ${time}${_R}`);
-        originalConsoleMethods.log(`${_MAG}▸ 🔐 ${args.join(' ')}${_R}`);
+        originalConsoleMethods.log(`${_MAGB}[WOLF-AVO]${_R} ${_DIM}⏱️  ${time}${_R}  ${_MAG}▸ 🔐 ${args.join(' ')}${_R}`);
     }
 
     static message(phone, chatType, groupName, text) {
@@ -8271,7 +8266,7 @@ async function handleIncomingMessage(sock, msg) {
                 const ownerDisplay = getDisplayNumber(senderJid);
                 const ownerLocTag = isGroup ? `[${chatId.split('@')[0].substring(0, 10)}]` : '[DM]';
                 const preview = textMsg.length > 60 ? textMsg.substring(0, 60) + '…' : textMsg;
-                UltraCleanLogger.ownerMessage(`${ownerDisplay} ${ownerLocTag} → "${preview}"`);
+                UltraCleanLogger.ownerMessage(preview);
             }
 
             // Wolf AI: prefixless DM assistant — only for owner/sudo, only in DMs (not groups)
