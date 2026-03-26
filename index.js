@@ -5180,7 +5180,7 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
     const time  = new Date().toLocaleTimeString('en-GB', { hour12: false });
     const status = isReconnect ? 'RECONNECTED' : 'ONLINE';
 
-    const INNER = 46;
+    const INNER = 38;
     const dashStr = (n) => '─'.repeat(Math.max(0, n));
 
     // Top border — centred title like WOLFBOT CONTROL CORE
