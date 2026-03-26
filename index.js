@@ -2259,7 +2259,8 @@ class JidManager {
         this.loadOwnerData();
         this.loadWhitelist();
         
-        UltraCleanLogger.success('JID Manager initialized');
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.jidManager = true;
     }
     
     loadOwnerData() {
@@ -2599,7 +2600,8 @@ class NewMemberDetector {
         this.groupMembersCache = new Map();
         this.loadDetectionData();
         
-        UltraCleanLogger.success('New Member Detector initialized');
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.memberDetector = true;
     }
     
     loadDetectionData() {
@@ -2608,7 +2610,8 @@ class NewMemberDetector {
                 for (const [groupId, members] of Object.entries(_cache_member_detection.detectedMembers)) {
                     this.detectedMembers.set(groupId, members);
                 }
-                UltraCleanLogger.info(`📊 Loaded ${this.detectedMembers.size} groups member data`);
+                globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+                globalThis._wolfSysStats.memberGroups = this.detectedMembers.size;
                 return;
             }
             supabaseDb.getConfig('member_detection', {}).then(data => {
@@ -2618,7 +2621,8 @@ class NewMemberDetector {
                         for (const [groupId, members] of Object.entries(data.detectedMembers)) {
                             this.detectedMembers.set(groupId, members);
                         }
-                        UltraCleanLogger.info(`📊 Loaded ${this.detectedMembers.size} groups member data`);
+                        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+                        globalThis._wolfSysStats.memberGroups = this.detectedMembers.size;
                     }
                 } catch {}
             }).catch(err => {
@@ -3546,7 +3550,8 @@ class AntiViewOnceSystem {
         
         this.downloadContentFromMessage = downloadFunc;
         
-        UltraCleanLogger.success('🔐 Anti-ViewOnce System initialized');
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.antiViewOnce = true;
     }
     
     setupDirectories() {
@@ -4102,7 +4107,8 @@ class StatusDetector {
         this.setupDataDir();
         this.loadStatusLogs();
         
-        UltraCleanLogger.success('Status Detector initialized');
+        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
+        globalThis._wolfSysStats.statusDetector = true;
     }
     
     setupDataDir() {
@@ -5172,29 +5178,37 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
         row('Wolf AI',        flag(wolfAiOn)),
         div,
         ...((() => {
-            const s = globalThis._wolfSysStats || {};
-            const lines = [];
-            const stat = (label, val) => row(label, val);
-            lines.push(stat('Disk Manager',   s.diskManager    ? `${OK}ACTIVE${R}` : `${OFF}inactive${R}`));
-            lines.push(stat('Coinflip',       `${W}${s.coinflipUsers ?? 0} users  ·  ${s.coinflipBets ?? 0} active bets${R}`));
-            lines.push(stat('RPS',            `${W}${s.rpsPlayers    ?? 0} players${R}`));
-            lines.push(stat('Snake',          `${W}${s.snakePlayers  ?? 0} players${R}`));
-            lines.push(stat('Tetris',         `${W}${s.tetrisPlayers ?? 0} players${R}`));
-            lines.push(stat('ViewOnce Cache', `${W}${s.viewonceRecords ?? 0} records${R}`));
-            let antidelLabel;
+            const s   = globalThis._wolfSysStats || {};
+            const on  = (v) => v ? `${OK}✔ ready${R}` : `${OFF}✘ pending${R}`;
+            const num = (n, unit) => `${W}${n ?? 0} ${unit}${R}`;
+            const txt = (v, fallback) => v ? `${W}${v}${R}` : `${D}${fallback || 'pending'}${R}`;
+
+            // antidelete status — read from SQLite for accuracy
+            let adLabel;
             try {
                 const adEnabled = getConfigSync('antidelete_status_enabled', false);
                 const adMode    = getConfigSync('antidelete_status_mode', 'private');
                 const adOn = adEnabled === true || adEnabled === 'true' || adEnabled === 1;
-                antidelLabel = `${adOn ? OK : OFF}${adOn ? 'ON' : 'OFF'} (${String(adMode).toUpperCase()})${R}`;
-            } catch { antidelLabel = s.statusAntidelete
-                ? `${s.statusAntidelete.startsWith('ON') ? OK : OFF}${s.statusAntidelete}${R}`
-                : `${D}initializing${R}`; }
-            lines.push(stat('Status Antidel', antidelLabel));
-            lines.push(stat('Scheduler',      s.schedulerEAT
-                ? `${W}${s.schedulerEAT}${R}`
-                : `${D}initializing${R}`));
-            return lines;
+                adLabel = `${adOn ? OK : OFF}${adOn ? 'ON' : 'OFF'} (${String(adMode).toUpperCase()})${R}`;
+            } catch { adLabel = `${D}pending${R}`; }
+
+            return [
+                // ── Core modules ──────────────────────────
+                row('JID Manager',    on(s.jidManager)),
+                row('Status Reply',   on(s.statusReply)),
+                row('QuickConnect',   txt(s.quickConnect, 'pending')),
+                row('Disk Manager',   s.diskManager ? `${OK}✔ ACTIVE${R}` : `${OFF}✘ inactive${R}`),
+                row('Scheduler',      txt(s.schedulerEAT, 'pending')),
+                // ── Feature data ──────────────────────────
+                row('Status Antidel', adLabel),
+                row('Member Groups',  num(s.memberGroups ?? 0, 'groups tracked')),
+                row('ViewOnce Cache', num(s.viewonceRecords ?? 0, 'records')),
+                // ── Game engines ──────────────────────────
+                row('Coinflip',       num(s.coinflipUsers ?? 0, 'users') + `  ${D}·${R}  ${num(s.coinflipBets ?? 0, 'bets')}`),
+                row('RPS',            num(s.rpsPlayers    ?? 0, 'players')),
+                row('Snake',          num(s.snakePlayers  ?? 0, 'players')),
+                row('Tetris',         num(s.tetrisPlayers ?? 0, 'players')),
+            ];
         })()),
         div,
         barLine,
