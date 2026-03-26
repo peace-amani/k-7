@@ -5131,10 +5131,11 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
     const div   = `  ${D}${dashStr(INNER + 2)}${R}`;
 
     // Label rows — same style as WOLFBOT CONTROL CORE
-    const row = (icon, label, val, col) => {
+    const DOT = `${N}▣${R}`;
+    const row = (label, val, col) => {
         const labelW = 14;
         const pad = ' '.repeat(Math.max(0, labelW - label.length));
-        return `  ${Y}${icon}${R}  ${D}${label}${pad}${R}${N}:${R} ${col || W}${val}${R}`;
+        return `  ${DOT}  ${D}${label}${pad}${R}${N}:${R} ${col || W}${val}${R}`;
     };
 
     const flag = (on) => on ? `${OK}on${R}` : `${OFF}off${R}`;
@@ -5148,25 +5149,25 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
     const out = [
         '',
         top,
-        row('🏗️', 'Platform',  platform),
-        row('⏱️',  'Time',      time),
-        row('⚙️',  'Prefix',    prefix || 'none'),
-        row('🔓',  'Mode',      mode),
-        row('👤',  'Owner',     '+' + ownerNumber),
-        row('📦',  'Commands',  commandCount),
-        row('💾',  'SQLite',    `ready (${sqliteDriver})`),
+        row('Platform',  platform),
+        row('Time',      time),
+        row('Prefix',    prefix || 'none'),
+        row('Mode',      mode),
+        row('Owner',     '+' + ownerNumber),
+        row('Commands',  commandCount),
+        row('SQLite',    `ready (${sqliteDriver})`),
         div,
-        row('🔗',  'Database',  avail(dbOk,  'set',          'not set'),   ''),
-        row('🐘',  'PostgreSQL',avail(pgOk,  pgTbl ? `connected · ${pgTbl} tables` : 'connected', 'not connected'), ''),
-        row('🦅',  'Pterodactyl', avail(ptOk, 'set', 'not set'), ''),
-        row('💳',  'Paystack',  avail(pyOk,  'set',          'not set'),   ''),
+        row('Database',    avail(dbOk,  'set', 'not set'),   ''),
+        row('PostgreSQL',  avail(pgOk,  pgTbl ? `connected · ${pgTbl} tables` : 'connected', 'not connected'), ''),
+        row('Pterodactyl', avail(ptOk,  'set', 'not set'),   ''),
+        row('Paystack',    avail(pyOk,  'set', 'not set'),   ''),
         div,
-        row('🛡️',  'Anti-Delete',   flag(true)),
-        row('👁️',  'Anti-ViewOnce', flag(true)),
-        row('📡',  'Status Detect', flag(true)),
-        row('👥',  'Member Detect', flag(true)),
-        row('🔄',  'Auto-Reconnect',flag(true)),
-        row('🤖',  'Wolf AI',       flag(wolfAiOn)),
+        row('Anti-Delete',    flag(true)),
+        row('Anti-ViewOnce',  flag(true)),
+        row('Status Detect',  flag(true)),
+        row('Member Detect',  flag(true)),
+        row('Auto-Reconnect', flag(true)),
+        row('Wolf AI',        flag(wolfAiOn)),
         div,
         barLine,
         bot,
