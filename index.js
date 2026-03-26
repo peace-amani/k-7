@@ -1223,21 +1223,29 @@ function _isLogSuppressed(msg) {
     return false;
 }
 
-const _Y = '\x1b[38;2;255;200;0m';
-const _YB = '\x1b[1m\x1b[38;2;255;200;0m';
-const _YD = '\x1b[2m\x1b[38;2;255;200;0m';
-const _G = '\x1b[38;2;0;255;65m';
-const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
-const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
-const _R = '\x1b[0m';
-const _CYAN = '\x1b[38;2;0;220;255m';
-const _CYANB = '\x1b[1m\x1b[38;2;0;220;255m';
-const _MAG = '\x1b[38;2;200;100;255m';
-const _MAGB = '\x1b[1m\x1b[38;2;200;100;255m';
-const _BL = '\x1b[38;2;80;160;255m';
-const _BLB = '\x1b[1m\x1b[38;2;80;160;255m';
-const _ORG = '\x1b[38;2;255;140;0m';
-const _ORGB = '\x1b[1m\x1b[38;2;255;140;0m';
+// ── Cyberpunk Wolf colour palette ──────────────────────────────────────────
+const _G    = '\x1b[38;2;0;255;156m';       // #00FF9C  neon green (primary)
+const _GB   = '\x1b[1m\x1b[38;2;0;255;156m';
+const _GD   = '\x1b[2m\x1b[38;2;0;255;156m';
+const _SG   = '\x1b[38;2;0;230;118m';       // #00E676  secondary green
+const _Y    = '\x1b[38;2;250;204;21m';       // #FACC15  yellow highlight
+const _YB   = '\x1b[1m\x1b[38;2;250;204;21m';
+const _YD   = '\x1b[2m\x1b[38;2;250;204;21m';
+const _BL   = '\x1b[38;2;34;193;255m';       // #22C1FF  blue accent
+const _BLB  = '\x1b[1m\x1b[38;2;34;193;255m';
+const _BLD  = '\x1b[2m\x1b[38;2;34;193;255m';
+const _RED  = '\x1b[38;2;255;60;80m';        // neon red
+const _REDB = '\x1b[1m\x1b[38;2;255;60;80m';
+const _ORG  = '\x1b[38;2;255;110;0m';        // neon orange
+const _ORGB = '\x1b[1m\x1b[38;2;255;110;0m';
+const _MAG  = '\x1b[38;2;180;0;255m';        // neon violet
+const _MAGB = '\x1b[1m\x1b[38;2;180;0;255m';
+const _CYAN = '\x1b[38;2;0;240;255m';        // neon cyan
+const _CYANB= '\x1b[1m\x1b[38;2;0;240;255m';
+const _WHT  = '\x1b[38;2;200;215;225m';      // off-white body text
+const _DIM  = '\x1b[2m\x1b[38;2;100;120;130m'; // dim grey
+const _R    = '\x1b[0m';
+// ───────────────────────────────────────────────────────────────────────────
 
 const _systemBuffer = [];
 const _FLUSH_INTERVAL = 25000;
@@ -1262,8 +1270,41 @@ function _isSystemLog(text) {
 }
 
 function _getTime() {
-    return new Date().toLocaleTimeString();
+    const d = new Date();
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${h}:${m}:${s}`;
 }
+
+// ── PG log detection ────────────────────────────────────────────────────────
+function _isPGLog(text) {
+    return typeof text === 'string' && text.startsWith('[PG]');
+}
+
+function _printPGLog(text) {
+    const time = _getTime();
+    const hdr  = `${_BLB}[WOLF-DB]${_R} ${_BLD}⏱️  ${time}${_R}`;
+    if (text.includes('Tables in DB:')) {
+        const match = text.match(/Tables in DB:\s*(.+)/i);
+        const tables = match ? match[1].split(',').map(t => t.trim()).filter(Boolean) : [];
+        process.stdout.write(`\n${_YB}════════〔 DATABASE CORE ▣ ONLINE 〕════════${_R}\n\n`);
+        process.stdout.write(`${hdr}\n`);
+        process.stdout.write(`${_G}▸ ${_WHT}Scanning database clusters...${_R}\n\n`);
+        for (const tbl of tables) {
+            const pad = ' '.repeat(Math.max(0, 20 - tbl.length));
+            process.stdout.write(`   ${_G}▣ ${_WHT}${tbl}${pad}${_DIM}→ ${_G}LINKED${_R}\n`);
+        }
+        process.stdout.write('\n');
+    } else if (text.includes('✅') || text.toLowerCase().includes('connected')) {
+        process.stdout.write(`${hdr}\n`);
+        process.stdout.write(`${_G}▸ ${_WHT}STATUS ${_DIM}→ ${_G}✅ ALL SYSTEMS SYNCHRONIZED${_R}\n\n`);
+    } else {
+        process.stdout.write(`${hdr}\n`);
+        process.stdout.write(`${_G}▸ ${_WHT}${text.replace('[PG]', '').trim()}${_R}\n`);
+    }
+}
+// ───────────────────────────────────────────────────────────────────────────
 
 function _flushSystemBuffer() {
     if (_systemBuffer.length === 0) return;
@@ -1306,11 +1347,12 @@ function _flushSystemBuffer() {
     if (lines.length === 0) return;
 
     const time = _getTime();
-    originalConsoleMethods.log(`${_YB}╭─⌈ ⚙️  SYSTEM ⌋─── ${_YD}${time}${_R}`);
+    process.stdout.write(`\n${_YB}════════〔 SYSTEM STATUS ▣ LIVE 〕════════${_R}\n\n`);
+    process.stdout.write(`${_YB}[WOLF-SYS]${_R} ${_YD}⏱️  ${time}${_R}\n`);
     for (const line of lines) {
-        originalConsoleMethods.log(`${_Y}├─⊷ ${line}${_R}`);
+        process.stdout.write(`${_G}▸ ${_WHT}${line}${_R}\n`);
     }
-    originalConsoleMethods.log(`${_Y}╰───${_R}`);
+    process.stdout.write('\n');
 }
 
 function _bufferSystemLog(text) {
@@ -1330,19 +1372,15 @@ class UltraCleanLogger {
         if (typeof firstArg === 'string') {
             const lower = firstArg.toLowerCase();
             if (_isLogSuppressed(lower)) return;
-            if (_isSystemLog(firstArg)) {
-                _bufferSystemLog(args.join(' '));
-                return;
-            }
+            if (_isPGLog(firstArg)) { _printPGLog(args.join(' ')); return; }
+            if (_isSystemLog(firstArg)) { _bufferSystemLog(args.join(' ')); return; }
         }
         const text = args.join(' ');
         const time = _getTime();
-        const _DIM = '\x1b[2m\x1b[37m';
-        const _WHT = '\x1b[37m';
-        originalConsoleMethods.log(`${_DIM}╭─⌈ 💬  LOG ⌋\x1b[0m`);
-        originalConsoleMethods.log(`${_DIM}╰─⊷ ${time}  \x1b[0m${_WHT}${text}\x1b[0m`);
+        originalConsoleMethods.log(`${_GD}[WOLF-SYS]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_G}▸ ${_WHT}${text}${_R}`);
     }
-    
+
     static error(...args) {
         const message = args.join(' ').toLowerCase();
         for (let i = 0; i < _errSuppressArr.length; i++) {
@@ -1350,28 +1388,28 @@ class UltraCleanLogger {
         }
         const text = args.join(' ');
         const time = _getTime();
-        originalConsoleMethods.error(`${_YB}╭─⌈ ❌ ERROR ⌋${_R}`);
-        originalConsoleMethods.error(`${_Y}╰─⊷ ${_YD}${time}  ${_R}\x1b[38;2;255;80;80m${text}${_R}`);
+        originalConsoleMethods.error(`${_REDB}[WOLF-ERR]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.error(`${_RED}▸ ${text}${_R}`);
     }
-    
+
     static success(...args) {
         if (globalThis._wolfStartupPhase) return;
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_GB}╭─⌈ ✅  OK ⌋${_R}`);
-        originalConsoleMethods.log(`${_G}╰─⊷ ${_GD}${time}  ${_R}${_G}${text}${_R}`);
+        originalConsoleMethods.log(`${_GB}[WOLF-OK]${_R} ${_GD}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_G}▸ ${_SG}${text}${_R}`);
     }
-    
+
     static info(...args) {
         if (globalThis._wolfStartupPhase) return;
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_BLB}╭─⌈ ℹ️  INFO ⌋${_R}`);
-        originalConsoleMethods.log(`${_BL}╰─⊷ ${_BL}${time}  ${_R}${_CYAN}${text}${_R}`);
+        originalConsoleMethods.log(`${_BLB}[WOLF-INFO]${_R} ${_BLD}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_BL}▸ ${_CYAN}${text}${_R}`);
     }
-    
+
     static warning(...args) {
         if (globalThis._wolfStartupPhase) return;
         const message = args.join(' ').toLowerCase();
@@ -1381,71 +1419,76 @@ class UltraCleanLogger {
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
-        originalConsoleMethods.log(`${_YB}╭─⌈ ⚠️  WARNING ⌋${_R}`);
-        originalConsoleMethods.log(`${_Y}╰─⊷ ${_YD}${time}  ${_R}${_ORG}${text}${_R}`);
+        originalConsoleMethods.log(`${_YB}[WOLF-WARN]${_R} ${_YD}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_Y}▸ ${_ORG}${text}${_R}`);
     }
     
     static event(...args) {
-        const timestamp = `${_MAGB}[${_getTime()}]${_R}`;
-        originalConsoleMethods.log(timestamp, `${_MAG}🎭${_R}`, ...args.map(a => `${_MAG}${a}${_R}`));
+        const time = _getTime();
+        originalConsoleMethods.log(`${_MAGB}[WOLF-EVT]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_MAG}▸ 🎭 ${args.join(' ')}${_R}`);
     }
-    
+
     static command(...args) {
-        const timestamp = `${_CYANB}[${_getTime()}]${_R}`;
-        originalConsoleMethods.log(timestamp, `${_CYAN}💬${_R}`, ...args.map(a => `${_CYAN}${a}${_R}`));
+        const time = _getTime();
+        originalConsoleMethods.log(`${_CYANB}[WOLF-CMD]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_CYAN}▸ 💬 ${args.join(' ')}${_R}`);
     }
 
     static ownerCommand(...args) {
         const time = _getTime();
         const msg = args.join(' ');
-        const ts = `${_GB}[${time}]${_R}`;
-        originalConsoleMethods.log(`${ts} ${_GB}👑${_R} ${_G}${msg}${_R}`);
+        originalConsoleMethods.log(`${_GB}[WOLF-CMD]${_R} ${_GD}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_G}▸ 👑 ${msg}${_R}`);
     }
 
     static ownerMessage(...args) {
         const time = _getTime();
         const msg = args.join(' ');
-        originalConsoleMethods.log(`${_GD}╭─⌈ 💬 👑 OWNER ⌋${_R}`);
-        originalConsoleMethods.log(`${_G}╰─⊷ ${_GD}${time}  ${_R}${_G}${msg}${_R}`);
+        originalConsoleMethods.log(`${_GB}[WOLF-OWNER]${_R} ${_GD}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_G}▸ 💬 ${_SG}${msg}${_R}`);
     }
-    
+
     static critical(...args) {
         const time = _getTime();
         const text = args.join(' ');
-        originalConsoleMethods.error(`${_YB}╭─⌈ 🚨 CRITICAL ⌋${_R}`);
-        originalConsoleMethods.error(`${_Y}╰─⊷ ${_YD}${time}  ${_R}${_Y}${text}${_R}`);
+        originalConsoleMethods.error(`${_REDB}[WOLF-CRIT]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.error(`${_RED}▸ 🚨 ${text}${_R}`);
     }
-    
+
     static group(...args) {
-        const timestamp = `${_MAGB}[${_getTime()}]${_R}`;
-        originalConsoleMethods.log(timestamp, `${_MAG}👥${_R}`, ...args.map(a => `${_MAG}${a}${_R}`));
+        const time = _getTime();
+        originalConsoleMethods.log(`${_MAGB}[WOLF-GRP]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_MAG}▸ 👥 ${args.join(' ')}${_R}`);
     }
-    
+
     static member(...args) {
-        const timestamp = `${_CYANB}[${_getTime()}]${_R}`;
-        originalConsoleMethods.log(timestamp, `${_CYAN}👤${_R}`, ...args.map(a => `${_CYAN}${a}${_R}`));
+        const time = _getTime();
+        originalConsoleMethods.log(`${_CYANB}[WOLF-MBR]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_CYAN}▸ 👤 ${args.join(' ')}${_R}`);
     }
-    
+
     static antiviewonce(...args) {
-        const timestamp = `${_MAGB}[${_getTime()}]${_R}`;
-        originalConsoleMethods.log(timestamp, `${_MAG}🔐${_R}`, ...args.map(a => `${_MAG}${a}${_R}`));
+        const time = _getTime();
+        originalConsoleMethods.log(`${_MAGB}[WOLF-AVO]${_R} ${_DIM}⏱️  ${time}${_R}`);
+        originalConsoleMethods.log(`${_MAG}▸ 🔐 ${args.join(' ')}${_R}`);
     }
 
     static message(phone, chatType, groupName, text, time) {
         const t = time || _getTime();
         const isGroup = chatType === 'GROUP';
-        const typeIcon = isGroup ? '👥' : '💬';
-        const typeLabel = isGroup ? 'GROUP' : '  DM ';
-        const preview = text.length > 90 ? text.substring(0, 90) + '…' : text;
-        const color = isGroup ? _BL : _ORG;
+        const preview = text.length > 80 ? text.substring(0, 80) + '…' : text;
+        const color  = isGroup ? _BL : _ORG;
         const colorB = isGroup ? _BLB : _ORGB;
-        originalConsoleMethods.log(`${colorB}╭─⌈ ${typeIcon} ${typeLabel} ⌋${_R}`);
+        const icon   = isGroup ? '👥' : '💬';
+        const label  = isGroup ? '[WOLF-GRP]' : '[WOLF-DM] ';
+        originalConsoleMethods.log(`${colorB}${label}${_R} ${_DIM}⏱️  ${t}${_R}`);
         if (isGroup && groupName) {
-            originalConsoleMethods.log(`${color}├─ ${color}${t}  📱 +${phone}   👥 ${groupName}${_R}`);
+            originalConsoleMethods.log(`${color}▸ ${icon} +${phone}  ${_DIM}▸${_R} ${color}${groupName}${_R}`);
         } else {
-            originalConsoleMethods.log(`${color}├─ ${color}${t}  📱 +${phone}${_R}`);
+            originalConsoleMethods.log(`${color}▸ ${icon} +${phone}${_R}`);
         }
-        originalConsoleMethods.log(`${color}╰─⊷ "${preview}"${_R}`);
+        originalConsoleMethods.log(`${_DIM}  ╰ "${preview}"${_R}`);
     }
 
     static flushSystem() {
@@ -4776,12 +4819,24 @@ class LoginManager {
     
     async selectMode() {
         globalThis._wolfStartupPhase = false; // release so login prompts show
-        console.log(chalk.yellow('\n🐺 WOLFBOT v' + VERSION + ' - LOGIN SYSTEM'));
-        console.log(chalk.blue('1) Pairing Code Login (Recommended)'));
-        console.log(chalk.blue('2) Clean Session & Start Fresh'));
-        console.log(chalk.magenta('3) Use Session ID from Environment'));
-        
-        const choice = await this.ask('Choose option (1-3, default 1): ');
+        printWolfBootSequence();
+
+        const N = '\x1b[38;2;0;255;156m';
+        const B = '\x1b[38;2;34;193;255m';
+        const Y = '\x1b[38;2;250;204;21m';
+        const D = '\x1b[2m\x1b[38;2;100;120;130m';
+        const W = '\x1b[38;2;200;215;225m';
+        const R = '\x1b[0m';
+        const t = _getTime();
+
+        process.stdout.write(`\n${N}┌────────〔 🧠 SYSTEM LOG 〕────────┐${R}\n\n`);
+        process.stdout.write(`${B}[WOLF-AUTH]${R} ${D}⏱️  ${t}${R}\n`);
+        process.stdout.write(`${N}◆ 01 ${D}→${R} ${W}Pairing Code Login     ${Y}⟪Recommended⟫${R}\n`);
+        process.stdout.write(`${N}◆ 02 ${D}→${R} ${W}Clean Session Reset    ${Y}⟪Fresh Boot⟫${R}\n`);
+        process.stdout.write(`${N}◆ 03 ${D}→${R} ${W}ENV Session Injection  ${Y}⟪Advanced⟫${R}\n\n`);
+        process.stdout.write(`${Y}⚡ INPUT REQUIRED ▸ Select [1-3] ⟶ (default: 1): ${R}`);
+
+        const choice = await this.ask('');
         
         switch (choice.trim()) {
             case '1':
@@ -4873,7 +4928,8 @@ class LoginManager {
     
     ask(question) {
         return new Promise((resolve) => {
-            this.rl.question(chalk.yellow(question), (answer) => {
+            const prompt = question === '' ? '' : chalk.yellow(question);
+            this.rl.question(prompt, (answer) => {
                 resolve(answer);
             });
         });
@@ -4890,6 +4946,25 @@ function updateTerminalHeader() {
 }
 
 let _dbInitReady = false;
+
+function printWolfBootSequence() {
+    const N  = '\x1b[38;2;0;255;156m';
+    const NB = '\x1b[1m\x1b[38;2;0;255;156m';
+    const ND = '\x1b[2m\x1b[38;2;0;255;156m';
+    const Y  = '\x1b[38;2;250;204;21m';
+    const YB = '\x1b[1m\x1b[38;2;250;204;21m';
+    const D  = '\x1b[2m\x1b[38;2;100;120;130m';
+    const R  = '\x1b[0m';
+    const filled = '█';
+    const empty  = '░';
+    const bar = (n, tot = 16) => `${N}${filled.repeat(n)}${D}${empty.repeat(tot - n)}${R}`;
+
+    process.stdout.write(`\n${YB}▣ WOLF CORE BOOT SEQUENCE INITIATED...${R}\n`);
+    process.stdout.write(`  ${bar(7)}  ${Y}45%${R}\n`);
+    process.stdout.write(`  ${bar(13)} ${Y}85%${R}\n`);
+    process.stdout.write(`  ${bar(16)} ${Y}100%${R}\n`);
+    process.stdout.write(`  ${NB}▸ CORE ONLINE ✓${R}\n\n`);
+}
 
 function printStartupBox() {
     const prefixDisplay = isPrefixless ? 'none' : `"${getCurrentPrefix()}"`;
