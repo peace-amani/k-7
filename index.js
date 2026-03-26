@@ -140,7 +140,8 @@ const _noisyTokens = [
     '[asm-debug]',
     'interactive send:','native_flow','tag: \'biz\'',
     'app state resync','syncing critical app state',
-    '[dotenv'
+    '[dotenv',
+    '[chatbot-check]','[chatbot-trace]'
 ];
 
 const _importantTokens = [
@@ -1324,6 +1325,7 @@ function _bufferSystemLog(text) {
 
 class UltraCleanLogger {
     static log(...args) {
+        if (globalThis._wolfStartupPhase) return;
         const firstArg = args[0];
         if (typeof firstArg === 'string') {
             const lower = firstArg.toLowerCase();
@@ -1355,6 +1357,7 @@ class UltraCleanLogger {
     }
     
     static success(...args) {
+        if (globalThis._wolfStartupPhase) return;
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
@@ -1364,6 +1367,7 @@ class UltraCleanLogger {
     }
     
     static info(...args) {
+        if (globalThis._wolfStartupPhase) return;
         const text = args.join(' ');
         if (_isSystemLog(text)) { _bufferSystemLog(text); return; }
         const time = _getTime();
@@ -1373,6 +1377,7 @@ class UltraCleanLogger {
     }
     
     static warning(...args) {
+        if (globalThis._wolfStartupPhase) return;
         const message = args.join(' ').toLowerCase();
         for (let i = 0; i < _warnSuppressArr.length; i++) {
             if (message.includes(_warnSuppressArr[i])) return;
@@ -1398,9 +1403,8 @@ class UltraCleanLogger {
     static ownerCommand(...args) {
         const time = _getTime();
         const msg = args.join(' ');
-        originalConsoleMethods.log(`${_GB}╭─⌈ ⚡ 👑 OWNER ⌋─── ${_GD}${time}${_R}`);
-        originalConsoleMethods.log(`${_G}├─⊷ ${_GB}${msg}${_R}`);
-        originalConsoleMethods.log(`${_G}╰───${_R}`);
+        const ts = `${_GB}[${time}]${_R}`;
+        originalConsoleMethods.log(`${ts} ${_GB}👑${_R} ${_G}${msg}${_R}`);
     }
 
     static ownerMessage(...args) {
@@ -1462,6 +1466,12 @@ console.error = UltraCleanLogger.error;
 console.info = UltraCleanLogger.info;
 console.warn = UltraCleanLogger.warning;
 console.debug = () => {};
+
+// ── Startup phase: suppress individual log entries until bot is fully connected ──
+// Flip to false (and call printWolfStartupBlock) once connection is confirmed.
+// Safety valve: release after 45s so interactive login / pairing mode still logs.
+globalThis._wolfStartupPhase = true;
+setTimeout(() => { globalThis._wolfStartupPhase = false; }, 45_000);
 
 // Add custom methods
 global.logSuccess = UltraCleanLogger.success;
@@ -4772,6 +4782,7 @@ class LoginManager {
     }
     
     async selectMode() {
+        globalThis._wolfStartupPhase = false; // release so login prompts show
         console.log(chalk.yellow('\n🐺 WOLFBOT v' + VERSION + ' - LOGIN SYSTEM'));
         console.log(chalk.blue('1) Pairing Code Login (Recommended)'));
         console.log(chalk.blue('2) Clean Session & Start Fresh'));
@@ -4971,6 +4982,84 @@ function printConnectionBox(botName) {
         row(`✅ Anti-delete ready`),
         `${c()}╰${bar}╯${R}`,
     ];
+    process.stdout.write('\n' + lines.join('\n') + '\n\n');
+}
+
+// ── Wolf Startup Block ──────────────────────────────────────────────────────
+// Prints ONE consolidated status block at connection time, replacing all the
+// individual startup log entries. Called from handleConnectionOpen().
+function printWolfStartupBlock({ botName, version, platform, prefix, mode,
+    ownerNumber, commandCount, sqliteDriver, wolfAiOn, isReconnect }) {
+
+    const _G  = '\x1b[38;2;0;255;65m';   // wolf green
+    const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
+    const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
+    const _RD = '\x1b[38;2;255;80;80m';  // red for "not set"
+    const _R  = '\x1b[0m';
+
+    // Visible-width that ignores ANSI escape codes and handles emoji double-width
+    const vlen = s => {
+        const stripped = s.replace(/\x1b\[[0-9;]*m/g, '');
+        let n = 0;
+        for (const ch of [...stripped]) {
+            const cp = ch.codePointAt(0);
+            n += (cp > 0xFFFF || (cp >= 0x1F000 && cp <= 0x1FFFF)) ? 2 : 1;
+        }
+        return n;
+    };
+
+    const W   = 54;
+    const bar = '─'.repeat(W + 2);
+
+    // Header row (centred, bold)
+    const header = `🐺 ${botName} v${version} · ${isReconnect ? 'RECONNECTED' : 'ONLINE'}`;
+    const hpad   = Math.max(0, W - vlen(header));
+    const headerRow = `${_G}│${_R} ${_GB}${header}${_R}${' '.repeat(hpad)} ${_G}│${_R}`;
+
+    // Dot-leader row: "  key ············ value"
+    const item = (key, value, ok) => {
+        const k   = `  ${key}`;
+        const v   = String(value);
+        const dots = Math.max(3, W - vlen(k) - vlen(v) - 1);
+        const vc  = ok === true ? _G : ok === false ? _RD : _GD;
+        return `${_G}│${_R} ${_GD}${k}${_R} ${_GD}${'·'.repeat(dots)}${_R} ${vc}${v}${_R} ${_G}│${_R}`;
+    };
+
+    const ks    = getKeyStatus();
+    const dbOk  = ks.dbStatus.includes('✅');
+    const ptOk  = ks.pteroStatus.includes('✅');
+    const pyOk  = ks.paystackStatus.includes('✅');
+    const pgOk  = !!(globalThis.pg?.isReady);
+    const pgTbl = globalThis.pg?.tableCount || 0;
+
+    const time  = new Date().toLocaleTimeString();
+
+    const lines = [
+        `${_G}╭${bar}╮${_R}`,
+        headerRow,
+        `${_G}├${bar}┤${_R}`,
+        item('platform', platform, null),
+        item('time', time, null),
+        item('prefix', prefix, null),
+        item('mode', mode, null),
+        item('owner', `+${ownerNumber}`, null),
+        item('commands', commandCount, null),
+        item('sqlite', `ready (${sqliteDriver})`, null),
+        `${_G}├${bar}┤${_R}`,
+        item('database url', dbOk  ? 'set' : 'not set', dbOk),
+        item('postgresql',   pgOk  ? (pgTbl ? `connected · ${pgTbl} tables` : 'connected') : 'not connected', pgOk),
+        item('pterodactyl',  ptOk  ? 'set' : 'not set', ptOk),
+        item('paystack',     pyOk  ? 'set' : 'not set', pyOk),
+        `${_G}├${bar}┤${_R}`,
+        item('anti-delete',    'on', null),
+        item('anti-viewonce',  'on', null),
+        item('status detect',  'on', null),
+        item('member detect',  'on', null),
+        item('auto-reconnect', 'on', null),
+        item('wolf ai',        wolfAiOn ? 'on' : 'off', null),
+        `${_G}╰${bar}╯${_R}`,
+    ];
+
     process.stdout.write('\n' + lines.join('\n') + '\n\n');
 }
 
@@ -5719,9 +5808,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     memoryMonitor.start();
                 }, 3000);
 
-                setTimeout(() => {
-                    if (isConnected) printConnectionBox(getCurrentBotName());
-                }, 9000);
+                // printConnectionBox removed — replaced by printWolfStartupBlock in handleConnectionOpen
                 
                 // ====== THE ONLY SUCCESS MESSAGE ======
                 setTimeout(async () => {
@@ -7118,59 +7205,21 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
         connectionMethod = 'PAIR CODE';
     }
     
-{
-    const _G  = '\x1b[38;2;0;255;65m';
-    const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
-    const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
-    const _R  = '\x1b[0m';
-    const W   = 26;
-    const bar = '─'.repeat(W + 2);
-    const vlen = s => { let n=0; for (const ch of[...s]){const cp=ch.codePointAt(0);n+=(cp>0xFFFF||(cp>=0x1F000&&cp<=0x1FFFF))?2:1;} return n; };
-    const pad  = s => { const v=vlen(s); return s+(v<W?' '.repeat(W-v):''); };
-    const row  = (text, bold) => {
-        const t = bold ? `${_GB}${pad(text)}${_R}` : `${_G}${pad(text)}${_R}`;
-        return `${_G}│${_R} ${t} ${_G}│${_R}`;
-    };
-    const sep  = `${_G}├${bar}┤${_R}`;
-    const lines = [
-        `${_G}╭${bar}╮${_R}`,
-        row(`🐺 ${getCurrentBotName()} ONLINE v${VERSION}`, true),
-        sep,
-        row(`✅ ${isAutoReconnect ? 'Reconnected!' : 'Connected!'}`),
-        row(`👑 Owner: +${ownerInfo.ownerNumber}`),
-        row(`🔗 LID: ${ownerInfo.ownerLid || 'Not set'}`),
-        row(`📱 Device: ${getCurrentBotName()}`),
-        row(`🕒 Time: ${currentTime}`),
-        row(`🔥 Status: 24/7 Ready!`),
-        row(`💬 Prefix: ${prefixDisplay}`),
-        row(`🎛️  Mode: ${BOT_MODE}`),
-        row(`🔐 Method: ${connectionMethod}`),
-        row(`📊 Cmds: ${commands.size} loaded`),
-        sep,
-        row(`🔧 ULTIMATE FIX   : ✅`),
-        row(`👁️  STATUS DETECT  : ✅`),
-        row(`👥 MEMBER DETECT  : ✅`),
-        row(`🔐 ANTI-VIEWONCE  : ✅`),
-        row(`🗑️  ANTIDELETE     : ✅`),
-        row(`🛡️  RATE LIMIT     : ✅`),
-        row(`🔗 LINK CONNECT   : ${AUTO_CONNECT_ON_LINK  ? '✅' : '❌'}`),
-        row(`🔄 START CONNECT  : ${AUTO_CONNECT_ON_START ? '✅' : '❌'}`),
-        row(`🔐 AUTO-RECONNECT : ✅`),
-        sep,
-        (() => { const ks = getKeyStatus(); return [
-            row(`🐦 PTERODACTYL  : ${ks.pteroStatus}`),
-            row(`💳 PAYSTACK     : ${ks.paystackStatus}`),
-            row(`🗄️  DATABASE URL : ${ks.dbStatus}`),
-        ]; })().join('\n'),
-        sep,
-        row(`🏗️  Platform: ${detectPlatform()}`),
-        row(`🔊 CONSOLE: ULTRA CLEAN`),
-        row(`⚡ SPEED: OPTIMIZED`),
-        row(`🎯 BG AUTH: ENABLED`),
-        `${_G}╰${bar}╯${_R}`,
-    ];
-    process.stdout.write('\n' + lines.join('\n') + '\n\n');
-}
+    // End startup phase — all subsequent logs flow normally
+    globalThis._wolfStartupPhase = false;
+
+    printWolfStartupBlock({
+        botName:      getCurrentBotName(),
+        version:      VERSION,
+        platform:     detectPlatform(),
+        prefix:       prefixDisplay,
+        mode:         BOT_MODE,
+        ownerNumber:  ownerInfo.ownerNumber,
+        commandCount: commands.size,
+        sqliteDriver: isUsingWasm() ? 'wasm' : 'native',
+        wolfAiOn:     WolfAI.isEnabled(),
+        isReconnect:  isAutoReconnect,
+    });
     
     // Only send welcome message if not auto-reconnecting
     if (!isAutoReconnect && isFirstConnection && !hasSentWelcomeMessage) {
@@ -8654,7 +8703,7 @@ async function main() {
     try {
         // ====== WEB SERVER — must bind to PORT before anything else (Heroku boot timeout) ======
         try { await _dbInitPromise; } catch {}
-        printStartupBox();
+        // printStartupBox removed — replaced by printWolfStartupBlock in handleConnectionOpen
         await setupWebServer();
         setupHerokuKeepAlive();
 
