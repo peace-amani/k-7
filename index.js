@@ -1365,54 +1365,69 @@ function _bufferSystemLog(text) {
     }
 }
 
-// ── Wolf Command Box ────────────────────────────────────────────────────────
-// Prints a single consolidated box for every executed command, matching the
-// startup block style exactly (same borders, dots, label alignment).
+// ── Shared box constants & helpers ──────────────────────────────────────────
+const _BOX_INNER = 34;
+function _boxDash(n) { return '─'.repeat(Math.max(0, n)); }
+function _boxTop(NB, R, icon, label) {
+    const title   = `〔 ${icon} ${label} 〕`;
+    const tVisLen = title.length + 2;   // +2 for fullwidth 〔 〕
+    const rpad    = Math.max(2, _BOX_INNER - 2 - tVisLen + 2);
+    return `${NB}┌──${title}${_boxDash(rpad)}┐${R}`;
+}
+function _boxBot(NB, R) { return `${NB}└${_boxDash(_BOX_INNER + 2)}┘${R}`; }
+function _boxRow(DOT, D, N, W, R, lbl, val) {
+    const pad = ' '.repeat(Math.max(0, 9 - lbl.length));
+    return `  ${DOT}  ${D}${lbl}${pad}${R}${N}:${R} ${W}${val}${R}`;
+}
+
+// ── Wolf Command Box (neon green) ───────────────────────────────────────────
 function _printCommandBox({ sender, command, location, role, ms }) {
     const NB = '\x1b[1m\x1b[38;2;0;255;156m';
     const N  = '\x1b[38;2;0;255;156m';
-    const Y  = '\x1b[38;2;250;204;21m';
     const D  = '\x1b[2m\x1b[38;2;100;120;130m';
     const W  = '\x1b[38;2;200;215;225m';
     const OK = '\x1b[38;2;0;230;118m';
     const R  = '\x1b[0m';
-
-    const INNER  = 46;
-    const dash   = (n) => '─'.repeat(Math.max(0, n));
-    const DOT    = `${N}▣${R}`;
+    const DOT = `${N}▣${R}`;
 
     const icon  = role === 'owner' ? '👑' : role === 'sudo' ? '🔑' : '💬';
     const label = role === 'owner' ? 'OWNER CMD' : role === 'sudo' ? 'SUDO CMD' : 'USER CMD';
-    const title = `〔 ${icon} ${label} 〕`;
-    // 〔 and 〕 are fullwidth (2 cols each) → add 2 to visual length estimate
-    const tVisLen = title.length + 2;
-    const rpad = Math.max(2, INNER - 2 - tVisLen + 2);
-
-    const top = `${NB}┌──${title}${dash(rpad)}┐${R}`;
-    const bot = `${NB}└${dash(INNER + 2)}┘${R}`;
-
-    const row = (lbl, val) => {
-        const labelW = 10;
-        const pad = ' '.repeat(Math.max(0, labelW - lbl.length));
-        return `  ${DOT}  ${D}${lbl}${pad}${R}${N}:${R} ${W}${val}${R}`;
-    };
 
     const msLabel    = ms !== undefined ? `  ${D}(${ms}ms)${R}` : '';
-    const statusLine = `  ${DOT}  ${D}Status    :${R}  ${OK}✔ done${R}${msLabel}`;
+    const statusLine = `  ${DOT}  ${D}Status   ${R}${N}:${R}  ${OK}✔ done${R}${msLabel}`;
     const senderFmt  = sender && !sender.startsWith('+') ? `+${sender}` : (sender || '?');
+    const r          = (l, v) => _boxRow(DOT, D, N, W, R, l, v);
 
-    const lines = [
-        '',
-        top,
-        row('Sender',  senderFmt),
-        row('Command', command),
-        row('Where',   location),
+    originalConsoleMethods.log([
+        '', _boxTop(NB, R, icon, label),
+        r('Sender',  senderFmt),
+        r('Command', command),
+        r('Where',   location),
         statusLine,
-        bot,
-        '',
-    ];
+        _boxBot(NB, R), '',
+    ].join('\n'));
+}
 
-    originalConsoleMethods.log(lines.join('\n'));
+// ── Wolf Incoming Message Box (blue / orange) ───────────────────────────────
+function _printMessageBox({ phone, chatType, groupName, text }) {
+    const isGroup = chatType === 'GROUP';
+    const NB = isGroup ? '\x1b[1m\x1b[38;2;34;193;255m' : '\x1b[1m\x1b[38;2;255;110;0m';
+    const N  = isGroup ? '\x1b[38;2;34;193;255m'         : '\x1b[38;2;255;110;0m';
+    const D  = '\x1b[2m\x1b[38;2;100;120;130m';
+    const W  = '\x1b[38;2;200;215;225m';
+    const R  = '\x1b[0m';
+    const DOT = `${N}▣${R}`;
+
+    const icon    = isGroup ? '👥' : '💬';
+    const label   = isGroup ? 'GROUP MSG' : 'DM MSG';
+    const preview = text && text.length > 28 ? text.substring(0, 28) + '…' : (text || '');
+    const r       = (l, v) => _boxRow(DOT, D, N, W, R, l, v);
+
+    const rows = ['', _boxTop(NB, R, icon, label), r('From', `+${phone}`)];
+    if (isGroup && groupName) rows.push(r('Group', groupName));
+    rows.push(r('Text', `"${preview}"`), _boxBot(NB, R), '');
+
+    originalConsoleMethods.log(rows.join('\n'));
 }
 
 class UltraCleanLogger {
@@ -1533,21 +1548,8 @@ class UltraCleanLogger {
         originalConsoleMethods.log(`${_MAG}▸ 🔐 ${args.join(' ')}${_R}`);
     }
 
-    static message(phone, chatType, groupName, text, time) {
-        const t = time || _getTime();
-        const isGroup = chatType === 'GROUP';
-        const preview = text.length > 80 ? text.substring(0, 80) + '…' : text;
-        const color  = isGroup ? _BL : _ORG;
-        const colorB = isGroup ? _BLB : _ORGB;
-        const icon   = isGroup ? '👥' : '💬';
-        const label  = isGroup ? '[WOLF-GRP]' : '[WOLF-DM] ';
-        originalConsoleMethods.log(`${colorB}${label}${_R} ${_DIM}⏱️  ${t}${_R}`);
-        if (isGroup && groupName) {
-            originalConsoleMethods.log(`${color}▸ ${icon} +${phone}  ${_DIM}▸${_R} ${color}${groupName}${_R}`);
-        } else {
-            originalConsoleMethods.log(`${color}▸ ${icon} +${phone}${_R}`);
-        }
-        originalConsoleMethods.log(`${_DIM}  ╰ "${preview}"${_R}`);
+    static message(phone, chatType, groupName, text) {
+        _printMessageBox({ phone, chatType, groupName, text });
     }
 
     static flushSystem() {
