@@ -5099,39 +5099,15 @@ function printConnectionBox(botName) {
 function printWolfStartupBlock({ botName, version, platform, prefix, mode,
     ownerNumber, commandCount, sqliteDriver, wolfAiOn, isReconnect }) {
 
-    const _G  = '\x1b[38;2;0;255;65m';   // wolf green
-    const _GB = '\x1b[1m\x1b[38;2;0;255;65m';
-    const _GD = '\x1b[2m\x1b[38;2;0;255;65m';
-    const _RD = '\x1b[38;2;255;80;80m';  // red for "not set"
-    const _R  = '\x1b[0m';
-
-    // Visible-width that ignores ANSI escape codes and handles emoji double-width
-    const vlen = s => {
-        const stripped = s.replace(/\x1b\[[0-9;]*m/g, '');
-        let n = 0;
-        for (const ch of [...stripped]) {
-            const cp = ch.codePointAt(0);
-            n += (cp > 0xFFFF || (cp >= 0x1F000 && cp <= 0x1FFFF)) ? 2 : 1;
-        }
-        return n;
-    };
-
-    const W   = 54;
-    const bar = '─'.repeat(W + 2);
-
-    // Header row (centred, bold)
-    const header = `🐺 ${botName} v${version} · ${isReconnect ? 'RECONNECTED' : 'ONLINE'}`;
-    const hpad   = Math.max(0, W - vlen(header));
-    const headerRow = `${_G}│${_R} ${_GB}${header}${_R}${' '.repeat(hpad)} ${_G}│${_R}`;
-
-    // Dot-leader row: "  key ············ value"
-    const item = (key, value, ok) => {
-        const k   = `  ${key}`;
-        const v   = String(value);
-        const dots = Math.max(3, W - vlen(k) - vlen(v) - 1);
-        const vc  = ok === true ? _G : ok === false ? _RD : _GD;
-        return `${_G}│${_R} ${_GD}${k}${_R} ${_GD}${'·'.repeat(dots)}${_R} ${vc}${v}${_R} ${_G}│${_R}`;
-    };
+    const NB  = '\x1b[1m\x1b[38;2;0;255;156m';
+    const N   = '\x1b[38;2;0;255;156m';
+    const Y   = '\x1b[38;2;250;204;21m';
+    const B   = '\x1b[38;2;34;193;255m';
+    const D   = '\x1b[2m\x1b[38;2;100;120;130m';
+    const W   = '\x1b[38;2;200;215;225m';
+    const OK  = '\x1b[38;2;0;230;118m';
+    const OFF = '\x1b[38;2;255;80;80m';
+    const R   = '\x1b[0m';
 
     const ks    = getKeyStatus();
     const dbOk  = ks.dbStatus.includes('✅');
@@ -5139,36 +5115,65 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
     const pyOk  = ks.paystackStatus.includes('✅');
     const pgOk  = !!(globalThis.pg?.isReady);
     const pgTbl = globalThis.pg?.tableCount || 0;
+    const time  = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    const status = isReconnect ? 'RECONNECTED' : 'ONLINE';
 
-    const time  = new Date().toLocaleTimeString();
+    const INNER = 46;
+    const dashStr = (n) => '─'.repeat(Math.max(0, n));
 
-    const lines = [
-        `${_G}╭${bar}╮${_R}`,
-        headerRow,
-        `${_G}├${bar}┤${_R}`,
-        item('platform', platform, null),
-        item('time', time, null),
-        item('prefix', prefix, null),
-        item('mode', mode, null),
-        item('owner', `+${ownerNumber}`, null),
-        item('commands', commandCount, null),
-        item('sqlite', `ready (${sqliteDriver})`, null),
-        `${_G}├${bar}┤${_R}`,
-        item('database url', dbOk  ? 'set' : 'not set', dbOk),
-        item('postgresql',   pgOk  ? (pgTbl ? `connected · ${pgTbl} tables` : 'connected') : 'not connected', pgOk),
-        item('pterodactyl',  ptOk  ? 'set' : 'not set', ptOk),
-        item('paystack',     pyOk  ? 'set' : 'not set', pyOk),
-        `${_G}├${bar}┤${_R}`,
-        item('anti-delete',    'on', null),
-        item('anti-viewonce',  'on', null),
-        item('status detect',  'on', null),
-        item('member detect',  'on', null),
-        item('auto-reconnect', 'on', null),
-        item('wolf ai',        wolfAiOn ? 'on' : 'off', null),
-        `${_G}╰${bar}╯${_R}`,
+    // Top border — centred title like WOLFBOT CONTROL CORE
+    const title = `〔 🐺 ${botName} v${version} · ${status} 〕`;
+    const tlen  = title.length; // JS length (close enough for centering)
+    const lpad  = Math.floor((INNER - tlen) / 2);
+    const rpad  = INNER - lpad - tlen + 2;
+    const top   = `${NB}┌${dashStr(lpad)}${title}${dashStr(rpad)}┐${R}`;
+    const bot   = `${NB}└${dashStr(INNER + 2)}┘${R}`;
+    const div   = `  ${D}${dashStr(INNER + 2)}${R}`;
+
+    // Label rows — same style as WOLFBOT CONTROL CORE
+    const row = (icon, label, val, col) => {
+        const labelW = 14;
+        const pad = ' '.repeat(Math.max(0, labelW - label.length));
+        return `  ${Y}${icon}${R}  ${D}${label}${pad}${R}${N}:${R} ${col || W}${val}${R}`;
+    };
+
+    const flag = (on) => on ? `${OK}on${R}` : `${OFF}off${R}`;
+    const avail = (ok, yes, no) => ok ? `${OK}${yes}${R}` : `${OFF}${no || 'not set'}${R}`;
+
+    // Progress bar — full 100%
+    const BAR = 20;
+    const barFill = `${N}${'█'.repeat(BAR)}${R}`;
+    const barLine = `  ${barFill}  ${Y}100%${R}  ${NB}▸  ALL SYSTEMS ONLINE ✓${R}`;
+
+    const out = [
+        '',
+        top,
+        row('🏗️', 'Platform',  platform),
+        row('⏱️',  'Time',      time),
+        row('⚙️',  'Prefix',    prefix || 'none'),
+        row('🔓',  'Mode',      mode),
+        row('👤',  'Owner',     '+' + ownerNumber),
+        row('📦',  'Commands',  commandCount),
+        row('💾',  'SQLite',    `ready (${sqliteDriver})`),
+        div,
+        row('🔗',  'Database',  avail(dbOk,  'set',          'not set'),   ''),
+        row('🐘',  'PostgreSQL',avail(pgOk,  pgTbl ? `connected · ${pgTbl} tables` : 'connected', 'not connected'), ''),
+        row('🦅',  'Pterodactyl', avail(ptOk, 'set', 'not set'), ''),
+        row('💳',  'Paystack',  avail(pyOk,  'set',          'not set'),   ''),
+        div,
+        row('🛡️',  'Anti-Delete',   flag(true)),
+        row('👁️',  'Anti-ViewOnce', flag(true)),
+        row('📡',  'Status Detect', flag(true)),
+        row('👥',  'Member Detect', flag(true)),
+        row('🔄',  'Auto-Reconnect',flag(true)),
+        row('🤖',  'Wolf AI',       flag(wolfAiOn)),
+        div,
+        barLine,
+        bot,
+        '',
     ];
 
-    process.stdout.write('\n' + lines.join('\n') + '\n\n');
+    process.stdout.write(out.join('\n') + '\n');
 }
 
 // Initialize with loaded prefix
@@ -8185,7 +8190,6 @@ async function handleIncomingMessage(sock, msg) {
             }
 
             const _cbActive = isChatbotActiveForChat(chatId);
-            UltraCleanLogger.info(`[CHATBOT-TRACE] chatId=${chatId} active=${_cbActive} fromMe=${msg.key.fromMe}`);
             if (_cbActive) {
                 if (chatId !== 'status@broadcast' && !msg.key.fromMe) {
                     handleChatbotMessage(sock, msg, commands).catch((err) => {

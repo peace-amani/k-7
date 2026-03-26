@@ -601,8 +601,6 @@ export function getChatbotConfig() {
 // Checks the mode setting and any group/DM whitelists.
 export function isChatbotActiveForChat(chatId) {
   const config  = loadConfig();
-  const _resolvedForLog = chatId.endsWith('@lid') ? (globalThis.resolvePhoneFromLid?.(chatId) || 'unresolved') : null;
-  console.log(`[CHATBOT-CHECK] chatId=${chatId}${_resolvedForLog ? ` resolved=${_resolvedForLog}` : ''} mode=${config.mode} allowedDMs=${JSON.stringify(config.allowedDMs)} botId=${getBotId()}`);
   if (config.mode === 'off') return false;
 
   const isGroup = chatId.endsWith('@g.us');
