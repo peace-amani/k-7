@@ -7160,6 +7160,7 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
         (() => { const ks = getKeyStatus(); return [
             row(`🐦 PTERODACTYL  : ${ks.pteroStatus}`),
             row(`💳 PAYSTACK     : ${ks.paystackStatus}`),
+            row(`🗄️  DATABASE URL : ${ks.dbStatus}`),
         ]; })().join('\n'),
         sep,
         row(`🏗️  Platform: ${detectPlatform()}`),
