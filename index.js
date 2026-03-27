@@ -880,6 +880,7 @@ async function reloadConfigCaches() {
             { file: './anticall.json', key: 'anticall_config_root' },
             { file: './autoread_settings.json', key: 'autoread_config' },
             { file: './disp_settings.json', key: 'disp_config' },
+            { file: './data/footer.json', key: 'footer_config' },
         ];
         for (const { file, key } of _migrationFiles) {
             await supabaseDb.migrateJSONToConfig(file, key).catch(() => {});
@@ -983,6 +984,36 @@ async function reloadConfigCaches() {
         try {
             const _bn = _getBotName();
             if (_bn) updateEnvFile('BOT_NAME', _bn);
+        } catch {}
+
+        // ── Footer write-back ─────────────────────────────────────────────
+        // Restores data/footer.json from DB after a hard filesystem reset so
+        // the setfooter command's custom text survives full container wipes.
+        try {
+            const _footerData = await _loadConfigCache('footer_config', null);
+            if (_footerData && _footerData.footer) {
+                if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true });
+                fs.writeFileSync('./data/footer.json', JSON.stringify(_footerData, null, 2));
+            }
+        } catch {}
+
+        // ── Chatbot config write-back ─────────────────────────────────────
+        // Restores the per-bot chatbot JSON config from the chatbot_config
+        // DB table before the chatbot module first calls loadConfig().
+        // Without this, loadConfig() returns the default and the user's
+        // chatbot settings (mode, allowed groups, model preference) are lost
+        // until after the first command call triggers the background restore.
+        try {
+            const _cbBotId = supabaseDb.getConfigBotId ? supabaseDb.getConfigBotId() : null;
+            if (_cbBotId && _cbBotId !== 'default') {
+                const _cbRows = await supabaseDb.getAll('chatbot_config', { key: 'main', bot_id: _cbBotId });
+                const _cbData = _cbRows?.[0]?.config;
+                if (_cbData && typeof _cbData === 'object') {
+                    const _cbDir = './data/chatbot';
+                    if (!fs.existsSync(_cbDir)) fs.mkdirSync(_cbDir, { recursive: true });
+                    fs.writeFileSync(`${_cbDir}/chatbot_config_${_cbBotId}.json`, JSON.stringify(_cbData, null, 2));
+                }
+            }
         } catch {}
 
     } catch (err) {
@@ -4848,6 +4879,7 @@ async function runDataMigrations() {
             { file: './anticall.json', key: 'anticall_config_root' },
             { file: './autoread_settings.json', key: 'autoread_config' },
             { file: './disp_settings.json', key: 'disp_config' },
+            { file: './data/footer.json', key: 'footer_config' },
         ];
 
         for (const { file, key } of configFiles) {
@@ -4909,6 +4941,14 @@ async function runDataMigrations() {
             // so writing it here means it survives even if bot_name.json is wiped.
             const _bn = _getBotName();
             if (_bn) updateEnvFile('BOT_NAME', _bn);
+        } catch {}
+        // ── Footer write-back ─────────────────────────────────────────────
+        try {
+            const _footerData = await _loadConfigCache('footer_config', null);
+            if (_footerData && _footerData.footer) {
+                if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true });
+                fs.writeFileSync('./data/footer.json', JSON.stringify(_footerData, null, 2));
+            }
         } catch {}
         // ────────────────────────────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@ import { getBotName } from '../../lib/botname.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import db from '../../lib/database.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const footerFile = path.join(__dirname, '../../data/footer.json');
@@ -23,7 +24,9 @@ function getFooter() {
 
 function setFooter(text) {
     ensureDir();
-    fs.writeFileSync(footerFile, JSON.stringify({ footer: text, updatedAt: new Date().toISOString() }, null, 2));
+    const data = { footer: text, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(footerFile, JSON.stringify(data, null, 2));
+    db.setConfig('footer_config', data).catch(() => {});
 }
 
 export default {
