@@ -84,7 +84,6 @@ export const getBoxStyleCommands = () => {
 │  • anticall
 │  • antidelete
 │  • antiedit
-│  • antiviewonce
 │  • mode
 │  • setpp
 │  • repo
@@ -471,7 +470,6 @@ export const getTextOnlyCommands = (botMode) => {
 > • anticall — block calls
 > • antidelete — prevent deletion
 > • antiedit — prevent edits
-> • antiviewonce — bypass view once
 > • mode — change bot mode (${botMode})
 > • setpp — set bot profile
 > • repo — repository info
@@ -812,7 +810,6 @@ export const getQuotedBoxCommands = () => {
 > │ • anticall
 > │ • antidelete
 > │ • antiedit
-> │ • antiviewonce
 > │ • mode
 > │ • setpp
 > │ • repo
@@ -1223,7 +1220,6 @@ export const getPlainBoxCommands = () => {
 │ anticall
 │ antidelete
 │ antiedit
-│ antiviewonce
 │ mode
 │ setpp
 │ repo

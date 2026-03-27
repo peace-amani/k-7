@@ -522,7 +522,6 @@
 // │
 // ├─⊷ *🚫 AUTO-MODERATION*
 // │  • antisticker
-// │  • antiviewonce
 // │  • antilink
 // │  • antiimage
 // │  • antivideo

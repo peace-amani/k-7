@@ -29,7 +29,6 @@ export default {
                     '✅ Fixed 440 "Stream Errored (conflict)" reconnection loop with progressive backoff',
                     '✅ Suppressed startup message spam during reconnections',
                     '✅ Added conflict recovery mode with 30s stability timer',
-                    '🔵 Anti-ViewOnce now supports 3 triggers: auto-detect, sticker/emoji reply, reaction',
                 ]
             },
             {

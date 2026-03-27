@@ -568,7 +568,6 @@ export default {
                         response += `├─ Free Space: ${reportBefore.freeMB}MB → ${reportAfter.freeMB}MB\n`;
                     }
                     response += `├─ Session Signal Files: ${reportBefore.sessionSignalFiles} (${reportBefore.sessionSignalMB}MB)\n`;
-                    response += `├─ ViewOnce Media: ${reportBefore.viewonceMediaMB}MB\n`;
                     response += `├─ Antidelete Media: ${reportBefore.antideleteMediaMB}MB\n`;
                     response += `├─ Status Media: ${reportBefore.statusMediaMB || 0}MB\n`;
                     response += `├─ Temp Files: ${reportBefore.tempFilesMB}MB\n`;
@@ -577,7 +576,6 @@ export default {
 
                     response += `🗑️ *Removed:*\n`;
                     response += `├─ Session files: ${results.sessionFiles}\n`;
-                    response += `├─ ViewOnce media: ${results.viewonceMedia}\n`;
                     response += `├─ Antidelete media: ${results.antideleteMedia}\n`;
                     response += `├─ Status media: ${results.statusMedia}\n`;
                     response += `├─ Temp files: ${results.tempFiles}\n`;

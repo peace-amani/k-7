@@ -40,7 +40,6 @@ export default {
 │  • antidelete
 │  • antideletestatus
 │  • antiedit
-│  • antiviewonce
 │  • antispam
 │
 ╰─⊷

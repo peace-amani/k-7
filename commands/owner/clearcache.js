@@ -19,11 +19,11 @@ export default {
         }
 
         const target = (args[0] || 'all').toLowerCase();
-        const validTargets = ['all', 'messages', 'contacts', 'groups', 'viewonce', 'config', 'retry', 'lid'];
+        const validTargets = ['all', 'messages', 'contacts', 'groups', 'config', 'retry', 'lid'];
 
         if (!validTargets.includes(target)) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 🗑️ *CLEAR CACHE* ⌋\n│\n├─⊷ *${PREFIX}clearcache [target]*\n│\n├─⊷ *Targets:*\n│  └⊷ all — Clear everything\n│  └⊷ messages — Message store\n│  └⊷ contacts — Contact names\n│  └⊷ groups — Group metadata\n│  └⊷ viewonce — View-once cache\n│  └⊷ config — Config caches (reloads from DB)\n│  └⊷ retry — Message retry counters\n│  └⊷ lid — LID-to-phone mappings\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}clearcache\n│  └⊷ ${PREFIX}cc messages\n│\n╰───────────────\n> *${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🗑️ *CLEAR CACHE* ⌋\n│\n├─⊷ *${PREFIX}clearcache [target]*\n│\n├─⊷ *Targets:*\n│  └⊷ all — Clear everything\n│  └⊷ messages — Message store\n│  └⊷ contacts — Contact names\n│  └⊷ groups — Group metadata\n│  └⊷ config — Config caches (reloads from DB)\n│  └⊷ retry — Message retry counters\n│  └⊷ lid — LID-to-phone mappings\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}clearcache\n│  └⊷ ${PREFIX}cc messages\n│\n╰───────────────\n> *${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: msg });
         }
 
@@ -62,13 +62,6 @@ export default {
                 results.push(`✅ Group metadata: ${groupCount} cleared`);
             }
 
-            if (target === 'all' || target === 'viewonce') {
-                const voCache = globalThis.viewOnceCache_ref;
-                const voCount = voCache?.size || 0;
-                if (voCache) voCache.clear();
-                totalFreed += voCount;
-                results.push(`✅ View-once: ${voCount} cleared`);
-            }
 
             if (target === 'all' || target === 'retry') {
                 const retryCache = globalThis.msgRetryCounterCache_ref;

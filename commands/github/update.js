@@ -1063,11 +1063,11 @@
 
 //         const cleanCmds = [
 //           'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz 2>/dev/null',
-//           'rm -rf ./data/viewonce_private/* 2>/dev/null',
-//           'rm -rf ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.jpeg ./data/viewonce_messages/*.png ./data/viewonce_messages/*.gif ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp ./data/viewonce_messages/*.opus ./data/viewonce_messages/*.pdf ./data/viewonce_messages/*.doc 2>/dev/null',
+//
+//
 //           'rm -rf ./data/antidelete/media/* 2>/dev/null',
 //           'rm -rf ./data/antidelete/status/media/* 2>/dev/null',
-//           'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.jpeg ./data/antiviewonce/*.png ./data/antiviewonce/*.gif ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.ogg ./data/antiviewonce/*.webp ./data/antiviewonce/*.opus 2>/dev/null',
+//
 //           'find ./session -name "sender-key-*" -delete 2>/dev/null',
 //           'find ./session -name "pre-key-*" -delete 2>/dev/null',
 //           'find ./session -name "app-state-sync-version-*" -delete 2>/dev/null',
@@ -2495,11 +2495,8 @@ export default {
           // leftover update temp dirs
           'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz /tmp/wolfbot_* 2>/dev/null',
           // media caches
-          'rm -rf ./data/viewonce_private/* 2>/dev/null',
-          'rm -rf ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.jpeg ./data/viewonce_messages/*.png ./data/viewonce_messages/*.gif ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp ./data/viewonce_messages/*.opus ./data/viewonce_messages/*.pdf ./data/viewonce_messages/*.doc 2>/dev/null',
           'rm -rf ./data/antidelete/media/* 2>/dev/null',
           'rm -rf ./data/antidelete/status/media/* 2>/dev/null',
-          'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.jpeg ./data/antiviewonce/*.png ./data/antiviewonce/*.gif ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.ogg ./data/antiviewonce/*.webp ./data/antiviewonce/*.opus 2>/dev/null',
           // session bloat (keys grow unbounded over time)
           'find ./session -name "sender-key-*" -delete 2>/dev/null',
           'find ./session -name "pre-key-*" -delete 2>/dev/null',

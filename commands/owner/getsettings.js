@@ -183,18 +183,6 @@ function getAnticallMessage() {
     return msg.length > 38 ? msg.substring(0, 38) + '…' : msg;
 }
 
-function getAntiViewOnceState() {
-    const data = safeReadJSON(path.join(__dirname, '../../data/antiviewonce/config.json'));
-    if (!data) return 'OFF';
-    if (data.gc && data.pm) {
-        const gc = data.gc.enabled ? data.gc.mode.toUpperCase() : 'OFF';
-        const pm = data.pm.enabled ? data.pm.mode.toUpperCase() : 'OFF';
-        if (gc === 'OFF' && pm === 'OFF') return 'OFF';
-        return `GC: ${gc} | PM: ${pm}`;
-    }
-    if (!data.enabled || data.mode === 'off') return 'OFF';
-    return (data.mode || 'private').toUpperCase();
-}
 
 function getAntibugState() {
     const cfg = globalThis._antibugConfig;
@@ -382,7 +370,6 @@ export default {
 
             const anticall      = getAnticallState();
             const anticallMsg   = getAnticallMessage();
-            const antiViewOnce  = getAntiViewOnceState();
             const antibug       = getAntibugState();
             const antilink      = getAntilinkState();
             const antispam      = getAntispamState();
@@ -504,7 +491,6 @@ export default {
             body += `│ ◎ *Antidelete:* ${antidelete}\n`;
             body += `│ ◎ *Antidelete Status:* ${antideleteStatus}\n`;
             body += `│ ◎ *Antiedit:* ${antieditDisplay}\n`;
-            body += `│ ◎ *Anti-ViewOnce:* ${antiViewOnce}\n`;
             body += `│ ◎ *Antilink:* ${antilink}\n`;
             body += `│ ◎ *Antispam:* ${antispam}\n`;
             body += `│ ◎ *Antiforward:* ${antiforward}\n`;

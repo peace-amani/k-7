@@ -658,7 +658,6 @@ export default {
 // │
 // ├─⊷ *🚫 AUTO-MODERATION*
 // │  • antisticker
-// │  • antiviewonce
 // │  • antilink
 // │  • antiimage
 // │  • antivideo
@@ -1553,7 +1552,6 @@ case 1: {
 │  • antigrouplink
 │  • antidemote
 │  • antipromote
-│  • antiviewonce
 │  • antibadword
 │  • antigroupcall
 │  • antispam
@@ -2879,7 +2877,6 @@ case 3: {
 │ antigrouplink
 │ antidemote
 │ antipromote
-│ antiviewonce
 │ antibadword
 │ antigroupcall
 │ antispam
@@ -3860,7 +3857,6 @@ case 4: {
 │
 ├─⊷ *🚫 AUTO-MODERATION*
 │  • antisticker
-│  • antiviewonce
 │  • antilink
 │  • antiimage
 │  • antivideo
@@ -4835,7 +4831,6 @@ case 4: {
 // │
 // ├─⊷ *🚫 AUTO-MODERATION*
 // │  • antisticker
-// │  • antiviewonce
 // │  • antilink
 // │  • antiimage
 // │  • antivideo
@@ -5636,7 +5631,6 @@ case 5: {
 │  • antigrouplink
 │  • antidemote
 │  • antipromote
-│  • antiviewonce
 │  • antibadword
 │  • antigroupcall
 │  • antispam
@@ -6703,8 +6697,7 @@ case 6: {
 > │ antigrouplink
 > │ antidemote
 > │ antipromote
-> │ antiviewonce
-> │ antibadword
+> > │ antibadword
 > │ antigroupcall
 > │ antispam
 > └───────────────`,
@@ -7718,7 +7711,6 @@ case 6: {
 // │ 🚫 AUTO-MODERATION 🚫   
 // ├────────────────
 // │ antisticker             
-// │ antiviewonce  
 // │ antilink  
 // │ antiimage
 // │ antivideo
@@ -8500,7 +8492,6 @@ case 7: {
 │ antigrouplink
 │ antidemote
 │ antipromote
-│ antiviewonce
 │ antibadword
 │ antigroupcall
 │ antispam
@@ -9237,7 +9228,6 @@ case 9: {
 │  • antigrouplink
 │  • antidemote
 │  • antipromote
-│  • antiviewonce
 │  • antibadword
 │  • antigroupcall
 │  • antispam

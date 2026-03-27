@@ -77,9 +77,7 @@ export default {
         try {
           const cleanCmds = [
             'rm -rf tmp_update_fast tmp_preserve_fast /tmp/*.zip /tmp/*.tar.gz 2>/dev/null || true',
-            'rm -rf ./data/viewonce_private/* ./data/viewonce_messages/*.jpg ./data/viewonce_messages/*.mp4 ./data/viewonce_messages/*.mp3 ./data/viewonce_messages/*.ogg ./data/viewonce_messages/*.webp 2>/dev/null || true',
             'rm -rf ./data/antidelete/media/* ./data/antidelete/status/media/* 2>/dev/null || true',
-            'rm -rf ./data/antiviewonce/*.jpg ./data/antiviewonce/*.mp4 ./data/antiviewonce/*.mp3 ./data/antiviewonce/*.webp 2>/dev/null || true',
             'find ./session -name "sender-key-*" -o -name "pre-key-*" -o -name "app-state-sync-version-*" | xargs rm -f 2>/dev/null || true',
             'rm -rf session_backup ./temp/* ./logs/* 2>/dev/null || true',
             'find ./data -name "*.bak" -delete 2>/dev/null || true',

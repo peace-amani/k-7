@@ -1,63 +1,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //INNER-PEACE - SILENT WOLF
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // ====== SILENT WOLFBOT - ULTIMATE CLEAN EDITION (SPEED OPTIMIZED) ======
@@ -394,7 +338,6 @@ const groupMetadataCache = new Map();
 globalThis.groupMetadataCache = groupMetadataCache;
 globalThis.lidPhoneCache = lidPhoneCache;
 globalThis.phoneLidCache = phoneLidCache;
-globalThis.viewOnceCache_ref = null;
 globalThis.msgRetryCounterCache_ref = null;
 const GROUP_CACHE_TTL = 10 * 60 * 1000;
 const MAX_LID_CACHE = 500;
@@ -812,9 +755,6 @@ let _cache_blocked_users = null;
 let _cache_welcome_data = null;
 let _cache_status_logs = null;
 let _cache_member_detection = null;
-let _cache_antiviewonce_config = null;
-let _cache_antiviewonce_history = null;
-let _cache_antiviewonce_captured_count = 0;
 
 // ====== SECTION 8: CONFIG CACHE SYSTEM ======
 // Every piece of persistent state (owner number, prefix, bot mode, whitelist, etc.)
@@ -935,8 +875,6 @@ async function reloadConfigCaches() {
             { file: './data/autotyping/config.json', key: 'autotyping_config' },
             { file: './data/autorecording/config.json', key: 'autorecording_config' },
             { file: './data/member_detection.json', key: 'member_detection' },
-            { file: './data/antiviewonce/config.json', key: 'antiviewonce_config' },
-            { file: './data/viewonce_messages/history.json', key: 'antiviewonce_history' },
             { file: './data/status_detection_logs.json', key: 'status_detection_logs' },
             { file: './data/anticall.json', key: 'anticall_config' },
             { file: './anticall.json', key: 'anticall_config_root' },
@@ -956,9 +894,6 @@ async function reloadConfigCaches() {
         _cache_welcome_data = await _loadConfigCache('welcome_data', {});
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
-        _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
-        globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
-        _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
 
         // Defensive: treat empty/stale DB rows as if they don't exist.
         if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
@@ -1184,7 +1119,6 @@ silenceBaileysCompletely();
 //   .command() — shows when a command fires (e.g. "▶ music · .play")
 //   .group()   — group-event line (magenta)
 //   .member()  — join/leave line (cyan)
-//   .antiviewonce() — anti-view-once events (magenta)
 //
 // All command files call UltraCleanLogger (imported via lib/logger.js alias) so
 // their output blends cleanly into the same filtered stream.
@@ -1556,10 +1490,6 @@ class UltraCleanLogger {
         originalConsoleMethods.log(`${_CYANB}[WOLF-MBR]${_R} ${_DIM}⏱️  ${time}${_R}  ${_CYAN}▸ 👤 ${args.join(' ')}${_R}`);
     }
 
-    static antiviewonce(...args) {
-        const time = _getTime();
-        originalConsoleMethods.log(`${_MAGB}[WOLF-AVO]${_R} ${_DIM}⏱️  ${time}${_R}  ${_MAG}▸ 🔐 ${args.join(' ')}${_R}`);
-    }
 
     static message(phone, chatType, groupName, text) {
         _printMessageBox({ phone, chatType, groupName, text });
@@ -1591,7 +1521,6 @@ global.logEvent = UltraCleanLogger.event;
 global.logCommand = UltraCleanLogger.command;
 global.logGroup = UltraCleanLogger.group;
 global.logMember = UltraCleanLogger.member;
-global.logAntiViewOnce = UltraCleanLogger.antiviewonce;
 
 // Ultra silent baileys logger
 const ultraSilentLogger = {
@@ -1614,20 +1543,6 @@ const ultraSilentLogger = {
 };
 
 // Anti-viewonce configuration
-const ANTIVIEWONCE_DATA_DIR = './data/antiviewonce';
-const ANTIVIEWONCE_SAVE_DIR = './data/viewonce_messages';
-const ANTIVIEWONCE_PRIVATE_DIR = './data/viewonce_private';
-const ANTIVIEWONCE_HISTORY_FILE = join(ANTIVIEWONCE_SAVE_DIR, 'history.json');
-const ANTIVIEWONCE_CONFIG_FILE = join(ANTIVIEWONCE_DATA_DIR, 'config.json');
-const ANTIVIEWONCE_VERSION = '1.0.0';
-
-const DEFAULT_ANTIVIEWONCE_CONFIG = {
-    mode: 'private',
-    autoSave: true,
-    ownerJid: '',
-    enabled: true,
-    maxHistory: 500
-};
 
 // ====== SECTION 19a: DYNAMIC PREFIX SYSTEM ======
 // The prefix is the trigger character that starts every command (default: ".").
@@ -1986,7 +1901,6 @@ const DiskManager = {
             freeMB,
             sessionSignalFiles: sessionFiles.count,
             sessionSignalMB: Math.round(sessionFiles.bytes / 1024 / 1024 * 10) / 10,
-            viewonceMediaMB: Math.round(voMedia / 1024 / 1024 * 10) / 10,
             antideleteMediaMB: Math.round(adMedia / 1024 / 1024 * 10) / 10,
             statusMediaMB: Math.round(statusMedia / 1024 / 1024 * 10) / 10,
             tempFilesMB: Math.round(tempFiles / 1024 / 1024 * 10) / 10,
@@ -2077,8 +1991,6 @@ const DiskManager = {
             './temp/compressed',
             './temp/apk',
             './commands/temp',
-            './viewonce_stealth',
-            './viewonce_downloads',
             './temp_stickers',
             './temp_url_uploads',
             './collected_stickers',
@@ -2195,7 +2107,6 @@ const DiskManager = {
         const results = {};
         results.sessionFiles = await this.cleanSessionSignalFilesAsync(aggressive);
         await yieldToLoop();
-        results.viewonceMedia = await this.cleanOldMediaAsync('./data/viewonce_messages', 1/12, aggressive) + await this.cleanOldMediaAsync('./data/viewonce_private', 1/12, aggressive);
         await yieldToLoop();
         results.antideleteMedia = await this.cleanOldMediaAsync('./data/antidelete/media', 1/48, aggressive);
         await yieldToLoop();
@@ -2208,7 +2119,7 @@ const DiskManager = {
         results.logFiles = await this.cleanLogFilesAsync();
         const total = Object.values(results).reduce((a, b) => a + b, 0);
         if (total > 0) {
-            UltraCleanLogger.info(`🧹 Disk cleanup: removed ${total} items (session: ${results.sessionFiles}, viewonce: ${results.viewonceMedia}, antidelete: ${results.antideleteMedia}, status-media: ${results.statusMedia}, temp: ${results.tempFiles}, backups: ${results.backups}, logs: ${results.logFiles})`);
+            UltraCleanLogger.info(`🧹 Disk cleanup: removed ${total} items (session: ${results.sessionFiles}, antidelete: ${results.antideleteMedia}, status-media: ${results.statusMedia}, temp: ${results.tempFiles}, backups: ${results.backups}, logs: ${results.logFiles})`);
         }
         this.lastCleanup = Date.now();
         return results;
@@ -3000,7 +2911,6 @@ globalThis._memberDetector = memberDetector;
 //                       `• Multiple command categories\n` +
 //                       `• Group management tools\n` +
 //                       `• Media downloading\n` +
-//                       `• Anti-ViewOnce system\n` +
 //                       `• And much more!\n\n` +
 //                       `You're being automatically invited to join our official community group...\n` +
 //                       `Please wait a moment... ⏳`
@@ -3023,7 +2933,6 @@ globalThis._memberDetector = memberDetector;
 //                   `• Bot support & updates\n` +
 //                   `• Community chat\n` +
 //                   `• Exclusive features\n` +
-//                   `• Anti-ViewOnce protection\n\n` +
 //                   `Click to join: ${GROUP_LINK}`;
             
 //             await sock.sendMessage(userJid, { text: message });
@@ -3148,7 +3057,6 @@ globalThis._memberDetector = memberDetector;
 // }
 
 // const autoGroupJoinSystem = new AutoGroupJoinSystem();
-
 
 
 // ====== SECTION 14: ULTIMATE FIX SYSTEM ======
@@ -3461,14 +3369,12 @@ class AutoLinkSystem {
             successMsg += `├─ JID: ${cleaned.cleanJid}\n`;
             successMsg += `├─ Prefix: ${prefixDisplay}\n`;
             successMsg += `├─ Mode: ${BOT_MODE}\n`;
-            successMsg += `├─ Anti-ViewOnce: ✅ ACTIVE\n`;
             successMsg += `└─ Status: ✅ LINKED SUCCESSFULLY\n\n`;
             
             successMsg += `⚡ *Background Processes:*\n`;
             successMsg += `├─ Ultimate Fix: Initializing...\n`;
             successMsg += `├─ Auto-Join: ${AUTO_JOIN_ENABLED ? 'Initializing...' : 'Disabled'}\n`;
             successMsg += `├─ Member Detection: ✅ ACTIVE\n`;
-            successMsg += `├─ Anti-ViewOnce: ✅ ACTIVE\n`;
             successMsg += `└─ All systems: ✅ ACTIVE\n\n`;
             
             if (!isFirstUser) {
@@ -3492,7 +3398,6 @@ class AutoLinkSystem {
                           `✅ Your device has been added to owner devices.\n` +
                           `🔒 You can now use owner commands from this device.\n` +
                           `🔄 Ultimate Fix applied automatically in background.\n` +
-                          `🔐 Anti-ViewOnce protection active.\n\n` +
                           `🎉 All systems are now active and ready!`;
             
             await sock.sendMessage(senderJid, { text: message });
@@ -3585,7 +3490,6 @@ const memoryMonitor = {
             if (store && store.sentMessages) {
                 trimMap(store.sentMessages, Math.floor(80 * factor), Math.floor(40 * factor), null);
             }
-            trimMap(viewOnceCache, Math.floor(50 * factor), Math.floor(20 * factor), null);
             trimMap(_lidResolveAttempts, 80, 40, null);
             trimMap(_pendingGroupFetches, 20, 10, null);
             // Clean stale antispam tracker entries (older than 5 minutes)
@@ -3613,473 +3517,6 @@ const memoryMonitor = {
     }
 };
 
-// ====== ANTI-VIEWONCE SYSTEM ======
-class AntiViewOnceSystem {
-    constructor(sock) {
-        this.sock = sock;
-        this.config = this.loadConfig();
-        this.detectedMessages = [];
-        this.setupDirectories();
-        this.loadHistory();
-        
-        let downloadFunc;
-        try {
-            import('@whiskeysockets/baileys').then(baileys => {
-                downloadFunc = baileys.downloadContentFromMessage;
-            }).catch(() => {
-                downloadFunc = null;
-            });
-        } catch {
-            downloadFunc = null;
-        }
-        
-        this.downloadContentFromMessage = downloadFunc;
-        
-        globalThis._wolfSysStats = globalThis._wolfSysStats || {};
-        globalThis._wolfSysStats.antiViewOnce = true;
-    }
-    
-    setupDirectories() {
-    }
-    
-    loadConfig() {
-        try {
-            if (_cache_antiviewonce_config) {
-                return _cache_antiviewonce_config;
-            }
-            supabaseDb.getConfig('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG).then(config => {
-                try {
-                    _cache_antiviewonce_config = config;
-                    globalThis._antiviewonceEnabled = !!(config?.enabled);
-                    this.config = config;
-                } catch {}
-            }).catch(() => {});
-        } catch (error) {
-            UltraCleanLogger.warning(`Config load warning: ${error.message}`);
-        }
-        
-        return DEFAULT_ANTIVIEWONCE_CONFIG;
-    }
-    
-    saveConfig(config) {
-        try {
-            _cache_antiviewonce_config = config;
-            globalThis._antiviewonceEnabled = !!(config?.enabled);
-            supabaseDb.setConfig('antiviewonce_config', config).then(() => {
-                UltraCleanLogger.info('💾 Anti-viewonce config saved');
-            }).catch(err => {
-                UltraCleanLogger.error(`Config save error: ${err.message}`);
-            });
-        } catch (error) {
-            UltraCleanLogger.error(`Config save error: ${error.message}`);
-        }
-    }
-    
-    loadHistory() {
-        try {
-            if (_cache_antiviewonce_history) {
-                this.detectedMessages = _cache_antiviewonce_history.messages || [];
-                globalThis._wolfSysStats = globalThis._wolfSysStats || {};
-                globalThis._wolfSysStats.viewonceRecords = this.detectedMessages.length;
-                return;
-            }
-            supabaseDb.getConfig('antiviewonce_history', {}).then(data => {
-                try {
-                    _cache_antiviewonce_history = data;
-                    if (data && data.messages) {
-                        this.detectedMessages = data.messages;
-                        UltraCleanLogger.info(`📊 Loaded ${this.detectedMessages.length} viewonce records from DB`);
-                    }
-                } catch {}
-            }).catch(err => {
-                UltraCleanLogger.warning(`History load warning: ${err.message}`);
-            });
-        } catch (error) {
-            UltraCleanLogger.warning(`History load warning: ${error.message}`);
-        }
-    }
-    
-    saveHistory() {
-        try {
-            const data = {
-                messages: this.detectedMessages.slice(-this.config.maxHistory),
-                updatedAt: new Date().toISOString(),
-                total: this.detectedMessages.length,
-                mode: this.config.mode
-            };
-            _cache_antiviewonce_history = data;
-            supabaseDb.setConfig('antiviewonce_history', data).catch(err => {
-                UltraCleanLogger.warning(`History save warning: ${err.message}`);
-            });
-        } catch (error) {
-            UltraCleanLogger.warning(`History save warning: ${error.message}`);
-        }
-    }
-    
-    getFileExtension(mimetype) {
-        const extensions = {
-            'image/jpeg': 'jpg',
-            'image/jpg': 'jpg',
-            'image/png': 'png',
-            'image/gif': 'gif',
-            'image/webp': 'webp',
-            'video/mp4': 'mp4',
-            'video/3gp': '3gp',
-            'video/quicktime': 'mov',
-            'video/webm': 'webm',
-            'audio/mpeg': 'mp3',
-            'audio/mp4': 'm4a',
-            'audio/ogg': 'ogg',
-            'audio/webm': 'webm',
-            'audio/aac': 'aac',
-            'audio/opus': 'opus'
-        };
-        return extensions[mimetype] || 'bin';
-    }
-    
-    generateFilename(sender, type, timestamp, mimetype) {
-        const date = new Date(timestamp * 1000);
-        const dateStr = date.toISOString().split('T')[0];
-        const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-');
-        const senderShort = sender.split('@')[0].replace(/[^0-9]/g, '').slice(-8);
-        const ext = this.getFileExtension(mimetype);
-        return `${dateStr}_${timeStr}_${senderShort}_${type}.${ext}`;
-    }
-    
-    async downloadBuffer(msg, type) {
-        try {
-            if (!this.downloadContentFromMessage) {
-                const baileys = await import('@whiskeysockets/baileys');
-                this.downloadContentFromMessage = baileys.downloadContentFromMessage;
-            }
-            
-            const stream = await this.downloadContentFromMessage(msg, type);
-            let buffer = Buffer.from([]);
-            for await (const chunk of stream) {
-                buffer = Buffer.concat([buffer, chunk]);
-            }
-            return buffer;
-        } catch (error) {
-            UltraCleanLogger.error(`Download error: ${error.message}`);
-            return null;
-        }
-    }
-    
-    async saveMediaToFile(buffer, filename, isPrivate = false) {
-        try {
-            const mimetype = filename.endsWith('.jpg') ? 'image/jpeg' :
-                           filename.endsWith('.mp4') ? 'video/mp4' :
-                           filename.endsWith('.mp3') ? 'audio/mpeg' :
-                           filename.endsWith('.webp') ? 'image/webp' :
-                           filename.endsWith('.ogg') ? 'audio/ogg' :
-                           'application/octet-stream';
-            const folder = isPrivate ? 'viewonce_private' : 'viewonce';
-            const storagePath = await supabaseDb.uploadMedia(filename, buffer, mimetype, folder);
-            
-            if (!storagePath) {
-                UltraCleanLogger.error(`💾 Cannot save media to DB`);
-                return null;
-            }
-            
-            _cache_antiviewonce_captured_count++;
-            const sizeKB = Math.round(buffer.length / 1024);
-            UltraCleanLogger.success(`💾 Saved: ${filename} (${sizeKB}KB) to DB ${isPrivate ? 'private' : 'public'}`);
-            
-            return storagePath;
-        } catch (error) {
-            UltraCleanLogger.error(`Save error: ${error.message}`);
-            return null;
-        }
-    }
-    
-    detectViewOnceType(message) {
-        // Priority 1: Properly wrapped view-once types — reliable, no false positives
-        let wrappedMessage = null;
-        if (message.viewOnceMessageV2?.message) {
-            wrappedMessage = message.viewOnceMessageV2.message;
-        } else if (message.viewOnceMessageV2Extension?.message) {
-            wrappedMessage = message.viewOnceMessageV2Extension.message;
-        } else if (message.viewOnceMessage?.message) {
-            wrappedMessage = message.viewOnceMessage.message;
-        } else if (message.ephemeralMessage?.message?.viewOnceMessage?.message) {
-            wrappedMessage = message.ephemeralMessage.message.viewOnceMessage.message;
-        }
-
-        if (wrappedMessage) {
-            if (wrappedMessage.imageMessage) {
-                return { type: 'image', media: wrappedMessage.imageMessage, caption: wrappedMessage.imageMessage.caption || '' };
-            }
-            if (wrappedMessage.videoMessage) {
-                return { type: 'video', media: wrappedMessage.videoMessage, caption: wrappedMessage.videoMessage.caption || '' };
-            }
-            if (wrappedMessage.audioMessage) {
-                return { type: 'audio', media: wrappedMessage.audioMessage, caption: '' };
-            }
-        }
-
-        // Priority 2: Direct viewOnce flag — guard against interactive/button messages
-        // that include an imageMessage as part of their layout (not a real view-once)
-        const isInteractive = !!(
-            message.buttonsMessage ||
-            message.interactiveMessage ||
-            message.templateMessage ||
-            message.listMessage ||
-            message.buttonsResponseMessage ||
-            message.interactiveResponseMessage
-        );
-
-        if (!isInteractive) {
-            if (message.imageMessage?.viewOnce) {
-                return { type: 'image', media: message.imageMessage, caption: message.imageMessage.caption || '' };
-            }
-            if (message.videoMessage?.viewOnce) {
-                return { type: 'video', media: message.videoMessage, caption: message.videoMessage.caption || '' };
-            }
-            if (message.audioMessage?.viewOnce) {
-                return { type: 'audio', media: message.audioMessage, caption: '' };
-            }
-        }
-
-        return null;
-    }
-    
-    showTerminalNotification(sender, type, size, caption, isPrivate = false) {
-        const senderShort = sender.split('@')[0];
-        const sizeKB = Math.round(size / 1024);
-        const time = new Date().toLocaleTimeString();
-        
-        const typeEmoji = {
-            'image': '🖼️',
-            'video': '🎬',
-            'audio': '🎵'
-        }[type] || '📁';
-        
-        const modeTag = isPrivate ? '[PRIVATE]' : '[AUTO]';
-        const captionText = caption ? ` - "${caption.substring(0, 30)}${caption.length > 30 ? '...' : ''}"` : '';
-        
-        logAntiViewOnce(`${modeTag} ${typeEmoji} VIEW-ONCE DETECTED`);
-        logAntiViewOnce(`   👤 From: ${senderShort}`);
-        logAntiViewOnce(`   📦 Type: ${type} (${sizeKB}KB)`);
-        logAntiViewOnce(`   📝 Caption: ${captionText || 'None'}`);
-        logAntiViewOnce(`   🕒 Time: ${time}`);
-    }
-    
-    async handleViewOnceDetection(msg) {
-        try {
-            if (!this.config.enabled || this.config.mode === 'off') return null;
-            
-            const message = msg.message;
-            if (!message) return null;
-            
-            const viewOnceData = this.detectViewOnceType(message);
-            if (!viewOnceData) return null;
-            
-            const { type, media, caption } = viewOnceData;
-            const chatId = msg.key.remoteJid;
-            const sender = msg.key.participant || msg.key.remoteJid;
-            const messageId = msg.key.id;
-            const timestamp = msg.messageTimestamp || Math.floor(Date.now() / 1000);
-            
-            UltraCleanLogger.info(`🔍 Detected view-once ${type} from ${sender.split('@')[0]}`);
-            
-            const buffer = await this.downloadBuffer(media, type);
-            if (!buffer) {
-                UltraCleanLogger.error('❌ Download failed');
-                return null;
-            }
-            
-            const mimetype = media.mimetype || this.getDefaultMimeType(type);
-            const filename = this.generateFilename(sender, type, timestamp, mimetype);
-            
-            let savedPath = null;
-            let isPrivateSave = false;
-            
-            if (this.config.mode === 'private' && this.config.ownerJid) {
-                savedPath = await this.saveMediaToFile(buffer, filename, true);
-                isPrivateSave = true;
-                
-                await this.sendToOwner(sender, type, buffer, caption, filename, chatId);
-                
-            } else if (this.config.mode === 'auto') {
-                savedPath = await this.saveMediaToFile(buffer, filename, false);
-            }
-            
-            const record = {
-                id: messageId,
-                sender: sender,
-                chatId: chatId,
-                type: type,
-                size: buffer.length,
-                caption: caption,
-                timestamp: timestamp,
-                detectedAt: new Date().toISOString(),
-                saved: !!savedPath,
-                mode: this.config.mode,
-                filename: savedPath ? filename : null,
-                isPrivate: isPrivateSave
-            };
-            
-            this.detectedMessages.push(record);
-            if (this.detectedMessages.length > this.config.maxHistory * 2) {
-                this.detectedMessages = this.detectedMessages.slice(-this.config.maxHistory);
-            }
-            
-            this.showTerminalNotification(sender, type, buffer.length, caption, isPrivateSave);
-            
-            if (Math.random() < 0.1) {
-                this.saveHistory();
-            }
-            
-            return record;
-            
-        } catch (error) {
-            UltraCleanLogger.error(`View-once handling error: ${error.message}`);
-            return null;
-        }
-    }
-    
-    getDefaultMimeType(type) {
-        const defaults = {
-            'image': 'image/jpeg',
-            'video': 'video/mp4',
-            'audio': 'audio/mpeg'
-        };
-        return defaults[type] || 'application/octet-stream';
-    }
-    
-    async sendToOwner(sender, type, buffer, caption, filename, chatId) {
-        try {
-            if (!this.config.ownerJid) {
-                UltraCleanLogger.warning('⚠️ Owner JID not set, skipping owner notification');
-                return;
-            }
-            
-            const retrievalCaption = await generateRetrievalCaption(sender, 'auto-detect', chatId, null, this.sock);
-            
-            const mediaOptions = {
-                caption: retrievalCaption,
-                fileName: filename
-            };
-            
-            switch (type) {
-                case 'image':
-                    await this.sock.sendMessage(this.config.ownerJid, { 
-                        image: buffer, 
-                        ...mediaOptions 
-                    });
-                    break;
-                case 'video':
-                    await this.sock.sendMessage(this.config.ownerJid, { 
-                        video: buffer, 
-                        ...mediaOptions 
-                    });
-                    break;
-                case 'audio':
-                    await this.sock.sendMessage(this.config.ownerJid, { 
-                        audio: buffer, 
-                        ...mediaOptions 
-                    });
-                    break;
-            }
-            
-            UltraCleanLogger.info(`📤 Sent ${type} to owner`);
-            
-        } catch (error) {
-            UltraCleanLogger.error(`Owner send error: ${error.message}`);
-        }
-    }
-    
-    async handleManualRecovery(msg) {
-        try {
-            const chatId = msg.key.remoteJid;
-            const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-            
-            if (!quoted) {
-                await this.sock.sendMessage(chatId, {
-                    text: '❌ Reply to a view-once message'
-                }, { quoted: msg });
-                return;
-            }
-            
-            const viewOnceData = this.detectViewOnceType(quoted);
-            if (!viewOnceData) {
-                await this.sock.sendMessage(chatId, {
-                    text: '❌ Not a view-once message'
-                }, { quoted: msg });
-                return;
-            }
-            
-            const { type, media, caption } = viewOnceData;
-            
-            await this.sock.sendMessage(chatId, {
-                text: `🔍 Downloading ${type}...`
-            }, { quoted: msg });
-            
-            const buffer = await this.downloadBuffer(media, type);
-            if (!buffer) {
-                await this.sock.sendMessage(chatId, { text: '❌ Download failed' }, { quoted: msg });
-                return;
-            }
-            
-            const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-            const originalSender = contextInfo?.participant || chatId;
-            const retrieverJid = msg.key.participant || msg.key.remoteJid;
-            
-            const mediaOptions = {
-                caption: await generateRetrievalCaption(originalSender, retrieverJid, chatId, null, this.sock),
-                quoted: msg
-            };
-            
-            switch (type) {
-                case 'image':
-                    await this.sock.sendMessage(chatId, { image: buffer, ...mediaOptions });
-                    break;
-                case 'video':
-                    await this.sock.sendMessage(chatId, { video: buffer, ...mediaOptions });
-                    break;
-                case 'audio':
-                    await this.sock.sendMessage(chatId, { audio: buffer, ...mediaOptions });
-                    break;
-            }
-            
-            UltraCleanLogger.success(`🔄 Manual recovery of ${type} completed`);
-            
-        } catch (error) {
-            UltraCleanLogger.error(`Recovery error: ${error.message}`);
-        }
-    }
-    
-    getStats() {
-        const stats = {
-            total: this.detectedMessages.length,
-            byType: { image: 0, video: 0, audio: 0 },
-            totalSize: 0
-        };
-        
-        for (const msg of this.detectedMessages) {
-            if (stats.byType[msg.type] !== undefined) {
-                stats.byType[msg.type]++;
-            }
-            stats.totalSize += msg.size || 0;
-        }
-        
-        return {
-            ...stats,
-            totalSizeKB: Math.round(stats.totalSize / 1024),
-            mode: this.config.mode,
-            enabled: this.config.enabled,
-            autoSave: this.config.autoSave
-        };
-    }
-    
-    updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
-        this.saveConfig(this.config);
-        return this.config;
-    }
-}
-
-let antiViewOnceSystem = null;
 let antideleteInitDone = false;
 let statusAntideleteInitDone = false;
 
@@ -4553,32 +3990,6 @@ function cleanSession(preserveExisting = false) {
         UltraCleanLogger.error(`Session cleanup error: ${error.message}`);
         return false;
     }
-}
-const viewOnceCache = new Map();
-globalThis.viewOnceCache_ref = viewOnceCache;
-const VIEW_ONCE_CACHE_MAX = 50;
-
-function cacheViewOnceMessage(chatId, messageId, msg) {
-    try {
-        const key = `${chatId}|${messageId}`;
-        let deepCopy;
-        if (typeof structuredClone === 'function') {
-            try { deepCopy = structuredClone(msg); } catch { deepCopy = JSON.parse(JSON.stringify(msg)); }
-        } else {
-            deepCopy = JSON.parse(JSON.stringify(msg));
-        }
-        viewOnceCache.set(key, deepCopy);
-        if (viewOnceCache.size > VIEW_ONCE_CACHE_MAX) {
-            const oldest = viewOnceCache.keys().next().value;
-            viewOnceCache.delete(oldest);
-        }
-        originalConsoleMethods.log(`🔐 [VO-CACHE] Stored view-once msg ${messageId.substring(0, 8)}... in dedicated cache (total: ${viewOnceCache.size})`);
-    } catch {}
-}
-
-function getViewOnceFromCache(chatId, messageId) {
-    const key = `${chatId}|${messageId}`;
-    return viewOnceCache.get(key) || null;
 }
 
 // ====== SECTION 17: MESSAGE STORE ======
@@ -5319,7 +4730,6 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
         row('Paystack',    avail(pyOk,  'set', 'not set'),   ''),
         div,
         row('Anti-Delete',    flag(true)),
-        row('Anti-ViewOnce',  flag(true)),
         row('Status Detect',  flag(true)),
         row('Member Detect',  flag(true)),
         row('Auto-Reconnect', flag(true)),
@@ -5373,13 +4783,10 @@ function printWolfStartupBlock({ botName, version, platform, prefix, mode,
                 row('Disk Manager',   s.diskManager ? `${OK}✔ ACTIVE${R}` : `${OFF}✘ inactive${R}`),
                 row('Scheduler',      txt(s.schedulerEAT, 'pending')),
                 // ── Media modules ─────────────────────────
-                row('VV Module',      vvLabel),
-                row('VV2 Module',     vv2Label),
                 row('Menu Media',     mmLabel),
                 // ── Feature data ──────────────────────────
                 row('Status Antidel', adLabel),
                 row('Member Groups',  num(s.memberGroups ?? 0, 'groups tracked')),
-                row('ViewOnce Cache', num(s.viewonceRecords ?? 0, 'records')),
                 // ── Game engines ──────────────────────────
                 row('Coinflip',       num(s.coinflipUsers ?? 0, 'users') + `  ${D}·${R}  ${num(s.coinflipBets ?? 0, 'bets')}`),
                 row('RPS',            num(s.rpsPlayers    ?? 0, 'players')),
@@ -5436,8 +4843,6 @@ async function runDataMigrations() {
             { file: './data/autotyping/config.json', key: 'autotyping_config' },
             { file: './data/autorecording/config.json', key: 'autorecording_config' },
             { file: './data/member_detection.json', key: 'member_detection' },
-            { file: './data/antiviewonce/config.json', key: 'antiviewonce_config' },
-            { file: './data/viewonce_messages/history.json', key: 'antiviewonce_history' },
             { file: './data/status_detection_logs.json', key: 'status_detection_logs' },
             { file: './data/anticall.json', key: 'anticall_config' },
             { file: './anticall.json', key: 'anticall_config_root' },
@@ -5458,9 +4863,6 @@ async function runDataMigrations() {
         _cache_welcome_data = await _loadConfigCache('welcome_data', {});
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
-        _cache_antiviewonce_config = await _loadConfigCache('antiviewonce_config', DEFAULT_ANTIVIEWONCE_CONFIG);
-        globalThis._antiviewonceEnabled = !!(_cache_antiviewonce_config?.enabled);
-        _cache_antiviewonce_history = await _loadConfigCache('antiviewonce_history', {});
 
         // If bot_mode came back as an empty object (stale DB row), reset to proper default.
         if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
@@ -5978,12 +5380,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     }, 15000);
                 }
                 
-                if (!antiViewOnceSystem) {
-                    antiViewOnceSystem = new AntiViewOnceSystem(sock);
-                } else {
-                    antiViewOnceSystem.sock = sock;
-                }
-                
                 setTimeout(() => {
                     if (isConnected) discoverNewsletters(sock).catch(() => {});
                 }, 10000);
@@ -6198,10 +5594,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     memberDetector.saveDetectionData();
                 }
                 
-                if (antiViewOnceSystem) {
-                    antiViewOnceSystem.saveHistory();
-                }
-                
                 try {
                     if (typeof autoGroupJoinSystem !== 'undefined' && autoGroupJoinSystem) {
                         UltraCleanLogger.info('💾 Saving auto-join logs...');
@@ -6246,7 +5638,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
 ║ ⏰ Expires : ${chalk.red('10 minutes'.padEnd(38))}║
 ║ 🤖 Bot     : ${chalk.blue(getCurrentBotName().substring(0, 38).padEnd(38))}║
 ║ 👥 Member Detector: ✅ ENABLED
-║ 🔐 Anti-ViewOnce: ✅ ENABLED
 ╚══════════════════════════════════════════════════════════════════════╝
 `));
                             
@@ -6397,7 +5788,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             globalThis._wolfSysStats.commandsLoaded = commands.size;
             commandsLoaded = true;
         }
-        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
+        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, autoread: false });
 
         sock.ev.on('group-participants.update', async (update) => {
             try {
@@ -6522,7 +5913,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
         //   3. Pass to antideleteStoreMessage() so deletion can be detected later
         //   4. If chatId === 'status@broadcast' → Status pipeline (autoView/autoReact/autoSave)
         //   5. trackActivity() → resets the UltimateFixSystem watchdog timer
-        //   6. If anti-viewonce is enabled and message is view-once → antiViewOnceSystem.handle()
         //   7. Call handleIncomingMessage(sock, msg) for all real messages (Section 22)
         //
         // Everything after step 7 is a fast return — handleIncomingMessage owns the
@@ -6556,23 +5946,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         if (!hasBtn && !hasReaction && !hasEdit) return;
                         // fall through — let button responses, reactions, and edits be processed
                     } else {
-                        // For non-fromMe append messages: check for fresh view-once
-                        // (view-once can arrive as 'append' when delivered during reconnection/restart)
-                        if (m0?.message && !m0?.key?.fromMe) {
-                            const _avTs = m0.messageTimestamp
-                                ? (typeof m0.messageTimestamp === 'object' ? m0.messageTimestamp.low || 0 : Number(m0.messageTimestamp)) * 1000
-                                : 0;
-                            const _avFresh = _avTs > 0 && (Date.now() - _avTs < 300000); // within 5 minutes
-                            if (_avFresh) {
-                                const _appendVo = detectViewOnceMedia(m0.message);
-                                if (_appendVo) {
-                                    originalConsoleMethods.log(`🔍 [AV-APPEND] Fresh view-once (${_appendVo.type}) in append event — processing...`);
-                                    handleViewOnceDetection(sock, m0).catch(err => {
-                                        originalConsoleMethods.log(`❌ [AV-APPEND] Error: ${err.message}`);
-                                    });
-                                }
-                            }
-                        }
                         return;
                     }
                 } else {
@@ -6945,16 +6318,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             if (store && msg?.key?.remoteJid && msg?.key?.id && msg?.message) {
                 store.addMessage(msg.key.remoteJid, msg.key.id, msg);
-                const voCheck = detectViewOnceMedia(msg.message);
-                if (voCheck) {
-                    cacheViewOnceMessage(msg.key.remoteJid, msg.key.id, msg);
-                } else {
-                    const msgKeys = Object.keys(msg.message);
-                    const hasVoKey = msgKeys.some(k => k.includes('viewOnce') || k.includes('ViewOnce'));
-                    if (hasVoKey) {
-                        cacheViewOnceMessage(msg.key.remoteJid, msg.key.id, msg);
-                    }
-                }
             }
 
             if (!msg.message) {
@@ -7080,24 +6443,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             handleReactDev(sock, msg).catch(() => {});
 
-            // ── Anti-ViewOnce: two delivery paths ─────────────────────────────
-            // Path A: DM view-once stub — WhatsApp withholds media content;
-            //         msg.message is null but msg.key.isViewOnce === true.
-            //         We send an alert notification (can't recover media).
-            // Path B: Group view-once — full content is available; download
-            //         and forward to owner / reveal in chat.
-            if (!msg.key?.fromMe && msg.key?.remoteJid) {
-                if (!msg.message && msg.key?.isViewOnce === true) {
-                    handleViewOnceStub(sock, msg).catch(() => {});
-                } else if (msg.message) {
-                    const _voResult = detectViewOnceMedia(msg.message);
-                    if (_voResult) {
-                        handleViewOnceDetection(sock, msg).catch(err => {
-                            originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
-                        });
-                    }
-                }
-            }
 
             if (msg.message?.groupStatusMentionMessage) {
                 console.log(`⚠️ [GSM] groupStatusMentionMessage received at ${msg.key?.remoteJid} from ${msg.key?.participant || 'unknown'}`);
@@ -7235,131 +6580,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
             }
         });
         
-        sock.ev.on('messages.reaction', async (reactions) => {
-            for (const reaction of reactions) {
-                try {
-                    if (!reaction.reaction?.text || !reaction.key) continue;
-                    
-                    const reactedKey = reaction.key;
-                    const reactedMsgId = reactedKey.id;
-                    // reaction.key.remoteJid is null for fromMe (owner) reactions because Baileys'
-                    // normaliseKey only sets remoteJid for non-fromMe reactions.
-                    // Fallback to reaction.reaction.key.remoteJid (reactor's chat JID) which is always set.
-                    const reactedChatId = reactedKey.remoteJid || reaction.reaction.key?.remoteJid;
-                    const reactionEmoji = reaction.reaction.text;
-                    const reactorJid = reaction.reaction.key?.participant || reaction.reaction.key?.remoteJid;
-                    
-                    if (!reactedMsgId) continue;
-                    
-                    let cachedMsg = getViewOnceFromCache(reactedChatId, reactedMsgId);
-                    const fromVoCache = !!cachedMsg;
-                    if (!cachedMsg) {
-                        cachedMsg = store?.getMessage(reactedChatId, reactedMsgId);
-                    }
-                    if (!cachedMsg || !cachedMsg.message) continue;
-                    
-                    let viewOnce = detectViewOnceMedia(cachedMsg.message);
-                    if (!viewOnce) {
-                        const cachedContent = normalizeMessageContent(cachedMsg.message);
-                        if (cachedContent) {
-                            viewOnce = detectViewOnceMedia(cachedContent);
-                        }
-                    }
-                    if (!viewOnce) continue;
-                    
-                    const config = loadAntiViewOnceConfig();
-                    const ownerJid = config.ownerJid || OWNER_CLEAN_JID;
-                    if (!ownerJid) continue;
-                    
-                    const { type, media } = viewOnce;
-                    const cleanMedia = { ...media };
-                    delete cleanMedia.viewOnce;
-                    
-                    const dlMsg = {
-                        key: { remoteJid: reactedChatId, id: reactedMsgId, participant: reactedKey.participant, fromMe: reactedKey.fromMe },
-                        message: { [`${type}Message`]: cleanMedia }
-                    };
-                    
-                    const silentLogger = { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) };
-                    
-                    try {
-                        const buffer = await Promise.race([
-                            downloadMediaMessage(dlMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
-                            new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 15000))
-                        ]);
-                        
-                        if (buffer && buffer.length > 0) {
-                            const normalizedOwner = jidNormalizedUser(ownerJid);
-                            const reactorShort = (reactorJid || 'unknown').split('@')[0].split(':')[0];
-                            const senderJid = reactedKey.participant || reactedChatId;
-                            
-                            let stickerMode = false;
-                            try {
-                                const lcf = './data/antiviewonce/config.json';
-                                if (fs.existsSync(lcf)) {
-                                    const lcp = JSON.parse(fs.readFileSync(lcf, 'utf8'));
-                                    if (lcp?.sendAsSticker === true && type === 'image') stickerMode = true;
-                                }
-                            } catch {}
-                            
-                            const mediaPayload = {};
-                            if (stickerMode) {
-                                mediaPayload.sticker = buffer;
-                            } else {
-                                mediaPayload[type] = buffer;
-                                mediaPayload.caption = await generateRetrievalCaption(senderJid, reactorJid || 'unknown', reactedChatId, null, sock);
-                            }
-                            
-                            await sock.sendMessage(normalizedOwner, mediaPayload);
-                            UltraCleanLogger.info(`🔐 View-once captured via reaction ${reactionEmoji} from ${reactorShort}`);
-                        }
-                    } catch (dlErr) {
-                        try {
-                            const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
-                            const stream = await Promise.race([
-                                downloadContentFromMessage(cleanMedia, type),
-                                new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 15000))
-                            ]);
-                            const chunks = [];
-                            for await (const chunk of stream) {
-                                chunks.push(chunk);
-                                if (chunks.length > 500) break;
-                            }
-                            const buffer = Buffer.concat(chunks);
-                            if (buffer && buffer.length > 0) {
-                                const normalizedOwner = jidNormalizedUser(ownerJid);
-                                const reactorShort = (reactorJid || 'unknown').split('@')[0].split(':')[0];
-                                const senderJid = reactedKey.participant || reactedChatId;
-                                
-                                let stickerMode2 = false;
-                                try {
-                                    const lcf2 = './data/antiviewonce/config.json';
-                                    if (fs.existsSync(lcf2)) {
-                                        const lcp2 = JSON.parse(fs.readFileSync(lcf2, 'utf8'));
-                                        if (lcp2?.sendAsSticker === true && type === 'image') stickerMode2 = true;
-                                    }
-                                } catch {}
-                                
-                                const mediaPayload = {};
-                                if (stickerMode2) {
-                                    mediaPayload.sticker = buffer;
-                                } else {
-                                    mediaPayload[type] = buffer;
-                                    mediaPayload.caption = await generateRetrievalCaption(senderJid, reactorJid || 'unknown', reactedChatId, null, sock);
-                                }
-                                await sock.sendMessage(normalizedOwner, mediaPayload);
-                                UltraCleanLogger.info(`🔐 View-once captured via reaction ${reactionEmoji} (fallback) from ${reactorShort}`);
-                            }
-                        } catch {}
-                    }
-                } catch (err) {
-                    if (err.message !== 'dl_timeout') {
-                        UltraCleanLogger.warning(`🔐 View-once reaction capture failed: ${err.message}`);
-                    }
-                }
-            }
-        });
-        
         sock.ev.on('messages.update', (updates) => {
             for (const update of updates) {
                 const updateChatJid = update.key?.remoteJid;
@@ -7396,9 +6616,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             key: update.key,
                             message: update.update.message
                         };
-                        if (detectViewOnceMedia(update.update.message)) {
-                            handleViewOnceDetection(sock, updatedMsg).catch(() => {});
-                        }
                     }
                 } catch {}
 
@@ -7444,7 +6661,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
             globalThis._wolfSysStats.commandsLoaded = commands.size;
             commandsLoaded = true;
         }
-        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, antiviewonce: !!(globalThis._webStatus?.antiviewonce), autoread: false });
+        updateWebStatus({ commands: commands.size, botName: getCurrentBotName(), version: VERSION, botMode: BOT_MODE, prefix: getCurrentPrefix(), owner: global.OWNER_NUMBER || 'Unknown', antispam: !!(globalThis._antispamConfig?.enabled), antibug: !!(globalThis._antibugConfig?.enabled), antilink: !!(globalThis._antilinkConfig?.enabled), antidelete: true, autoread: false });
 
         setTimeout(() => {
             if (!isConnected) {
@@ -7484,9 +6701,7 @@ async function triggerRestartAutoFix(sock) {
                                  `👑 Owner: +${cleaned.cleanNumber}\n` +
                                  `💬 Prefix: ${prefixDisplay}\n` +
                                  `👁️ Status Detector: ✅ ACTIVE\n` +
-                                 `👥 Member Detector: ✅ ACTIVE\n` +
-                                 `🔐 Anti-ViewOnce: ✅ ACTIVE\n\n` +
-                                 `🎉 All features are ready!\n` +
+                                 `👥 Member Detector: ✅ ACTIVE\n` +                                 `🎉 All features are ready!\n` +
                                  `💬 Try using ${currentPrefix ? currentPrefix + 'ping' : 'ping'} to verify.`;
                 
                 await sock.sendMessage(ownerJid, { text: restartMsg });
@@ -7607,7 +6822,6 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
 ┃  ⏱️ *Latency:* ${latency}ms
 ┃  ⏰ *Uptime:* ${uptimeText}
 ┃  👥 *Member Detection:* ✅ ACTIVE
-┃  🔐 *Anti-ViewOnce:* ✅ ACTIVE
 ┃  🔗 *Status:* ✅ Connected
 ┃  🎯 *Mood:* Ready to Serve
 ┃  👑 *Owner:* ✅ Yes
@@ -7759,303 +6973,6 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
     }, delayTime);
 }
 
-// ====== VIEW-ONCE DETECTION HANDLER ======
-function loadAntiViewOnceConfig() {
-    // Priority 1: local JSON file written by the .antiviewonce command
-    try {
-        const localFile = './data/antiviewonce/config.json';
-        if (fs.existsSync(localFile)) {
-            const parsed = JSON.parse(fs.readFileSync(localFile, 'utf8'));
-            // Accept both legacy { mode } and new { gc, pm } formats
-            if (parsed && typeof parsed === 'object' && (parsed.mode || parsed.gc || parsed.pm)) {
-                return parsed;
-            }
-        }
-    } catch {}
-    // Priority 2: DB/Supabase cache
-    try {
-        if (_cache_antiviewonce_config) {
-            return _cache_antiviewonce_config;
-        }
-    } catch {}
-    return { mode: 'private', ownerJid: '' };
-}
-
-function saveAntiViewOnceConfig(config) {
-    try {
-        _cache_antiviewonce_config = config;
-        globalThis._antiviewonceEnabled = !!(config?.enabled);
-        supabaseDb.setConfig('antiviewonce_config', config).catch(err => {
-            console.log('⚠️ Anti-viewonce config save error:', err.message);
-        });
-    } catch (err) {
-        console.log('⚠️ Anti-viewonce config save error:', err.message);
-    }
-}
-
-function detectViewOnceMedia(rawMessage) {
-    if (!rawMessage) return null;
-    const m = rawMessage;
-
-    // V2 wrapper (newest format)
-    const v2 = m.viewOnceMessageV2?.message || m.viewOnceMessageV2Extension?.message;
-    if (v2) {
-        if (v2.imageMessage) return { type: 'image', media: v2.imageMessage, caption: v2.imageMessage.caption || '' };
-        if (v2.videoMessage) return { type: 'video', media: v2.videoMessage, caption: v2.videoMessage.caption || '' };
-        if (v2.audioMessage) return { type: 'audio', media: v2.audioMessage, caption: '' };
-    }
-
-    // Old viewOnceMessage wrapper
-    const vom = m.viewOnceMessage?.message;
-    if (vom) {
-        if (vom.imageMessage) return { type: 'image', media: vom.imageMessage, caption: vom.imageMessage.caption || '' };
-        if (vom.videoMessage) return { type: 'video', media: vom.videoMessage, caption: vom.videoMessage.caption || '' };
-        if (vom.audioMessage) return { type: 'audio', media: vom.audioMessage, caption: '' };
-    }
-
-    // Ephemeral-wrapped viewonce (disappearing message groups)
-    const eph = m.ephemeralMessage?.message;
-    if (eph) {
-        const ev2 = eph.viewOnceMessageV2?.message || eph.viewOnceMessageV2Extension?.message;
-        if (ev2) {
-            if (ev2.imageMessage) return { type: 'image', media: ev2.imageMessage, caption: ev2.imageMessage.caption || '' };
-            if (ev2.videoMessage) return { type: 'video', media: ev2.videoMessage, caption: ev2.videoMessage.caption || '' };
-            if (ev2.audioMessage) return { type: 'audio', media: ev2.audioMessage, caption: '' };
-        }
-        const evm = eph.viewOnceMessage?.message;
-        if (evm) {
-            if (evm.imageMessage) return { type: 'image', media: evm.imageMessage, caption: evm.imageMessage.caption || '' };
-            if (evm.videoMessage) return { type: 'video', media: evm.videoMessage, caption: evm.videoMessage.caption || '' };
-            if (evm.audioMessage) return { type: 'audio', media: evm.audioMessage, caption: '' };
-        }
-    }
-
-    // Direct imageMessage/videoMessage/audioMessage with viewOnce flag
-    if (m.imageMessage?.viewOnce) return { type: 'image', media: m.imageMessage, caption: m.imageMessage.caption || '' };
-    if (m.videoMessage?.viewOnce) return { type: 'video', media: m.videoMessage, caption: m.videoMessage.caption || '' };
-    if (m.audioMessage?.viewOnce) return { type: 'audio', media: m.audioMessage, caption: '' };
-
-    // normalizeMessageContent fallback
-    try {
-        const norm = normalizeMessageContent(m);
-        if (norm) {
-            const ntype = getContentType(norm);
-            if (ntype) {
-                const nMsg = norm[ntype];
-                if (nMsg?.viewOnce) {
-                    const t = ntype.replace('Message', '');
-                    return { type: t, media: nMsg, caption: nMsg.caption || '' };
-                }
-            }
-        }
-    } catch {}
-
-    // Wrapper-only detection: wrapper present but inner message is null — use downloadMediaMessage
-    const hasVoWrapper = !!(m.viewOnceMessageV2 || m.viewOnceMessageV2Extension || m.viewOnceMessage ||
-        m.ephemeralMessage?.message?.viewOnceMessageV2 || m.ephemeralMessage?.message?.viewOnceMessage);
-    if (hasVoWrapper) {
-        const guessVideo = !!(m.viewOnceMessage?.message?.videoMessage || m.viewOnceMessageV2?.message?.videoMessage);
-        return { type: guessVideo ? 'video' : 'image', media: null, caption: '', useMessageDownload: true };
-    }
-
-    return null;
-}
-
-async function handleViewOnceStub(sock, msg) {
-    try {
-        const _stubSender = (msg.key?.participant || msg.key?.remoteJid || '?').split('@')[0].split(':')[0];
-        originalConsoleMethods.log(`🔐 [AV-STUB] view-once stub from ${_stubSender} isViewOnce=${msg.key?.isViewOnce}`);
-        const config = loadAntiViewOnceConfig();
-        const chatId = msg.key.remoteJid;
-        const isGroup = chatId?.endsWith('@g.us');
-
-        let enabled, deliveryMode;
-        if (config.gc && config.pm) {
-            const scope = isGroup ? config.gc : config.pm;
-            enabled = scope.enabled;
-            deliveryMode = scope.mode || 'private';
-        } else {
-            enabled = config.mode !== 'off' && !!(config.mode || config.enabled);
-            deliveryMode = config.mode === 'public' ? 'chat' : 'private';
-        }
-        if (!enabled) return;
-
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const senderNum = sender.split('@')[0].split(':')[0];
-        const pushName = msg.pushName || senderNum;
-        const resolvedPhone = resolvePhoneFromLid(sender) || senderNum;
-
-        const ownerJid = config.ownerJid ||
-            jidManager?.owner?.cleanJid ||
-            (OWNER_JID ? (OWNER_JID.includes('@') ? OWNER_JID : `${OWNER_JID}@s.whatsapp.net`) : null);
-
-        logAntiViewOnce(`🔐 VIEW-ONCE STUB: from +${resolvedPhone} in ${isGroup ? 'GROUP ' + chatId.split('@')[0] : 'DM'}`);
-
-        const chatLabel = isGroup
-            ? (groupMetadataCache?.get(chatId)?.subject || chatId.split('@')[0])
-            : `DM with +${resolvedPhone}`;
-
-        const alertText =
-            `🔐 *View-Once Message Detected*\n\n` +
-            `👤 *From:* @${resolvedPhone} (${pushName})\n` +
-            `💬 *Chat:* ${chatLabel}\n` +
-            `🕒 *Time:* ${new Date().toLocaleTimeString()}\n\n` +
-            `⚠️ _WhatsApp withholds view-once media from bots. ` +
-            `Ask the sender to resend as a regular image, or reply to it with /vv._`;
-
-        if (deliveryMode === 'private' || deliveryMode === 'both') {
-            if (ownerJid) {
-                await sock.sendMessage(ownerJid, {
-                    text: alertText,
-                    mentions: [sender]
-                }).catch(() => {});
-            }
-        }
-        if (deliveryMode === 'chat' || deliveryMode === 'both') {
-            await sock.sendMessage(chatId, {
-                text: alertText,
-                mentions: [sender]
-            }).catch(() => {});
-        }
-    } catch (err) {
-        originalConsoleMethods.log(`❌ [AV-STUB] ${err.message}`);
-    }
-}
-
-async function handleViewOnceDetection(sock, msg) {
-    try {
-        if (msg.key?.fromMe) return;
-
-        const rawMessage = msg.message;
-        if (!rawMessage) return;
-
-        // Quick pre-check: skip obvious non-viewonce messages
-        const voKeys = ['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension',
-            'imageMessage', 'videoMessage', 'audioMessage', 'ephemeralMessage'];
-        if (!Object.keys(rawMessage).some(k => voKeys.includes(k))) return;
-
-        const config = loadAntiViewOnceConfig();
-        const chatId = msg.key.remoteJid;
-        const isGroup = chatId?.endsWith('@g.us');
-
-        // Determine effective enabled/mode from gc/pm config
-        let enabled, deliveryMode;
-        if (config.gc && config.pm) {
-            const scope = isGroup ? config.gc : config.pm;
-            enabled = scope.enabled;
-            deliveryMode = scope.mode || 'private';
-        } else {
-            // Legacy flat config
-            enabled = config.mode !== 'off' && (config.mode || config.enabled);
-            deliveryMode = config.mode === 'public' ? 'chat' : 'private';
-        }
-        if (!enabled) return;
-
-        const viewOnce = detectViewOnceMedia(rawMessage);
-        if (!viewOnce) return;
-
-        const { type, media, useMessageDownload } = viewOnce;
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const senderShort = sender.split('@')[0].split(':')[0];
-
-        UltraCleanLogger.antiviewonce(`🔐 View-Once detected: ${type} from ${senderShort}`);
-
-        const DL_TIMEOUT = 15000;
-        let buffer;
-
-        if (useMessageDownload) {
-            // Wrapper-only: inner message was null, use downloadMediaMessage on the whole msg
-            try {
-                buffer = await Promise.race([
-                    downloadMediaMessage(msg, 'buffer', {}),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
-                ]);
-            } catch (err) {
-                UltraCleanLogger.warning(`Anti-ViewOnce: downloadMediaMessage fallback failed — ${err.message}`);
-                return;
-            }
-        } else {
-            const cleanMedia = { ...media };
-            delete cleanMedia.viewOnce;
-            try {
-                const dlMsg = {
-                    key: msg.key,
-                    message: { [`${type}Message`]: cleanMedia }
-                };
-                buffer = await Promise.race([
-                    downloadMediaMessage(dlMsg, 'buffer', {}, {
-                        logger: { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) },
-                        reuploadRequest: sock.updateMediaMessage
-                    }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
-                ]);
-            } catch {
-                try {
-                    const stream = await Promise.race([
-                        downloadContentFromMessage(cleanMedia, type),
-                        new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), DL_TIMEOUT))
-                    ]);
-                    const chunks = [];
-                    for await (const chunk of stream) { chunks.push(chunk); if (chunks.length > 500) break; }
-                    buffer = Buffer.concat(chunks);
-                } catch (dlErr2) {
-                    UltraCleanLogger.warning(`Anti-ViewOnce: All download methods failed — ${dlErr2.message}`);
-                    return;
-                }
-            }
-        }
-
-        if (!buffer || buffer.length === 0) return;
-
-        const timestamp = Date.now();
-        const ext = type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'mp3';
-        const filename = `viewonce_${type}_${senderShort}_${timestamp}.${ext}`;
-
-        const retrievalCaption = await generateRetrievalCaption(sender, 'auto-detect', chatId, null, sock);
-        const sendAsSticker = config.sendAsSticker === true && type === 'image';
-
-        const mediaPayload = {};
-        if (sendAsSticker) {
-            mediaPayload.sticker = buffer;
-        } else {
-            mediaPayload[type] = buffer;
-            mediaPayload.caption = retrievalCaption;
-            mediaPayload.fileName = filename;
-        }
-
-        // Resolve owner JID
-        let ownerJid = config.ownerJid || '';
-        if (!ownerJid || ownerJid.includes('@lid')) ownerJid = OWNER_CLEAN_JID || '';
-
-        // Determine target(s): private → DM only, chat → same chat, both → both
-        const targets = [];
-        if (deliveryMode === 'private' || deliveryMode === 'both') {
-            if (ownerJid) targets.push(jidNormalizedUser(ownerJid));
-        }
-        if ((deliveryMode === 'chat' || deliveryMode === 'both') && chatId !== ownerJid) {
-            targets.push(chatId);
-        }
-        if (targets.length === 0 && ownerJid) targets.push(jidNormalizedUser(ownerJid));
-
-        for (const target of targets) {
-            try {
-                await sock.sendMessage(target, mediaPayload);
-                UltraCleanLogger.antiviewonce(`🔐 View-Once sent to ${target}`);
-            } catch (sendErr) {
-                UltraCleanLogger.warning(`Anti-ViewOnce send failed to ${target}: ${sendErr.message}`);
-            }
-        }
-
-        try {
-            const mimetype = type === 'image' ? 'image/jpeg' : type === 'video' ? 'video/mp4' : 'audio/mpeg';
-            await supabaseDb.uploadMedia(filename, buffer, mimetype, 'viewonce');
-            _cache_antiviewonce_captured_count++;
-        } catch {}
-
-    } catch (error) {
-        UltraCleanLogger.warning(`Anti-ViewOnce error: ${error.message}`);
-    }
-}
 
 // ====== CONNECT COMMAND HANDLER ======
 async function handleConnectCommand(sock, msg, args, cleaned, opts = {}) {
@@ -8083,8 +7000,6 @@ async function handleConnectCommand(sock, msg, args, cleaned, opts = {}) {
         
         const memberStats = memberDetector ? memberDetector.getStats() : null;
         
-        const antiviewonceStats = antiViewOnceSystem ? antiViewOnceSystem.getStats() : null;
-        
         let statusEmoji, statusText, mood;
         if (latency <= 100) {
             statusEmoji = "🟢";
@@ -8110,8 +7025,7 @@ async function handleConnectCommand(sock, msg, args, cleaned, opts = {}) {
 // ┃  ⏱️ *Latency:* ${latency}ms ${statusEmoji}
 // ┃  ⏰ *Uptime:* ${uptimeText}
 // ┃  👥 *Members:* ${memberStats ? `${memberStats.totalEvents} events` : 'Not loaded'}
-// ┃  🔐 *ViewOnce:* ${antiviewonceStats ? `${antiviewonceStats.total} captured` : 'Not loaded'}
-// ┃  🔗 *Status:* ${statusText}
+// ┃  🔐 *ViewOnce:* ${// ┃  🔗 *Status:* ${statusText}
 // ┃  🎯 *Mood:* ${mood}
 // ┃  👑 *Owner:* ${isOwnerUser ? '✅ Yes' : '❌ No'}
 // ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
@@ -8271,49 +7185,7 @@ async function handleIncomingMessage(sock, msg) {
                                 msgContent.videoMessage?.contextInfo;
                 
                 if (replyCtx?.quotedMessage) {
-                    const viewOnceCheck = detectViewOnceMedia(replyCtx.quotedMessage);
                     
-                    if (viewOnceCheck) {
-                        (async () => {
-                            try {
-                                const config = loadAntiViewOnceConfig();
-                                const ownerJid = config.ownerJid || OWNER_CLEAN_JID;
-                                if (!ownerJid) return;
-                                
-                                const { type, media } = viewOnceCheck;
-                                const cleanMedia = { ...media };
-                                delete cleanMedia.viewOnce;
-                                
-                                const dlMsg = { 
-                                    key: { remoteJid: replyCtx.remoteJid || chatId, id: replyCtx.stanzaId, participant: replyCtx.participant, fromMe: replyCtx.fromMe }, 
-                                    message: { [`${type}Message`]: cleanMedia } 
-                                };
-                                
-                                const silentLogger = { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) };
-                                
-                                const buffer = await Promise.race([
-                                    downloadMediaMessage(dlMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
-                                    new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 15000))
-                                ]);
-                                
-                                if (buffer && buffer.length > 0) {
-                                    const normalizedOwner = jidNormalizedUser(ownerJid);
-                                    const replierJid = msg.key.participant || msg.key.remoteJid;
-                                    const voSenderJid = replyCtx.participant || replyCtx.remoteJid || chatId;
-                                    const replierShort = (replierJid).split('@')[0].split(':')[0];
-                                    
-                                    const mediaPayload = {};
-                                    mediaPayload[type] = buffer;
-                                    mediaPayload.caption = await generateRetrievalCaption(voSenderJid, replierJid, chatId, null, sock);
-                                    
-                                    await sock.sendMessage(normalizedOwner, mediaPayload);
-                                    UltraCleanLogger.info(`🔐 View-once auto-captured via ${isSticker ? 'sticker' : 'emoji'} reply from ${replierShort}`);
-                                }
-                            } catch (dlErr) {
-                                UltraCleanLogger.warning(`🔐 View-once auto-capture failed: ${dlErr.message}`);
-                            }
-                        })();
-                    }
                 }
             }
         } catch {}
@@ -8329,64 +7201,6 @@ async function handleIncomingMessage(sock, msg) {
                 const reactedKey = reactionMsg.key;
                 const reactedMsgId = reactedKey.id;
                 const reactedChatId = reactedKey.remoteJid || chatId;
-                
-                let cachedMsg = getViewOnceFromCache(reactedChatId, reactedMsgId);
-                if (!cachedMsg) {
-                    cachedMsg = store?.getMessage(reactedChatId, reactedMsgId);
-                }
-                
-                if (cachedMsg) {
-                    let viewOnceReactCheck = detectViewOnceMedia(cachedMsg.message || cachedMsg);
-                    if (!viewOnceReactCheck) {
-                        const cachedContent = normalizeMessageContent(cachedMsg.message || cachedMsg);
-                        if (cachedContent) viewOnceReactCheck = detectViewOnceMedia(cachedContent);
-                    }
-                    
-                    if (viewOnceReactCheck) {
-                        ((voCheck) => {
-                            (async () => {
-                                try {
-                                    const config = loadAntiViewOnceConfig();
-                                    const ownerJid = config.ownerJid || OWNER_CLEAN_JID;
-                                    if (!ownerJid) return;
-                                    
-                                    const { type, media } = voCheck;
-                                    const cleanMedia = { ...media };
-                                    delete cleanMedia.viewOnce;
-                                    
-                                    const dlMsg = { 
-                                        key: { remoteJid: reactedChatId, id: reactedMsgId, participant: reactedKey.participant, fromMe: reactedKey.fromMe }, 
-                                        message: { [`${type}Message`]: cleanMedia } 
-                                    };
-                                    
-                                    const silentLogger = { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({}) }) };
-                                    
-                                    const buffer = await Promise.race([
-                                        downloadMediaMessage(dlMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
-                                        new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 15000))
-                                    ]);
-                                    
-                                    if (buffer && buffer.length > 0) {
-                                        const normalizedOwner = jidNormalizedUser(ownerJid);
-                                        const reactorJid2 = msg.key.participant || msg.key.remoteJid;
-                                        const reactorShort = (reactorJid2).split('@')[0].split(':')[0];
-                                        const senderJid2 = reactedKey.participant || reactedChatId;
-                                        const senderShort = senderJid2.split('@')[0].split(':')[0];
-                                        
-                                        const mediaPayload = {};
-                                        mediaPayload[type] = buffer;
-                                        mediaPayload.caption = await generateRetrievalCaption(senderJid2, reactorJid2, reactedChatId, null, sock);
-                                        
-                                        await sock.sendMessage(normalizedOwner, mediaPayload);
-                                        UltraCleanLogger.info(`🔐 View-once auto-captured via reaction ${reactionMsg.text} from ${reactorShort} on ${senderShort}'s message`);
-                                    }
-                                } catch (dlErr) {
-                                    UltraCleanLogger.warning(`🔐 View-once reaction capture failed: ${dlErr.message}`);
-                                }
-                            })();
-                        })(viewOnceReactCheck);
-                    }
-                }
             }
         } catch {}
 
@@ -8417,7 +7231,7 @@ async function handleIncomingMessage(sock, msg) {
             } else {
                 const defaultCommands = ['ping', 'help', 'uptime', 'statusstats', 
                                        'ultimatefix', 'prefixinfo',
-                                       'antiviewonce', 'av'];
+                                       ];
                 if (defaultCommands.includes(firstWord)) {
                     commandName = firstWord;
                     args = words.slice(1);
@@ -8480,8 +7294,7 @@ async function handleIncomingMessage(sock, msg) {
                                     isSudo: () => _isSudoW || jidManager.isSudo(msg),
                                     jidManager, store, statusDetector,
                                     updatePrefix: updatePrefixImmediately,
-                                    getCurrentPrefix, rateLimiter, memberDetector,
-                                    antiViewOnceSystem, isPrefixless, DiskManager
+                                    getCurrentPrefix, rateLimiter, memberDetector, isPrefixless, DiskManager
                                 });
                             } finally {
                                 clearActiveCommand(chatId, senderJid);
@@ -8610,7 +7423,6 @@ async function handleIncomingMessage(sock, msg) {
                         getCurrentPrefix: getCurrentPrefix,
                         rateLimiter: rateLimiter,
                         memberDetector: memberDetector,
-                        antiViewOnceSystem: antiViewOnceSystem,
                         isPrefixless: isPrefixless,
                         DiskManager: DiskManager
                     });
@@ -8666,95 +7478,6 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
     
     try {
         switch (commandName) {
-            case 'antiviewonce':
-            case 'av': {
-                if (!jidManager.isOwner(msg)) {
-                    await sock.sendMessage(chatId, {
-                        text: '❌ *Owner Only Command*'
-                    }, { quoted: msg });
-                    return;
-                }
-                
-                const avAction = args[0]?.toLowerCase() || 'settings';
-                const avOwnerJid = jidNormalizedUser(msg.key.participant || chatId);
-                const avConfig = loadAntiViewOnceConfig();
-                
-                switch (avAction) {
-                    case 'private': {
-                        const newConfig = { mode: 'private', ownerJid: avOwnerJid, updatedAt: new Date().toISOString() };
-                        saveAntiViewOnceConfig(newConfig);
-                        await sock.sendMessage(chatId, {
-                            text: `✅ *ANTI-VIEWONCE: PRIVATE MODE*\n\n` +
-                                 `View-once media will be sent to your DMs:\n` +
-                                 `• Images ✅\n• Videos ✅\n• Audio ✅\n\n` +
-                                 `📱 Send a view-once message to test!`
-                        }, { quoted: msg });
-                        break;
-                    }
-                    case 'public': {
-                        const newConfig = { mode: 'public', ownerJid: avOwnerJid, updatedAt: new Date().toISOString() };
-                        saveAntiViewOnceConfig(newConfig);
-                        await sock.sendMessage(chatId, {
-                            text: `✅ *ANTI-VIEWONCE: PUBLIC MODE*\n\n` +
-                                 `View-once media will be revealed in the original chat:\n` +
-                                 `• Images ✅\n• Videos ✅\n• Audio ✅\n\n` +
-                                 `Everyone in the chat can see the media!`
-                        }, { quoted: msg });
-                        break;
-                    }
-                    case 'off':
-                    case 'disable': {
-                        const newConfig = { mode: 'off', ownerJid: avOwnerJid, updatedAt: new Date().toISOString() };
-                        saveAntiViewOnceConfig(newConfig);
-                        await sock.sendMessage(chatId, {
-                            text: '❌ *ANTI-VIEWONCE DISABLED*\n\nNo view-once media will be captured.'
-                        }, { quoted: msg });
-                        break;
-                    }
-                    case 'on':
-                    case 'enable': {
-                        const newConfig = { mode: 'private', ownerJid: avOwnerJid, updatedAt: new Date().toISOString() };
-                        saveAntiViewOnceConfig(newConfig);
-                        await sock.sendMessage(chatId, {
-                            text: `✅ *ANTI-VIEWONCE ENABLED (PRIVATE)*\n\n` +
-                                 `View-once media will be sent to your DMs:\n` +
-                                 `• Images ✅\n• Videos ✅\n• Audio ✅\n\n` +
-                                 `Use \`${currentPrefix}av public\` to reveal in chat instead.`
-                        }, { quoted: msg });
-                        break;
-                    }
-                    case 'settings':
-                    case 'status':
-                    case 'check': {
-                        const modeDisplay = avConfig.mode === 'private' ? '🔒 Private (Owner DM)' :
-                                           avConfig.mode === 'public' ? '🌐 Public (In Chat)' :
-                                           '❌ Off';
-                        let capturedCount = _cache_antiviewonce_captured_count;
-                        await sock.sendMessage(chatId, {
-                            text: `🔐 *ANTI-VIEWONCE SETTINGS*\n\n` +
-                                 `*Mode:* ${modeDisplay}\n` +
-                                 `*Owner:* ${avConfig.ownerJid ? '✅ Set' : '❌ Not set'}\n` +
-                                 `*Captured:* ${capturedCount} media files\n\n` +
-                                 `*Commands:*\n` +
-                                 `\`${currentPrefix}av private\` - Send to owner DM\n` +
-                                 `\`${currentPrefix}av public\` - Reveal in chat\n` +
-                                 `\`${currentPrefix}av off\` - Disable\n` +
-                                 `\`${currentPrefix}av settings\` - This menu`
-                        }, { quoted: msg });
-                        break;
-                    }
-                    default:
-                        await sock.sendMessage(chatId, {
-                            text: `🔐 *ANTI-VIEWONCE*\n\n` +
-                                 `\`${currentPrefix}av private\` - Send to owner DM\n` +
-                                 `\`${currentPrefix}av public\` - Reveal in chat\n` +
-                                 `\`${currentPrefix}av off\` - Disable\n` +
-                                 `\`${currentPrefix}av settings\` - Check status`
-                        }, { quoted: msg });
-                }
-                break;
-            }
-
             case 'ping':
                 const start = Date.now();
                 const latency = Date.now() - start;
@@ -8773,16 +7496,9 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
                     memberInfo += `📊 Events: ${memberStats.totalEvents}\n`;
                 }
                 
-                let antiviewonceInfoPing = '';
-                if (antiViewOnceSystem) {
-                    const antiviewonceStats = antiViewOnceSystem.getStats();
-                    antiviewonceInfoPing = `🔐 Anti-ViewOnce: ✅ ACTIVE\n`;
-                    antiviewonceInfoPing += `📊 Captured: ${antiviewonceStats.total} media\n`;
-                    antiviewonceInfoPing += `🎯 Mode: ${antiviewonceStats.mode}\n`;
-                }
                 
                 await sock.sendMessage(chatId, { 
-                    text: `🏓 *Pong!*\nLatency: ${latency}ms\nPrefix: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\nMode: ${BOT_MODE}\nOwner: ${isOwnerUser ? 'Yes ✅' : 'No ❌'}\n${statusInfo}${memberInfo}${antiviewonceInfoPing}Status: Connected ✅`
+                    text: `🏓 *Pong!*\nLatency: ${latency}ms\nPrefix: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\nMode: ${BOT_MODE}\nOwner: ${isOwnerUser ? 'Yes ✅' : 'No ❌'}\n${statusInfo}${memberInfo}Status: Connected ✅`
                 }, { quoted: msg });
                 break;
                 
@@ -8802,9 +7518,6 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
                 helpText += `${prefixDisplay}welcomeset - Configure welcome messages\n\n`;
                 
                 helpText += `*ANTI-VIEWONCE*\n`;
-                helpText += `${prefixDisplay}av private - Send view-once to owner DM\n`;
-                helpText += `${prefixDisplay}av public - Reveal view-once in chat\n`;
-                helpText += `${prefixDisplay}av off - Disable anti-viewonce\n`;
                 helpText += `${prefixDisplay}av settings - Check status\n\n`;
                 
                 helpText += `*STATUS DETECTOR*\n`;
@@ -8843,17 +7556,9 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
                     memberDetectorInfo += `📈 Groups: ${memberStats.totalGroups}\n`;
                 }
                 
-                let antiviewonceInfo = '';
-                if (antiViewOnceSystem) {
-                    const antiviewonceStats = antiViewOnceSystem.getStats();
-                    antiviewonceInfo = `🔐 Anti-ViewOnce: ✅ ACTIVE\n`;
-                    antiviewonceInfo += `📊 Captured: ${antiviewonceStats.total} media\n`;
-                    antiviewonceInfo += `🎯 Mode: ${antiviewonceStats.mode}\n`;
-                    antiviewonceInfo += `💾 Size: ${antiviewonceStats.totalSizeKB}KB\n`;
-                }
                 
                 await sock.sendMessage(chatId, {
-                    text: `⏰ *UPTIME*\n\n${hours}h ${minutes}m ${seconds}s\n📊 Commands: ${commands.size}\n👑 Owner: +${ownerInfo.ownerNumber}\n💬 Prefix: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\n🎛️ Mode: ${BOT_MODE}\n${statusDetectorInfo}${memberDetectorInfo}${antiviewonceInfo}`
+                    text: `⏰ *UPTIME*\n\n${hours}h ${minutes}m ${seconds}s\n📊 Commands: ${commands.size}\n👑 Owner: +${ownerInfo.ownerNumber}\n💬 Prefix: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\n🎛️ Mode: ${BOT_MODE}\n${statusDetectorInfo}${memberDetectorInfo}`
                 }, { quoted: msg });
                 break;
                 
@@ -9016,7 +7721,6 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 //         UltraCleanLogger.info(`⚡ Response speed: OPTIMIZED (Reduced delays by 50-70%)`);
 //         UltraCleanLogger.info(`🔐 Session ID support: ✅ ENABLED (WOLF-BOT: format)`);
 //         UltraCleanLogger.info(`🎯 Member Detection: ✅ ENABLED (New members in groups)`);
-//         UltraCleanLogger.info(`🔐 Anti-ViewOnce: ✅ ENABLED (Private/Auto modes)`);
 //         UltraCleanLogger.info(`👥 Welcome System: ✅ ENABLED (Auto-welcome new members)`);
 //         UltraCleanLogger.info(`🎯 Background processes: ✅ ENABLED`);
 
@@ -9097,11 +7801,6 @@ async function handleDefaultCommands(commandName, sock, msg, args, currentPrefix
 //         }, 8000);
 //     }
 // }
-
-
-
-
-
 
 
 // ====== SECTION 23: main() — APPLICATION ENTRY POINT ======
@@ -9327,16 +8026,5 @@ main().catch((error) => {
     UltraCleanLogger.critical(`Fatal error: ${error.message}`);
     process.exit(1);
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
