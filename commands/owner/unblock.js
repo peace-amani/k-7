@@ -3,21 +3,37 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { resolveJid } from '../tools/getjid.js';
 
 async function tryUnblock(sock, jid) {
+    const node = {
+        tag: 'iq',
+        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
+        content: [{ tag: 'item', attrs: { action: 'unblock', jid } }],
+    };
+
+    // Strategy 1: Baileys helper
     try {
         await sock.updateBlockStatus(jid, 'unblock');
         return;
     } catch (e1) {
-        console.log(`[UNBLOCK] updateBlockStatus failed (${e1?.message}), trying IQ...`);
+        console.log(`[UNBLOCK] updateBlockStatus: ${e1?.message}`);
     }
-    await sock.query({
-        tag: 'iq',
-        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
-        content: [{
-            tag: 'list',
-            attrs: {},
-            content: [{ tag: 'item', attrs: { action: 'unblock', jid } }],
-        }],
-    });
+
+    // Strategy 2: query() — waits for server ACK
+    try {
+        await sock.query(node);
+        return;
+    } catch (e2) {
+        console.log(`[UNBLOCK] query failed: ${e2?.message}`);
+    }
+
+    // Strategy 3: sendNode — fire-and-forget, bypasses ACK timeout
+    if (typeof sock.sendNode === 'function') {
+        const { generateMessageTag } = await import('@whiskeysockets/baileys');
+        node.attrs.id = generateMessageTag();
+        await sock.sendNode(node);
+        return;
+    }
+
+    throw new Error('All unblock strategies exhausted');
 }
 
 export default {
