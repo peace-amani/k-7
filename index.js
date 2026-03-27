@@ -4360,15 +4360,45 @@ let statusDetector = null;
 // ====== HELPER FUNCTIONS ======
 function isUserBlocked(jid) {
     try {
-        const data = _cache_blocked_users;
-        if (data) {
-            return data.users && data.users.includes(jid);
-        }
+        const list = _cache_blocked_users?.blocked;
+        if (!Array.isArray(list) || list.length === 0) return false;
+        const num = jid.split(':')[0].split('@')[0];
+        return list.some(entry => {
+            if (entry === jid) return true;
+            const entryNum = entry.split(':')[0].split('@')[0];
+            return entryNum === num;
+        });
     } catch {
         return false;
     }
-    return false;
 }
+
+globalThis.addBlockedUser = function(jid) {
+    const num = jid.split(':')[0].split('@')[0];
+    const canonical = `${num}@s.whatsapp.net`;
+    if (!_cache_blocked_users) _cache_blocked_users = { blocked: [] };
+    if (!Array.isArray(_cache_blocked_users.blocked)) _cache_blocked_users.blocked = [];
+    if (!_cache_blocked_users.blocked.includes(canonical)) {
+        _cache_blocked_users.blocked.push(canonical);
+        _saveConfigCache('blocked_users', _cache_blocked_users);
+        try { fs.writeFileSync(BLOCKED_USERS_FILE, JSON.stringify(_cache_blocked_users, null, 2)); } catch {}
+    }
+};
+
+globalThis.removeBlockedUser = function(jid) {
+    const num = jid.split(':')[0].split('@')[0];
+    if (!_cache_blocked_users || !Array.isArray(_cache_blocked_users.blocked)) return;
+    _cache_blocked_users.blocked = _cache_blocked_users.blocked.filter(entry => {
+        const entryNum = entry.split(':')[0].split('@')[0];
+        return entryNum !== num;
+    });
+    _saveConfigCache('blocked_users', _cache_blocked_users);
+    try { fs.writeFileSync(BLOCKED_USERS_FILE, JSON.stringify(_cache_blocked_users, null, 2)); } catch {}
+};
+
+globalThis.getBotBlocklist = function() {
+    return (_cache_blocked_users?.blocked || []).map(j => j.split('@')[0]);
+};
 
 function checkBotMode(msg, commandName, isSudoOverride = false) {
     try {

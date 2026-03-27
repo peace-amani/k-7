@@ -2,94 +2,89 @@ import { delay } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { resolveJid } from '../tools/getjid.js';
 
-async function tryBlock(sock, jid) {
-    // Correct WA multi-device protocol: action on <list>, jid-only on <item>
+async function tryWaBlock(sock, jid) {
     const listNode = {
         tag: 'iq',
         attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
         content: [{ tag: 'list', attrs: { action: 'block' }, content: [{ tag: 'item', attrs: { jid } }] }],
     };
-
-    // Strategy 1: correct list-action format
     try {
         await sock.query(listNode);
-        return;
+        return true;
     } catch (e1) {
         const msg = e1?.message || '';
-        console.log(`[BLOCK] list-format query: ${msg}`);
-        if (msg === 'bad-request') throw new Error('bad-request');
+        if (msg === 'bad-request') return false;
+        console.log(`[BLOCK] IQ list-format: ${msg}`);
     }
-
-    // Strategy 2: Baileys legacy helper (item-action format)
     try {
         await sock.updateBlockStatus(jid, 'block');
-        return;
+        return true;
     } catch (e2) {
         const msg = e2?.message || '';
+        if (msg === 'bad-request') return false;
         console.log(`[BLOCK] updateBlockStatus: ${msg}`);
-        if (msg === 'bad-request') throw new Error('bad-request');
     }
-
-    // Strategy 3: sendNode fire-and-forget — only for timeout/connection errors
     if (typeof sock.sendNode === 'function') {
         listNode.attrs.id = typeof sock.generateMessageTag === 'function'
-            ? sock.generateMessageTag()
-            : `block-${Date.now()}`;
-        await sock.sendNode(listNode);
-        return;
+            ? sock.generateMessageTag() : `block-${Date.now()}`;
+        await sock.sendNode(listNode).catch(() => {});
     }
-
-    throw new Error('All block strategies exhausted');
+    return false;
 }
 
 export default {
     name: 'block',
-    description: 'Block a user by number, mention, reply, or DM contact',
+    description: 'Block a user — bot will ignore them and attempts WA-level block',
     category: 'owner',
     async execute(sock, msg, args) {
         const { key, message } = msg;
         const isGroup = key.remoteJid.endsWith('@g.us');
+
+        // Subcommand: /block list
+        if (args[0] === 'list') {
+            const list = typeof globalThis.getBotBlocklist === 'function'
+                ? globalThis.getBotBlocklist() : [];
+            if (list.length === 0) {
+                return sock.sendMessage(key.remoteJid, {
+                    text: `╭─⌈ 🕸️ *BLOCK LIST* ⌋\n│\n╰⊷ No users blocked yet.`,
+                }, { quoted: msg });
+            }
+            const lines = list.map((n, i) => `├─⊷ ${i + 1}. +${n}`).join('\n');
+            return sock.sendMessage(key.remoteJid, {
+                text: `╭─⌈ 🕸️ *BLOCK LIST* ⌋\n│\n${lines}\n╰⊷ Total: ${list.length}`,
+            }, { quoted: msg });
+        }
+
         let rawTarget = null;
 
-        // 1. Number argument
-        if (args[0]) {
+        if (args[0] && args[0] !== 'list') {
             const num = args[0].replace(/[^0-9]/g, '');
             if (num.length >= 7) rawTarget = `${num}@s.whatsapp.net`;
         }
-
-        // 2. Mention
         if (!rawTarget) {
             const mentioned = message?.extendedTextMessage?.contextInfo?.mentionedJid;
-            if (mentioned && mentioned.length > 0) rawTarget = mentioned[0];
+            if (mentioned?.length > 0) rawTarget = mentioned[0];
         }
-
-        // 3. Quoted reply
         if (!rawTarget) {
             const quoted = message?.extendedTextMessage?.contextInfo?.participant;
             if (quoted) rawTarget = quoted;
         }
-
-        // 4. In a group with no target — show usage
         if (!rawTarget && isGroup) {
             return sock.sendMessage(key.remoteJid, {
-                text: `╭─⌈ 🐺 *BLOCK* ⌋\n│\n├─⊷ */block <number>*\n│  └⊷ e.g. /block 254712345678\n├─⊷ *Tag a user* or *reply* to their message\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 🐺 *BLOCK* ⌋\n│\n├─⊷ */block <number>*\n│  └⊷ e.g. /block 254712345678\n├─⊷ *Tag* or *reply* to a user\n├─⊷ */block list* — view blocked users\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
             }, { quoted: msg });
         }
-
-        // 5. DM with no target — block the DM contact
         if (!rawTarget && !isGroup) rawTarget = key.remoteJid;
 
         if (!rawTarget || rawTarget.endsWith('@g.us') || rawTarget.endsWith('@newsletter')) {
             return sock.sendMessage(key.remoteJid, {
-                text: '⚠️ Cannot block a group or newsletter. Provide a number: */block 254712345678*',
+                text: '⚠️ Cannot block a group or newsletter.',
             }, { quoted: msg });
         }
 
-        // Resolve using the same comprehensive logic as getjid
         const target = await resolveJid(sock, rawTarget);
         console.log(`[BLOCK] rawTarget=${rawTarget} → resolved=${target}`);
 
-        // Guard: cannot block self
         const botNum = (sock.user?.id || '').split(':')[0].split('@')[0];
         const targetNum = (target || '').split('@')[0];
         if (botNum && targetNum && botNum === targetNum) {
@@ -100,40 +95,22 @@ export default {
 
         if (!target || target.endsWith('@lid')) {
             return sock.sendMessage(key.remoteJid, {
-                text: `⚠️ Could not resolve this user to a phone number.\n\nTry using the number directly:\n*/block 254712345678*`,
+                text: `⚠️ Could not resolve this user.\n\nTry the number directly:\n*/block 254712345678*`,
             }, { quoted: msg });
         }
 
-        // Try phone JID first, raw JID as last-resort fallback only if different
-        const attempts = [target];
-        if (rawTarget !== target && !rawTarget.endsWith('@lid')) attempts.push(rawTarget);
-
-        let blocked = false;
-        let lastErr = null;
-
-        for (const jid of attempts) {
-            try {
-                console.log(`[BLOCK] Attempting: ${jid}`);
-                await tryBlock(sock, jid);
-                blocked = true;
-                console.log(`[BLOCK] Success: ${jid}`);
-                break;
-            } catch (err) {
-                console.error(`[BLOCK] Failed (${jid}):`, err?.message || err);
-                lastErr = err;
-            }
+        // PRIMARY: add to bot-side blocklist immediately
+        if (typeof globalThis.addBlockedUser === 'function') {
+            globalThis.addBlockedUser(target);
         }
 
-        await delay(500);
-        if (blocked) {
-            const num = target.split('@')[0];
-            await sock.sendMessage(key.remoteJid, {
-                text: `🕸️ *Blocked successfully.*\n\n❌ +${num} has been blocked.`,
-            }, { quoted: msg });
-        } else {
-            await sock.sendMessage(key.remoteJid, {
-                text: `⚠️ Block failed.\n\n_Error: ${lastErr?.message || 'Unknown'}_\n\nMake sure the number exists on WhatsApp.`,
-            }, { quoted: msg });
-        }
+        // BACKGROUND: attempt WA-level block (best-effort, may not work for all accounts)
+        tryWaBlock(sock, target).catch(() => {});
+
+        await delay(400);
+        const num = target.split('@')[0];
+        await sock.sendMessage(key.remoteJid, {
+            text: `🕸️ *Blocked.*\n\n❌ +${num} is now blocked.\n_The bot will ignore all messages from this user._`,
+        }, { quoted: msg });
     },
 };
