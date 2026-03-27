@@ -6664,24 +6664,33 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                             } else {
                                                 // 2. Try LID → phone cache
                                                 const cachedPhone = lidPhoneCache.get(senderClean) || getPhoneFromLid(senderClean);
-                                                kickJid = cachedPhone ? `${cachedPhone}@s.whatsapp.net` : senderJid;
+                                                // If still unresolvable, set null — do NOT fall back to @lid (WhatsApp rejects it)
+                                                kickJid = cachedPhone ? `${cachedPhone}@s.whatsapp.net` : null;
                                             }
                                         } else {
                                             kickJid = `${senderClean}@s.whatsapp.net`;
                                         }
-                                        const kickDisplay = kickJid.split('@')[0];
-                                        try {
-                                            await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                        if (!kickJid) {
+                                            // LID unresolvable — message was already deleted above; warn group
+                                            UltraCleanLogger.warning(`🔗 ANTILINK: LID unresolvable for ${senderClean}, kick skipped`);
                                             await sock.sendMessage(chatJid, {
-                                                text: `🚫 @${kickDisplay} has been removed for sharing links.`,
-                                                mentions: [kickJid]
-                                            });
-                                        } catch (kickErr) {
-                                            UltraCleanLogger.warning(`🔗 ANTILINK kick failed for ${kickJid}: ${kickErr.message}`);
-                                            await sock.sendMessage(chatJid, {
-                                                text: `⚠️ Failed to remove @${kickDisplay}. Check my admin permissions.`,
-                                                mentions: [kickJid]
+                                                text: `⚠️ Link detected and deleted. User identity not yet resolved — kick skipped. Try again after they send another message.`
                                             }).catch(() => {});
+                                        } else {
+                                            const kickDisplay = kickJid.split('@')[0];
+                                            try {
+                                                await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                                await sock.sendMessage(chatJid, {
+                                                    text: `🚫 @${kickDisplay} has been removed for sharing links.`,
+                                                    mentions: [kickJid]
+                                                });
+                                            } catch (kickErr) {
+                                                UltraCleanLogger.warning(`🔗 ANTILINK kick failed for ${kickJid}: ${kickErr.message}`);
+                                                await sock.sendMessage(chatJid, {
+                                                    text: `⚠️ Failed to remove @${kickDisplay}. Make sure I have admin permissions.`,
+                                                    mentions: [kickJid]
+                                                }).catch(() => {});
+                                            }
                                         }
                                     }
 

@@ -32,6 +32,57 @@ function cleanJid(jid) {
     return clean.includes('@') ? clean : clean + '@s.whatsapp.net';
 }
 
+// Find a participant accounting for LID ↔ phone JID mismatch.
+// Status messages arrive with phone JIDs but group metadata may store LIDs.
+function findParticipant(participants, senderJid) {
+    const clean = cleanJid(senderJid);
+    // 1. Exact match (most common case)
+    const direct = participants.find(p => cleanJid(p.id) === clean);
+    if (direct) return direct;
+    // 2. Numeric-part match — covers @s.whatsapp.net vs device-qualified JIDs
+    const senderNum = clean.split('@')[0];
+    for (const p of participants) {
+        const pNum = p.id.split(':')[0].split('@')[0];
+        if (pNum === senderNum) return p;
+    }
+    // 3. LID ↔ phone cross-resolution via globalThis cache
+    const lidPhoneCache = globalThis.lidPhoneCache;
+    const phoneLidCache = globalThis.phoneLidCache;
+    if (lidPhoneCache || phoneLidCache) {
+        for (const p of participants) {
+            const pClean = cleanJid(p.id);
+            if (pClean.endsWith('@lid') && lidPhoneCache) {
+                // participant is a LID — resolve to phone and compare
+                const phone = lidPhoneCache.get(pClean.split('@')[0]);
+                if (phone && phone === senderNum) return p;
+            } else if (phoneLidCache && !pClean.endsWith('@lid')) {
+                // participant is a phone JID — check if sender's phone maps to a LID we hold
+                const lid = phoneLidCache.get(senderNum);
+                if (lid && (pClean.split('@')[0] === lid)) return p;
+            }
+        }
+    }
+    return null;
+}
+
+// Resolve a participant's JID to a kickable phone JID.
+// WhatsApp rejects groupParticipantsUpdate with @lid addresses.
+function resolveKickJid(participant, cleanSender) {
+    // If sender itself is a phone JID, use it directly
+    if (cleanSender && !cleanSender.endsWith('@lid')) return cleanSender;
+    // Try phoneNumber field on participant object
+    const pn = participant?.phoneNumber ? String(participant.phoneNumber).replace(/[^0-9]/g, '') : null;
+    if (pn) return `${pn}@s.whatsapp.net`;
+    // Try LID → phone cache
+    const lidNum = (participant?.id || cleanSender || '').split(':')[0].split('@')[0];
+    const lidPhoneCache = globalThis.lidPhoneCache;
+    if (lidPhoneCache) {
+        const phone = lidPhoneCache.get(lidNum);
+        if (phone) return `${phone}@s.whatsapp.net`;
+    }
+    return null; // unresolvable
+}
+
 export function getAntiStatusMentionConfig(groupId) {
     const config = loadConfig();
     return config[groupId] || null;
@@ -175,13 +226,14 @@ async function processGroupMention(sock, groupId, cleanSender, userName) {
     let isGroupMember = false;
     let isAdmin = false;
     let metadata;
+    let foundParticipant = null;
 
     try {
         metadata = await sock.groupMetadata(groupId);
-        const participant = metadata.participants.find(p => cleanJid(p.id) === cleanSender);
-        if (participant) {
+        foundParticipant = findParticipant(metadata.participants, cleanSender);
+        if (foundParticipant) {
             isGroupMember = true;
-            isAdmin = participant.admin === 'admin' || participant.admin === 'superadmin';
+            isAdmin = foundParticipant.admin === 'admin' || foundParticipant.admin === 'superadmin';
         }
     } catch {
         return;
@@ -219,19 +271,28 @@ async function processGroupMention(sock, groupId, cleanSender, userName) {
 
         case 'kick': {
             if (warningCount >= (groupConfig.maxWarnings || 1)) {
+                const kickJid = resolveKickJid(foundParticipant, cleanSender);
+                if (!kickJid) {
+                    // LID unresolvable — warn group honestly instead of failing silently
+                    await sock.sendMessage(groupId, {
+                        text: `⚠️ *Status Mention Detected*\n\n@${userName} should be removed but their identity could not be resolved yet.\n\n📋 Violations: *${warningCount}* — Try again after they send a message in the group.`,
+                        mentions: [cleanSender]
+                    }).catch(() => {});
+                } else {
                 try {
                     await sock.sendMessage(groupId, {
                         text: `🚨 *Auto-Kick: Status Mention*\n\n@${userName} has been removed for mentioning this group in their WhatsApp status.\n\n📋 Violations: *${warningCount}*`,
-                        mentions: [cleanSender]
+                        mentions: [kickJid]
                     });
-                    await sock.groupParticipantsUpdate(groupId, [cleanSender], 'remove');
+                    await sock.groupParticipantsUpdate(groupId, [kickJid], 'remove');
                     delete groupConfig.warnings[cleanSender];
                     console.log(`[ANTISTATUSMENTION] Kicked ${userName} from ${groupId.split('@')[0]}`);
                 } catch (kickErr) {
                     await sock.sendMessage(groupId, {
-                        text: `❌ Failed to remove @${userName}. I may not have admin permissions.`,
-                        mentions: [cleanSender]
+                        text: `❌ Failed to remove @${userName}. Make sure I have admin permissions.`,
+                        mentions: [kickJid]
                     });
+                }
                 }
             } else {
                 await sock.sendMessage(groupId, {
