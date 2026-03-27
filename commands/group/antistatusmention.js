@@ -310,7 +310,7 @@ async function processGroupMention(sock, groupId, cleanSender, userName) {
 
 export default {
     name: 'antistatusmention',
-    alias: ['asm', 'antistatusm', 'gsm', 'groupstatusmention'],
+    alias: ['asm', 'antistatusm', 'gsm', 'groupstatusmention', 'antigroupstatusmention'],
     category: 'group',
     description: 'Detect and take action when someone mentions the group in their WhatsApp status',
     groupOnly: true,
