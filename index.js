@@ -6555,14 +6555,24 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         try {
                             const _im = _pg.message?.imageMessage || _pg.message?.videoMessage;
                             if (_im) {
-                                const _safe = {};
-                                for (const [k, v] of Object.entries(_im)) {
-                                    if (typeof v === 'function') continue;
-                                    if (v instanceof Uint8Array || Buffer.isBuffer(v)) { _safe[k] = `<buf${v.length}>`; continue; }
-                                    if (typeof v === 'object' && v !== null) { try { _safe[k] = JSON.stringify(v); } catch { _safe[k] = '[obj]'; } continue; }
-                                    _safe[k] = v;
-                                }
-                                originalConsoleMethods.log(`🔍 [AV-STRUCT-IM] ${JSON.stringify(_safe)}`);
+                                // Probe specific proto fields directly (bypass Object.entries getter issue)
+                                const _probe = {
+                                    viewOnce:          _im.viewOnce,
+                                    viewOnceType:      typeof _im.viewOnce,
+                                    mediaKey:          _im.mediaKey ? `<buf${_im.mediaKey.length}>` : null,
+                                    fileEncSha256:     _im.fileEncSha256 ? `<buf${_im.fileEncSha256.length}>` : null,
+                                    mediaKeyTimestamp: _im.mediaKeyTimestamp,
+                                    fileSha256:        _im.fileSha256 ? `<buf${_im.fileSha256.length}>` : null,
+                                    mimetype:          _im.mimetype,
+                                    caption:           _im.caption,
+                                    height:            _im.height,
+                                    width:             _im.width,
+                                };
+                                // Also dump ALL own + inherited enumerable keys to catch hidden fields
+                                const _allKeys = [];
+                                for (const k in _im) { if (typeof _im[k] !== 'function') _allKeys.push(k); }
+                                _probe._allKeys = _allKeys.join(',');
+                                originalConsoleMethods.log(`🔍 [AV-STRUCT-IM] ${JSON.stringify(_probe)}`);
                             }
                         } catch {}
                     }
