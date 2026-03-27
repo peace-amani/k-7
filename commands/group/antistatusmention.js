@@ -130,7 +130,7 @@ export async function handleStatusMention(sock, msg) {
             console.log(`⚠️ [GSM]    └─ GSM data: ${JSON.stringify(gsmMsg).substring(0, 300)}`);
 
             if (groupId?.endsWith('@g.us')) {
-                await processGroupMention(sock, groupId, cleanSender, userName);
+                await processGroupMention(sock, groupId, cleanSender, userName, msg);
             } else {
                 console.log(`⚠️ [GSM] No @g.us group found in GSM payload, logging only`);
             }
@@ -208,14 +208,14 @@ export async function handleStatusMention(sock, msg) {
         console.log(`⚠️ [GSM] Processing ${mentionedGroups.length} group mention(s) from ${userName}`);
 
         for (const groupId of mentionedGroups) {
-            await processGroupMention(sock, groupId, cleanSender, userName);
+            await processGroupMention(sock, groupId, cleanSender, userName, msg);
         }
     } catch (err) {
         console.error('[ANTISTATUSMENTION] Handler error:', err.message);
     }
 }
 
-async function processGroupMention(sock, groupId, cleanSender, userName) {
+async function processGroupMention(sock, groupId, cleanSender, userName, msg) {
     const config = loadConfig();
     const groupConfig = config[groupId];
     if (!groupConfig || !groupConfig.enabled) {
@@ -262,8 +262,21 @@ async function processGroupMention(sock, groupId, cleanSender, userName) {
         }
 
         case 'delete': {
+            try {
+                await sock.sendMessage(groupId, {
+                    delete: {
+                        remoteJid: groupId,
+                        id: msg?.key?.id,
+                        participant: msg?.key?.participant,
+                        fromMe: false
+                    }
+                });
+                console.log(`🗑️ [GSM] Deleted groupStatusMentionMessage from ${userName} in ${groupId.split('@')[0]}`);
+            } catch (delErr) {
+                console.error('[GSM] Delete failed:', delErr.message);
+            }
             await sock.sendMessage(groupId, {
-                text: `🚫 *Status Mention Detected*\n\n@${userName} mentioned this group in their WhatsApp status.\n\n⚡ Warning: *${warningCount}/${groupConfig.maxWarnings || 3}*${warningCount >= (groupConfig.maxWarnings || 3) ? '\n\n🚨 _Next violation may result in removal!_' : ''}`,
+                text: `🚫 *Status Mention Deleted*\n\n@${userName} mentioned this group in their WhatsApp status — message removed.\n\n⚡ Warning: *${warningCount}/${groupConfig.maxWarnings || 3}*${warningCount >= (groupConfig.maxWarnings || 3) ? '\n\n🚨 _Next violation may result in removal!_' : ''}`,
                 mentions: [cleanSender]
             });
             break;
