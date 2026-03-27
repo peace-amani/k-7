@@ -341,7 +341,7 @@ export default {
                 text += `├─⊷ *${prefix}sr view+react*\n│  └⊷ View then react\n`;
                 text += `├─⊷ *${prefix}sr react-only*\n│  └⊷ React without viewing\n`;
                 text += `├─⊷ *${prefix}sr random*\n│  └⊷ Random emoji mode\n`;
-                text += `├─⊷ *${prefix}sr setrandom <emojis...>*\n│  └⊷ Set random emoji pool\n`;
+                text += `├─⊷ *${prefix}sr setrandom 😂,🫡,🔥*\n│  └⊷ Set random emoji pool (comma-separated)\n`;
                 text += `├─⊷ *${prefix}sr emoji <emoji>*\n│  └⊷ Set fixed emoji\n`;
                 text += `├─⊷ *${prefix}sr stats*\n│  └⊷ Statistics\n`;
                 text += `╰⊷ *Powered by ${getBotName().toUpperCase()}*`;
@@ -421,15 +421,15 @@ export default {
 
                 case 'setrandom': case 'setemojis': case 'setpool': {
                     if (!isOwner) { await reply("❌ Owner only!"); return; }
-                    const inputEmojis = args.slice(1);
+                    const inputEmojis = args.slice(1).join(' ').split(',').map(e => e.trim()).filter(Boolean);
                     if (!inputEmojis.length) {
                         await reply(
                             `╭─⌈ 🎲 *SETRANDOM* ⌋\n│\n` +
                             `├─⊷ Sets the full random emoji pool\n│\n` +
-                            `├─⊷ *Usage:*\n│  └⊷ ${prefix}sr setrandom 🐺 ❤️ 🔥 💯 🎉\n│\n` +
+                            `├─⊷ *Usage:*\n│  └⊷ ${prefix}sr setrandom 🐺,❤️,🔥,💯,🎉\n│\n` +
                             `├─⊷ *Current pool (${autoReactManager.reactions.length}):*\n` +
                             `│  └⊷ ${autoReactManager.reactions.join(' ')}\n│\n` +
-                            `╰⊷ Separate each emoji with a space`
+                            `╰⊷ Separate each emoji with a comma`
                         );
                         return;
                     }
@@ -444,7 +444,7 @@ export default {
                         }
                     }
                     if (!valid.length) {
-                        await reply(`❌ No valid emojis found.\n\nUsage: *${prefix}sr setrandom 🐺 ❤️ 🔥 💯*\nSeparate each emoji with a space.`);
+                        await reply(`❌ No valid emojis found.\n\nUsage: *${prefix}sr setrandom 🐺,❤️,🔥,💯*\nSeparate each emoji with a comma.`);
                         return;
                     }
                     autoReactManager.config.reactions = valid;
