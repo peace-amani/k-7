@@ -7095,12 +7095,15 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 const _voDebugKeys = Object.keys(msg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
                 const _hasVoHint = _voDebugKeys.some(k => k.toLowerCase().includes('viewonce') || k === 'imageMessage' || k === 'videoMessage' || k === 'audioMessage');
                 if (_hasVoHint) {
-                    console.log(`[AV-DEBUG] Potential VO msg keys: ${_voDebugKeys.join(', ')} | fromMe: ${msg.key?.fromMe}`);
-                }
-                if (detectViewOnceMedia(msg.message)) {
-                    handleViewOnceDetection(sock, msg).catch(err => {
-                        originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
-                    });
+                    const _voResult = detectViewOnceMedia(msg.message);
+                    const _imgVo = msg.message?.imageMessage?.viewOnce;
+                    const _vidVo = msg.message?.videoMessage?.viewOnce;
+                    console.log(`[AV-DEBUG] keys=${_voDebugKeys.join(',')} fromMe=${msg.key?.fromMe} detected=${!!_voResult} imgVO=${_imgVo} vidVO=${_vidVo}`);
+                    if (_voResult) {
+                        handleViewOnceDetection(sock, msg).catch(err => {
+                            originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
+                        });
+                    }
                 }
             }
 
@@ -7893,9 +7896,11 @@ async function handleViewOnceDetection(sock, msg) {
             enabled = config.mode !== 'off' && (config.mode || config.enabled);
             deliveryMode = config.mode === 'public' ? 'chat' : 'private';
         }
+        console.log(`[AV-HANDLER] enabled=${enabled} mode=${deliveryMode} ownerJid=${config.ownerJid || 'unset'} gc=${JSON.stringify(config.gc)} pm=${JSON.stringify(config.pm)}`);
         if (!enabled) return;
 
         const viewOnce = detectViewOnceMedia(rawMessage);
+        console.log(`[AV-HANDLER] detectViewOnceMedia result=${JSON.stringify(viewOnce ? { type: viewOnce.type, hasMedia: !!viewOnce.media } : null)}`);
         if (!viewOnce) return;
 
         const { type, media, useMessageDownload } = viewOnce;
