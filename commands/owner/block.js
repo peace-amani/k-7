@@ -27,8 +27,9 @@ async function tryBlock(sock, jid) {
 
     // Strategy 3: sendNode — fire-and-forget, bypasses ACK timeout
     if (typeof sock.sendNode === 'function') {
-        const { generateMessageTag } = await import('@whiskeysockets/baileys');
-        node.attrs.id = generateMessageTag();
+        node.attrs.id = typeof sock.generateMessageTag === 'function'
+            ? sock.generateMessageTag()
+            : `block-${Date.now()}`;
         await sock.sendNode(node);
         return;
     }
