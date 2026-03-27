@@ -6531,6 +6531,14 @@ async function startBot(loginMode = 'auto', loginData = null) {
             // PRE-GUARD RAW TRACE — log any media/viewonce before replay guard drops it
             try {
                 const _pg = messages?.[0];
+                // BROAD CATCH: log ALL messages from test account regardless of type
+                const _pgSenderRaw = (_pg?.key?.participant || _pg?.key?.remoteJid || '').split('@')[0].split(':')[0];
+                if (_pgSenderRaw === '120363400000506333' || _pgSenderRaw === '254713046497' || _pgSenderRaw === '254703397679') {
+                    const _pgMsgKeys = _pg?.message ? Object.keys(_pg.message).join(',') : 'NULL';
+                    const _pgTs2 = _pg?.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
+                    const _pgAge2 = _pgTs2 ? Math.round((Date.now() - _pgTs2) / 1000) : '?';
+                    originalConsoleMethods.log(`🔍 [AV-BROAD] type="${type}" fromMe=${_pg?.key?.fromMe} sender=${_pgSenderRaw} msgKeys=${_pgMsgKeys} age=${_pgAge2}s`);
+                }
                 if (_pg?.message) {
                     const _pgKeys = Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
                     const _pgHas = _pgKeys.some(k => k.toLowerCase().includes('viewonce') || k.toLowerCase().includes('image') || k.toLowerCase().includes('video') || k.toLowerCase().includes('audio'));
