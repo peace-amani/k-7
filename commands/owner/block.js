@@ -1,40 +1,9 @@
-import { delay } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
 import { resolveJid } from '../tools/getjid.js';
 
-async function tryWaBlock(sock, jid) {
-    const listNode = {
-        tag: 'iq',
-        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
-        content: [{ tag: 'list', attrs: { action: 'block' }, content: [{ tag: 'item', attrs: { jid } }] }],
-    };
-    try {
-        await sock.query(listNode);
-        return true;
-    } catch (e1) {
-        const msg = e1?.message || '';
-        if (msg === 'bad-request') return false;
-        console.log(`[BLOCK] IQ list-format: ${msg}`);
-    }
-    try {
-        await sock.updateBlockStatus(jid, 'block');
-        return true;
-    } catch (e2) {
-        const msg = e2?.message || '';
-        if (msg === 'bad-request') return false;
-        console.log(`[BLOCK] updateBlockStatus: ${msg}`);
-    }
-    if (typeof sock.sendNode === 'function') {
-        listNode.attrs.id = typeof sock.generateMessageTag === 'function'
-            ? sock.generateMessageTag() : `block-${Date.now()}`;
-        await sock.sendNode(listNode).catch(() => {});
-    }
-    return false;
-}
-
 export default {
     name: 'block',
-    description: 'Block a user — bot will ignore them and attempts WA-level block',
+    description: 'Block a user from using the bot + manual WhatsApp block guidance',
     category: 'owner',
     async execute(sock, msg, args) {
         const { key, message } = msg;
@@ -46,12 +15,12 @@ export default {
                 ? globalThis.getBotBlocklist() : [];
             if (list.length === 0) {
                 return sock.sendMessage(key.remoteJid, {
-                    text: `╭─⌈ 🕸️ *BLOCK LIST* ⌋\n│\n╰⊷ No users blocked yet.`,
+                    text: `╭─⌈ 🕸️ *BOT BLOCK LIST* ⌋\n│\n╰⊷ No users blocked yet.`,
                 }, { quoted: msg });
             }
             const lines = list.map((n, i) => `├─⊷ ${i + 1}. +${n}`).join('\n');
             return sock.sendMessage(key.remoteJid, {
-                text: `╭─⌈ 🕸️ *BLOCK LIST* ⌋\n│\n${lines}\n╰⊷ Total: ${list.length}`,
+                text: `╭─⌈ 🕸️ *BOT BLOCK LIST* ⌋\n│\n${lines}\n╰⊷ Total: ${list.length}`,
             }, { quoted: msg });
         }
 
@@ -83,7 +52,6 @@ export default {
         }
 
         const target = await resolveJid(sock, rawTarget);
-        console.log(`[BLOCK] rawTarget=${rawTarget} → resolved=${target}`);
 
         const botNum = (sock.user?.id || '').split(':')[0].split('@')[0];
         const targetNum = (target || '').split('@')[0];
@@ -99,18 +67,21 @@ export default {
             }, { quoted: msg });
         }
 
-        // PRIMARY: add to bot-side blocklist immediately
+        // Add to bot-side blocklist — bot will completely ignore this user
         if (typeof globalThis.addBlockedUser === 'function') {
             globalThis.addBlockedUser(target);
         }
 
-        // BACKGROUND: attempt WA-level block (best-effort, may not work for all accounts)
-        tryWaBlock(sock, target).catch(() => {});
-
-        await delay(400);
         const num = target.split('@')[0];
         await sock.sendMessage(key.remoteJid, {
-            text: `🕸️ *Blocked.*\n\n❌ +${num} is now blocked.\n_The bot will ignore all messages from this user._`,
+            text: `🕸️ *Bot Block Applied*\n\n` +
+                `❌ *+${num}* is now blocked from the bot.\n` +
+                `_The bot will ignore all messages and commands from this user._\n\n` +
+                `⚠️ *Note:* Due to WhatsApp API limitations, a full WhatsApp-level block\n` +
+                `_(calls, messages, profile)_ cannot be done through the bot.\n\n` +
+                `👉 *To fully block on WhatsApp:*\n` +
+                `Open their chat → Tap name → *Block*\n` +
+                `Or: *Settings → Privacy → Blocked Contacts → Add*`,
         }, { quoted: msg });
     },
 };

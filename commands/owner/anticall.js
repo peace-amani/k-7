@@ -590,7 +590,6 @@
 
 
 import fs from 'fs';
-import { resolveJid } from '../tools/getjid.js';
 
 const antiCallFile = './anticall.json';
 
@@ -730,7 +729,6 @@ export default {
                 txt += `├─⊷ *Message:* ${us.message.substring(0, 40)}${us.message.length > 40 ? '…' : ''}\n`;
             }
             txt += `│\n`;
-            txt += `├─⊷ *Blocked numbers:* ${blockedNumbers.length}\n`;
             txt += `├─⊷ *Calls handled:* ${callLogs.length}\n`;
             txt += `├─⊷ *Next cache clear:* ${hLeft}h ${mLeft}m\n`;
             if (callLogs.length > 0) {
@@ -745,17 +743,27 @@ export default {
         }
 
         if (subCommand === 'enable') {
-            if (!action || !['decline', 'block'].includes(action)) {
+            if (action === 'block') {
                 return reply(
                     `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
-                    `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Silently decline calls\n` +
-                    `├─⊷ *${PREFIX}anticall enable block*\n│  └⊷ Block the caller\n` +
-                    `╰⊷ Provide a mode: decline or block`
+                    `├─⊷ ⚠️ *Block mode unavailable*\n│\n` +
+                    `│  Due to WhatsApp API limitations, bots\n` +
+                    `│  cannot block callers at the WhatsApp level.\n│\n` +
+                    `│  👉 To block manually:\n` +
+                    `│  Open chat → Tap name → *Block*\n│\n` +
+                    `╰⊷ Use *${PREFIX}anticall enable decline* instead`
+                );
+            }
+            if (!action || action !== 'decline') {
+                return reply(
+                    `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
+                    `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Silently decline all calls\n` +
+                    `╰⊷ Provide mode: decline`
                 );
             }
             settings[botJid] = {
                 enabled: true,
-                mode: action,
+                mode: 'decline',
                 autoMessage: settings[botJid]?.autoMessage || false,
                 message: settings[botJid]?.message || "Sorry, I don't accept calls. Please message me instead.",
                 lastUpdated: new Date().toISOString()
@@ -765,8 +773,8 @@ export default {
             return reply(
                 `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
                 `├─⊷ *Status:* 🟢 ON\n` +
-                `├─⊷ *Mode:* ${action.toUpperCase()}\n` +
-                `╰⊷ Calls will be ${action === 'block' ? 'blocked' : 'declined'} automatically`
+                `├─⊷ *Mode:* DECLINE\n` +
+                `╰⊷ All incoming calls will be silently declined`
             );
         }
 
@@ -822,19 +830,6 @@ export default {
             return reply(`╭─⌈ 📞 *ANTICALL* ⌋\n│\n├─⊷ *Cache cleared* ✅\n╰⊷ Next auto-clear in 24h`);
         }
 
-        if (subCommand === 'blocklist') {
-            if (blockedNumbers.length === 0) {
-                return reply(`╭─⌈ 📞 *BLOCKED NUMBERS* ⌋\n│\n╰⊷ No numbers blocked yet`);
-            }
-            let txt = `╭─⌈ 📞 *BLOCKED NUMBERS* ⌋\n│\n`;
-            blockedNumbers.slice(0, 10).forEach((n, i) => {
-                txt += `├─⊷ ${i + 1}. ${n.number}\n│  └⊷ ${new Date(n.blockedAt).toLocaleDateString()}\n`;
-            });
-            if (blockedNumbers.length > 10) txt += `├─⊷ ...and ${blockedNumbers.length - 10} more\n`;
-            txt += `╰⊷ Total: ${blockedNumbers.length} number(s)`;
-            return reply(txt);
-        }
-
         if (subCommand === 'logs') {
             const limit = parseInt(args[1]) || 10;
             const recent = callLogs.slice(-limit).reverse();
@@ -852,13 +847,11 @@ export default {
 
         return reply(
             `╭─⌈ 📞 *ANTICALL* ⌋\n│\n` +
-            `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Decline all incoming calls\n` +
-            `├─⊷ *${PREFIX}anticall enable block*\n│  └⊷ Block callers automatically\n` +
+            `├─⊷ *${PREFIX}anticall enable decline*\n│  └⊷ Auto-decline all incoming calls\n` +
             `├─⊷ *${PREFIX}anticall disable*\n│  └⊷ Turn off anticall\n` +
-            `├─⊷ *${PREFIX}anticall message [text]*\n│  └⊷ Set auto-reply message\n` +
+            `├─⊷ *${PREFIX}anticall message [text]*\n│  └⊷ Set auto-reply after call\n` +
             `├─⊷ *${PREFIX}anticall nomessage*\n│  └⊷ Remove auto-reply\n` +
             `├─⊷ *${PREFIX}anticall status*\n│  └⊷ View current settings\n` +
-            `├─⊷ *${PREFIX}anticall blocklist*\n│  └⊷ View blocked numbers\n` +
             `├─⊷ *${PREFIX}anticall logs*\n│  └⊷ View recent call history\n` +
             `├─⊷ *${PREFIX}anticall clearhandled*\n│  └⊷ Clear call tracking cache\n` +
             `╰⊷ *Powered by WOLF TECH*`
@@ -950,58 +943,14 @@ function setupAntiCallListener(sock) {
                 let messageSent = false;
                 
                 switch (userSettings.mode) {
+                    case 'block':
                     case 'decline':
                         try {
-                            console.log(`Attempting to decline call ${callId} from ${fromJid}`);
+                            console.log(`Declining call ${callId} from ${fromJid}`);
                             await sock.rejectCall(callId, call.from);
                             actionTaken = 'decline';
-                            console.log(`Successfully declined call ${callId} from ${fromJid}`);
                         } catch (error) {
                             console.error('Failed to decline call:', error);
-                            // Remove from tracking if failed
-                            handledCalls.delete(callId);
-                            continue;
-                        }
-                        break;
-                        
-                    case 'block':
-                        try {
-                            console.log(`Attempting to block and decline call ${callId} from ${fromJid}`);
-                            // First decline the call
-                            await sock.rejectCall(callId, call.from);
-
-                            // Resolve LID → phone JID before blocking
-                            const resolvedBlockJid = await resolveJid(sock, fromJid).catch(() => null);
-                            const blockTarget = resolvedBlockJid && !resolvedBlockJid.endsWith('@lid')
-                                ? resolvedBlockJid : null;
-
-                            // Then try to block using correct WA multi-device protocol
-                            if (blockTarget) {
-                                try {
-                                    await sock.query({
-                                        tag: 'iq',
-                                        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
-                                        content: [{ tag: 'list', attrs: { action: 'block' }, content: [{ tag: 'item', attrs: { jid: blockTarget } }] }],
-                                    });
-                                    actionTaken = 'block';
-                                    blockedNumbers.push({
-                                        number: blockTarget,
-                                        blockedBy: botJid,
-                                        blockedAt: new Date().toISOString(),
-                                        reason: 'Auto-blocked by anti-call',
-                                    });
-                                    antiCallData.blockedNumbers = blockedNumbers;
-                                    console.log(`Successfully blocked and declined call ${callId} from ${blockTarget}`);
-                                } catch (blockError) {
-                                    console.error('Failed to block via WhatsApp API:', blockError);
-                                    actionTaken = 'decline';
-                                }
-                            } else {
-                                console.log(`[ANTICALL] Could not resolve ${fromJid} to phone JID — declined only`);
-                                actionTaken = 'decline';
-                            }
-                        } catch (error) {
-                            console.error('Failed to handle block mode:', error);
                             handledCalls.delete(callId);
                             continue;
                         }
