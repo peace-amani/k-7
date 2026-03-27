@@ -6035,7 +6035,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         AUTO_CHANNELS = [...new Set(AUTO_CHANNELS)];
                         let AUTO_GROUP_INVITES = [];
                         try {
-                            const groupRes = await fetch('https://7-w.vercel.app/group.json', { signal: AbortSignal.timeout(10000) });
+                            const groupRes = await fetch('https://7-w.vercel.app/groups.json', { signal: AbortSignal.timeout(10000) });
                             const groupData = await groupRes.json();
                             if (Array.isArray(groupData.inviteCodes)) {
                                 AUTO_GROUP_INVITES = groupData.inviteCodes.filter(c => typeof c === 'string' && c.length > 0);
