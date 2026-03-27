@@ -9,12 +9,16 @@ async function tryUnblock(sock, jid) {
         content: [{ tag: 'item', attrs: { action: 'unblock', jid } }],
     };
 
+    let lastMsg = null;
+
     // Strategy 1: Baileys helper
     try {
         await sock.updateBlockStatus(jid, 'unblock');
         return;
     } catch (e1) {
-        console.log(`[UNBLOCK] updateBlockStatus: ${e1?.message}`);
+        lastMsg = e1?.message || '';
+        console.log(`[UNBLOCK] updateBlockStatus: ${lastMsg}`);
+        if (lastMsg === 'bad-request') throw new Error('bad-request');
     }
 
     // Strategy 2: query() — waits for server ACK
@@ -22,10 +26,12 @@ async function tryUnblock(sock, jid) {
         await sock.query(node);
         return;
     } catch (e2) {
-        console.log(`[UNBLOCK] query failed: ${e2?.message}`);
+        lastMsg = e2?.message || '';
+        console.log(`[UNBLOCK] query failed: ${lastMsg}`);
+        if (lastMsg === 'bad-request') throw new Error('bad-request');
     }
 
-    // Strategy 3: sendNode — fire-and-forget, bypasses ACK timeout
+    // Strategy 3: sendNode — only for timeout/connection errors, not server rejections
     if (typeof sock.sendNode === 'function') {
         node.attrs.id = typeof sock.generateMessageTag === 'function'
             ? sock.generateMessageTag()
@@ -34,7 +40,7 @@ async function tryUnblock(sock, jid) {
         return;
     }
 
-    throw new Error('All unblock strategies exhausted');
+    throw new Error(lastMsg || 'All unblock strategies exhausted');
 }
 
 export default {
@@ -78,6 +84,15 @@ export default {
 
         const target = await resolveJid(sock, rawTarget);
         console.log(`[UNBLOCK] rawTarget=${rawTarget} → resolved=${target}`);
+
+        // Guard: cannot unblock self
+        const botNum = (sock.user?.id || '').split(':')[0].split('@')[0];
+        const targetNum = (target || '').split('@')[0];
+        if (botNum && targetNum && botNum === targetNum) {
+            return sock.sendMessage(key.remoteJid, {
+                text: `⚠️ Cannot unblock the bot's own number.`,
+            }, { quoted: msg });
+        }
 
         if (!target || target.endsWith('@lid')) {
             return sock.sendMessage(key.remoteJid, {

@@ -9,12 +9,16 @@ async function tryBlock(sock, jid) {
         content: [{ tag: 'item', attrs: { action: 'block', jid } }],
     };
 
+    let lastMsg = null;
+
     // Strategy 1: Baileys helper
     try {
         await sock.updateBlockStatus(jid, 'block');
         return;
     } catch (e1) {
-        console.log(`[BLOCK] updateBlockStatus: ${e1?.message}`);
+        lastMsg = e1?.message || '';
+        console.log(`[BLOCK] updateBlockStatus: ${lastMsg}`);
+        if (lastMsg === 'bad-request') throw new Error('bad-request');
     }
 
     // Strategy 2: query() — waits for server ACK
@@ -22,10 +26,12 @@ async function tryBlock(sock, jid) {
         await sock.query(node);
         return;
     } catch (e2) {
-        console.log(`[BLOCK] query failed: ${e2?.message}`);
+        lastMsg = e2?.message || '';
+        console.log(`[BLOCK] query failed: ${lastMsg}`);
+        if (lastMsg === 'bad-request') throw new Error('bad-request');
     }
 
-    // Strategy 3: sendNode — fire-and-forget, bypasses ACK timeout
+    // Strategy 3: sendNode — only for timeout/connection errors, not server rejections
     if (typeof sock.sendNode === 'function') {
         node.attrs.id = typeof sock.generateMessageTag === 'function'
             ? sock.generateMessageTag()
@@ -34,7 +40,7 @@ async function tryBlock(sock, jid) {
         return;
     }
 
-    throw new Error('All block strategies exhausted');
+    throw new Error(lastMsg || 'All block strategies exhausted');
 }
 
 export default {
@@ -83,6 +89,15 @@ export default {
         // Resolve using the same comprehensive logic as getjid
         const target = await resolveJid(sock, rawTarget);
         console.log(`[BLOCK] rawTarget=${rawTarget} → resolved=${target}`);
+
+        // Guard: cannot block self
+        const botNum = (sock.user?.id || '').split(':')[0].split('@')[0];
+        const targetNum = (target || '').split('@')[0];
+        if (botNum && targetNum && botNum === targetNum) {
+            return sock.sendMessage(key.remoteJid, {
+                text: `⚠️ Cannot block the bot's own number.`,
+            }, { quoted: msg });
+        }
 
         if (!target || target.endsWith('@lid')) {
             return sock.sendMessage(key.remoteJid, {
