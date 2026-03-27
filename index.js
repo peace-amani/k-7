@@ -6528,6 +6528,21 @@ async function startBot(loginMode = 'auto', loginData = null) {
         // Everything after step 7 is a fast return — handleIncomingMessage owns the
         // full command dispatch pipeline.
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            // PRE-GUARD RAW TRACE — log any media/viewonce before replay guard drops it
+            try {
+                const _pg = messages?.[0];
+                if (_pg?.message) {
+                    const _pgKeys = Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
+                    const _pgHas = _pgKeys.some(k => k.toLowerCase().includes('viewonce') || k.toLowerCase().includes('image') || k.toLowerCase().includes('video') || k.toLowerCase().includes('audio'));
+                    if (_pgHas) {
+                        const _pgSender = (_pg.key?.participant || _pg.key?.remoteJid || '?').split('@')[0].split(':')[0];
+                        const _pgTs = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
+                        const _pgAge = _pgTs ? Math.round((Date.now() - _pgTs) / 1000) : '?';
+                        originalConsoleMethods.log(`🔍 [AV-PRE] type="${type}" fromMe=${_pg.key?.fromMe} sender=${_pgSender} keys=${_pgKeys.join(',')} age=${_pgAge}s`);
+                    }
+                }
+            } catch {}
+
             // ── QuickConnect replay guard — MUST be first ──────────────────────
             // When reconnecting with an old session WhatsApp replays thousands of
             // missed messages in a burst.  Drop them here before anything else runs
