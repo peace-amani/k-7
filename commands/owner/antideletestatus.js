@@ -13,7 +13,7 @@ try { giftedBtnsAds = _requireAds('gifted-btns'); } catch (e) {}
 const CACHE_CLEAN_INTERVAL = 1 * 60 * 60 * 1000;
 const MAX_CACHE_AGE = 3 * 60 * 60 * 1000;
 const MAX_STATUS_AGE_FOR_DOWNLOAD = 30 * 60 * 1000; // skip media older than 30 min (backlog)
-const MAX_CONCURRENT_DOWNLOADS = 2;
+const MAX_CONCURRENT_DOWNLOADS = 3;
 let _activeDownloads = 0;
 
 let statusAntideleteState = {
@@ -264,6 +264,59 @@ function getRealWhatsAppNumber(jid) {
 
 const STARTUP_GRACE_MS = 90 * 1000; // block media downloads for 90s after connect
 
+// On-demand download at delete time (mirrors antidelete.js getMediaBuffer pattern).
+// Called when the pre-downloaded buffer is missing from DB/cache.
+async function getStatusMediaBuffer(statusData) {
+    const rawMessage = statusData.rawMessage;
+    if (!rawMessage) return null;
+
+    const type = statusData.type === 'voice' ? 'audio' : statusData.type;
+    const silentLogger = {
+        level: 'silent', trace: () => {}, debug: () => {}, info: () => {},
+        warn: () => {}, error: () => {}, fatal: () => {}, child: function() { return this; }
+    };
+
+    // Primary: downloadMediaMessage with reupload hook
+    try {
+        const buffer = await Promise.race([
+            downloadMediaMessage(
+                rawMessage,
+                'buffer',
+                {},
+                { logger: silentLogger, reuploadRequest: statusAntideleteState.sock?.updateMediaMessage }
+            ),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 25000))
+        ]);
+        if (buffer && buffer.length > 0) {
+            return { buffer, mimetype: statusData.mimetype };
+        }
+    } catch {}
+
+    // Fallback: downloadContentFromMessage stream
+    try {
+        const inner = rawMessage?.message;
+        if (!inner) return null;
+        const mediaKey = `${type}Message`;
+        const mediaObj = inner[mediaKey];
+        if (!mediaObj) return null;
+        const stream = await Promise.race([
+            downloadContentFromMessage(mediaObj, type),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('dl_timeout')), 25000))
+        ]);
+        const chunks = [];
+        let totalSize = 0;
+        for await (const chunk of stream) {
+            chunks.push(chunk);
+            totalSize += chunk.length;
+            if (totalSize > 20 * 1024 * 1024) break;
+        }
+        const buffer = Buffer.concat(chunks);
+        if (buffer.length > 0) return { buffer, mimetype: statusData.mimetype };
+    } catch {}
+
+    return null;
+}
+
 async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype, statusTimestamp) {
     // Block ALL media downloads during startup flood window
     const _connectedAt = globalThis._botConnectionOpenTime || 0;
@@ -323,7 +376,7 @@ async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype,
     try {
         if (!buffer || buffer.length === 0) return null;
 
-        const maxSize = 2 * 1024 * 1024; // 2MB cap per status (was 5MB)
+        const maxSize = 8 * 1024 * 1024; // 8MB cap — covers most status videos
         if (buffer.length > maxSize) return null;
 
         const timestamp = Date.now();
@@ -464,6 +517,22 @@ export async function statusAntideleteStoreMessage(message) {
 
         const senderNumber = getRealWhatsAppNumber(statusInfo.senderJid);
 
+        // Store a slim raw reference (thumbnail stripped) for on-demand download at delete time
+        let rawMessage = null;
+        if (statusInfo.hasMedia && statusInfo.mediaInfo?.message) {
+            try {
+                const msgCopy = JSON.parse(JSON.stringify(statusInfo.mediaInfo.message));
+                const inner = msgCopy?.message;
+                if (inner) {
+                    for (const k of Object.keys(inner)) {
+                        if (inner[k]?.jpegThumbnail) delete inner[k].jpegThumbnail;
+                        if (inner[k]?.thumbnail) delete inner[k].thumbnail;
+                    }
+                }
+                rawMessage = msgCopy;
+            } catch {}
+        }
+
         const statusData = {
             id: msgId,
             chatJid: msgKey.remoteJid,
@@ -475,7 +544,8 @@ export async function statusAntideleteStoreMessage(message) {
             text: statusInfo.text || '',
             hasMedia: statusInfo.hasMedia,
             mimetype: statusInfo.mimetype,
-            isStatus: true
+            isStatus: true,
+            rawMessage
         };
 
         statusAntideleteState.statusCache.set(msgId, statusData);
@@ -680,6 +750,24 @@ async function sendStatusToOwnerDM(statusData, deletedByNumber) {
             } catch (fetchErr) {
                 console.error('❌ Status Antidelete: DB media fetch error:', fetchErr.message);
             }
+        }
+
+        // On-demand fallback: if DB/cache lookup returned nothing, try live CDN download
+        if (statusData.hasMedia && !mediaCache?.base64) {
+            try {
+                const liveResult = await getStatusMediaBuffer(statusData);
+                if (liveResult?.buffer && liveResult.buffer.length > 0) {
+                    console.log(`📥 [STATUS ANTIDELETE] On-demand fallback succeeded | Type: ${statusData.type} | Size: ${(liveResult.buffer.length/1024/1024).toFixed(2)}MB`);
+                    mediaCache = {
+                        base64: liveResult.buffer.toString('base64'),
+                        type: statusData.type,
+                        mimetype: liveResult.mimetype || statusData.mimetype,
+                        size: liveResult.buffer.length,
+                        isStatus: true,
+                        savedAt: Date.now()
+                    };
+                }
+            } catch {}
         }
 
         if (statusData.hasMedia && mediaCache?.base64) {
