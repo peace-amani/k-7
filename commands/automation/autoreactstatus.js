@@ -341,6 +341,7 @@ export default {
                 text += `├─⊷ *${prefix}sr view+react*\n│  └⊷ View then react\n`;
                 text += `├─⊷ *${prefix}sr react-only*\n│  └⊷ React without viewing\n`;
                 text += `├─⊷ *${prefix}sr random*\n│  └⊷ Random emoji mode\n`;
+                text += `├─⊷ *${prefix}sr setrandom <emojis...>*\n│  └⊷ Set random emoji pool\n`;
                 text += `├─⊷ *${prefix}sr emoji <emoji>*\n│  └⊷ Set fixed emoji\n`;
                 text += `├─⊷ *${prefix}sr stats*\n│  └⊷ Statistics\n`;
                 text += `╰⊷ *Powered by ${getBotName().toUpperCase()}*`;
@@ -415,6 +416,45 @@ export default {
                     if (!isOwner) { await reply("❌ Owner only!"); return; }
                     autoReactManager.setViewMode('react-only');
                     await reply(`🐺 *REACT-ONLY MODE*\n\nWill react without marking as viewed.\nSender will NOT see you in their viewers list.`);
+                    break;
+                }
+
+                case 'setrandom': case 'setemojis': case 'setpool': {
+                    if (!isOwner) { await reply("❌ Owner only!"); return; }
+                    const inputEmojis = args.slice(1);
+                    if (!inputEmojis.length) {
+                        await reply(
+                            `╭─⌈ 🎲 *SETRANDOM* ⌋\n│\n` +
+                            `├─⊷ Sets the full random emoji pool\n│\n` +
+                            `├─⊷ *Usage:*\n│  └⊷ ${prefix}sr setrandom 🐺 ❤️ 🔥 💯 🎉\n│\n` +
+                            `├─⊷ *Current pool (${autoReactManager.reactions.length}):*\n` +
+                            `│  └⊷ ${autoReactManager.reactions.join(' ')}\n│\n` +
+                            `╰⊷ Separate each emoji with a space`
+                        );
+                        return;
+                    }
+                    const valid = [];
+                    const invalid = [];
+                    for (const e of inputEmojis) {
+                        const chars = [...e];
+                        if (chars.length >= 1 && chars.length <= 4 && /\p{Emoji}/u.test(e)) {
+                            if (!valid.includes(e)) valid.push(e);
+                        } else {
+                            invalid.push(e);
+                        }
+                    }
+                    if (!valid.length) {
+                        await reply(`❌ No valid emojis found.\n\nUsage: *${prefix}sr setrandom 🐺 ❤️ 🔥 💯*\nSeparate each emoji with a space.`);
+                        return;
+                    }
+                    autoReactManager.config.reactions = valid;
+                    autoReactManager.setMode('random');
+                    autoReactManager.saveConfigImmediate();
+                    let text = `✅ *RANDOM EMOJI POOL UPDATED*\n\n`;
+                    text += `🎲 Mode: RANDOM\n`;
+                    text += `📦 Pool (${valid.length}): ${valid.join(' ')}\n`;
+                    if (invalid.length) text += `\n⚠️ Skipped (not emoji): ${invalid.join(' ')}`;
+                    await reply(text);
                     break;
                 }
 
