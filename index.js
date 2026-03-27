@@ -5935,6 +5935,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     isConflictRecovery = false;
                 }, 300000);
                 startHeartbeat(sock);
+                import('./commands/owner/online.js').then(m => m.initPresence?.(sock)).catch(() => {});
                 setupAntiGroupStatusListener(sock);
                 setTimeout(() => {
                     if (isConnected && !isConflictRecovery) handleSuccessfulConnection(sock, loginMode, loginData).catch(() => {});

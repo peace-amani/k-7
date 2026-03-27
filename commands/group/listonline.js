@@ -53,11 +53,7 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      await sock.sendPresenceUpdate('composing', jid);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      await sock.sendPresenceUpdate('paused', jid);
-
-      await new Promise(resolve => setTimeout(resolve, scanDuration - 2000));
+      await new Promise(resolve => setTimeout(resolve, scanDuration));
 
       sock.ev.off('presence.update', presenceHandler);
 

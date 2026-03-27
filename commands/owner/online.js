@@ -67,6 +67,16 @@ function stopAllPresenceIntervals() {
     }
 }
 
+// Called on every connection open to restore the correct presence interval
+export function initPresence(sock) {
+    const config = loadConfig();
+    if (config.enabled) {
+        startOnlineInterval(sock, config);
+    } else {
+        startOfflineInterval(sock);
+    }
+}
+
 export default {
     name: 'online',
     alias: ['ghost', 'presence', 'fakeonline', 'alwaysonline'],
