@@ -1,5 +1,11 @@
 import fetch from "node-fetch";
+import { createRequire } from 'module';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { isButtonModeEnabled } from '../../lib/buttonMode.js';
+
+const _require = createRequire(import.meta.url);
+let sendInteractiveMessage;
+try { ({ sendInteractiveMessage } = _require('gifted-btns')); } catch (e) {}
 
 export default {
   name: "wiki",
@@ -10,10 +16,8 @@ export default {
     try {
       const chatId = msg.key.remoteJid;
 
-      // Determine the search term
       let searchTerm = args.join(" ").trim();
 
-      // Check if it's a reply
       const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
       if (!searchTerm && quoted) {
         searchTerm =
@@ -31,7 +35,6 @@ export default {
         });
       }
 
-      // Special default for "Silent Wolf"
       if (searchTerm.toLowerCase() === "silent wolf") {
         return await sock.sendMessage(chatId, {
           text: "🐺 *Silent Wolf* — The Alpha of Bots!\n\n🌟 He outshined Meiser Hex, one of the greatest bots ever — bow down and fear the legend! 😎",
@@ -39,26 +42,47 @@ export default {
         });
       }
 
-      // Fetch from Wikipedia API
       const response = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`);
       if (!response.ok) throw new Error("Article not found");
 
       const data = await response.json();
+      const pageUrl = data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(searchTerm)}`;
+      const summary = data.extract || '';
+      const shortSummary = summary.length > 300 ? summary.substring(0, 297) + '...' : summary;
 
-      const resultMessage = `
-🌐 *Wikipedia Search Result*
+      const resultText = `🌐 *Wikipedia: ${data.title}*\n\n📝 ${data.description || ''}\n\n${shortSummary}`;
 
-📌 *Title:* ${data.title}
-📝 *Description:* ${data.description || "N/A"}
-📄 *Summary:* ${data.extract}
+      if (isButtonModeEnabled() && typeof sendInteractiveMessage === 'function') {
+        try {
+          const msgOpts = {
+            text: resultText,
+            footer: '🌐 Wikipedia',
+            interactiveButtons: [
+              {
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({ display_text: '📖 Read Full Article', url: pageUrl })
+              },
+              {
+                name: 'cta_copy',
+                buttonParamsJson: JSON.stringify({ display_text: '📋 Copy Summary', copy_code: `${data.title}\n\n${summary}` })
+              }
+            ]
+          };
+          if (data.thumbnail?.source) msgOpts.image = { url: data.thumbnail.source };
+          await sendInteractiveMessage(sock, chatId, msgOpts);
+          return;
+        } catch (btnErr) {
+          console.log('[Wiki] Button send failed:', btnErr.message);
+        }
+      }
 
-🔗 [Read More](${data.content_urls?.desktop?.page || "https://en.wikipedia.org/wiki/" + encodeURIComponent(searchTerm)})
-      `;
-
-      await sock.sendMessage(chatId, { text: resultMessage, quoted: msg, linkPreview: true });
+      await sock.sendMessage(chatId, {
+        text: `${resultText}\n\n🔗 ${pageUrl}`,
+        quoted: msg,
+        linkPreview: false
+      });
 
     } catch {
-      // Friendly error message for WhatsApp
       await sock.sendMessage(msg.key.remoteJid, {
         text: "❌ Could not find a Wikipedia article for your search term. Please try another keyword.",
         quoted: msg

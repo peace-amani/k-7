@@ -1,8 +1,11 @@
 import fetch from 'node-fetch';
 import { createRequire } from 'module';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { isButtonModeEnabled } from '../../lib/buttonMode.js';
+
 const require = createRequire(import.meta.url);
-const { sendInteractiveMessage } = require('gifted-btns');
+let sendInteractiveMessage;
+try { ({ sendInteractiveMessage } = require('gifted-btns')); } catch (e) {}
 
 export default {
   name: 'shorturl',
@@ -35,32 +38,30 @@ export default {
         return sock.sendMessage(jid, { text: '❌ Failed to shorten URL. Please check the URL and try again.' }, { quoted: m });
       }
 
-      try {
-        await sendInteractiveMessage(sock, jid, {
-          text: `✅ *URL Shortened Successfully!*\n\n🔗 *Short URL:* ${shortUrl}\n\n🐺 _Silent Wolf_`,
-          footer: '🐺 Silent Wolf',
-          interactiveButtons: [
-            {
-              name: 'cta_copy',
-              buttonParamsJson: JSON.stringify({
-                display_text: '📋 Copy URL',
-                copy_code: shortUrl
-              })
-            },
-            {
-              name: 'cta_url',
-              buttonParamsJson: JSON.stringify({
-                display_text: '🌐 Open Link',
-                url: shortUrl
-              })
-            }
-          ]
-        });
-      } catch (btnErr) {
-        console.log('[ShortURL] Interactive failed:', btnErr.message);
-        await sock.sendMessage(jid, { text: `🔗 *Shortened URL:*\n${shortUrl}` }, { quoted: m });
+      if (isButtonModeEnabled() && typeof sendInteractiveMessage === 'function') {
+        try {
+          await sendInteractiveMessage(sock, jid, {
+            text: `✅ *URL Shortened!*\n\n🔗 *Short:* ${shortUrl}\n🌐 *Original:* ${longUrl.substring(0, 60)}${longUrl.length > 60 ? '...' : ''}`,
+            footer: '🐺 Silent Wolf',
+            interactiveButtons: [
+              {
+                name: 'cta_copy',
+                buttonParamsJson: JSON.stringify({ display_text: '📋 Copy Short URL', copy_code: shortUrl })
+              },
+              {
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({ display_text: '🌐 Open Link', url: shortUrl })
+              }
+            ]
+          });
+          await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+          return;
+        } catch (btnErr) {
+          console.log('[ShortURL] Button send failed:', btnErr.message);
+        }
       }
 
+      await sock.sendMessage(jid, { text: `🔗 *Short URL:*\n${shortUrl}` }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
     } catch (err) {

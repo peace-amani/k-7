@@ -96,13 +96,29 @@ export default {
     if (isButtonModeEnabled() && giftedBtnsFb?.sendInteractiveMessage) {
       const mediaType = url.includes('/reel/') ? 'Reel' : url.includes('fb.watch') ? 'Watch' : 'Video';
       const senderClean = (m.key.participant || m.key.remoteJid).split(':')[0].split('@')[0];
+
+      let quickMeta = null;
+      try {
+        quickMeta = await Promise.race([
+          fetchFbInfo(url),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+        ]);
+      } catch {}
+
       setActionSession(`fb:${senderClean}:${jid.split('@')[0]}`, { url, mediaType }, 10 * 60 * 1000);
       try {
-        await giftedBtnsFb.sendInteractiveMessage(sock, jid, {
-          body: { text: `📘 *Facebook ${mediaType} Found*\n\n🔗 ${url.substring(0, 60)}\n\n▸ Tap Download to get the video` },
-          footer: { text: getBotName() },
-          interactiveButtons: [{ type: 'quick_reply', display_text: '⬇️ Download', id: `${p}fbdlget` }]
-        }, { quoted: m });
+        const cardBody = quickMeta?.title
+          ? `📘 *${quickMeta.title.substring(0, 80)}*\n\n📂 ${mediaType} | ▸ Tap to download`
+          : `📘 *Facebook ${mediaType} Found*\n\n🔗 ${url.substring(0, 55)}...\n\n▸ Tap to download`;
+        const msgOpts = {
+          text: cardBody,
+          footer: getBotName(),
+          interactiveButtons: [
+            { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download Video', id: `${p}fbdlget` }) }
+          ]
+        };
+        if (quickMeta?.thumbnail) msgOpts.image = { url: quickMeta.thumbnail };
+        await giftedBtnsFb.sendInteractiveMessage(sock, jid, msgOpts, { quoted: m });
         await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
         return;
       } catch {}

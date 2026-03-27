@@ -1,5 +1,11 @@
 import translate from "@iamtraction/google-translate";
+import { createRequire } from 'module';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { isButtonModeEnabled } from '../../lib/buttonMode.js';
+
+const _require = createRequire(import.meta.url);
+let sendInteractiveMessage;
+try { ({ sendInteractiveMessage } = _require('gifted-btns')); } catch (e) {}
 
 export default {
   name: "translate",
@@ -7,19 +13,15 @@ export default {
   usage: ".translate <lang> <text>",
   async execute(sock, m, args) {
     try {
-      let targetLang = args.shift(); // first argument = language
+      let targetLang = args.shift();
       let text;
 
       if (m.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-        // If replying to a message, grab that text
         text =
-          m.message.extendedTextMessage.contextInfo.quotedMessage
-            ?.conversation ||
-          m.message.extendedTextMessage.contextInfo.quotedMessage
-            ?.extendedTextMessage?.text ||
+          m.message.extendedTextMessage.contextInfo.quotedMessage?.conversation ||
+          m.message.extendedTextMessage.contextInfo.quotedMessage?.extendedTextMessage?.text ||
           "No text found in reply";
       } else {
-        // Otherwise use the arguments after the language
         text = args.join(" ");
       }
 
@@ -31,10 +33,28 @@ export default {
       }
 
       const result = await translate(text, { to: targetLang });
+      const translated = result.text;
+      const outText = `🌍 *Translated to ${targetLang.toUpperCase()}:*\n\n${translated}`;
 
-      await sock.sendMessage(m.key.remoteJid, {
-        text: `🌍 Translated to *${targetLang}*:\n\n${result.text}`,
-      });
+      if (isButtonModeEnabled() && typeof sendInteractiveMessage === 'function') {
+        try {
+          await sendInteractiveMessage(sock, m.key.remoteJid, {
+            text: outText,
+            footer: '🌍 Silent Wolf Translate',
+            interactiveButtons: [
+              {
+                name: 'cta_copy',
+                buttonParamsJson: JSON.stringify({ display_text: '📋 Copy Translation', copy_code: translated })
+              }
+            ]
+          });
+          return;
+        } catch (btnErr) {
+          console.log('[Translate] Button send failed:', btnErr.message);
+        }
+      }
+
+      await sock.sendMessage(m.key.remoteJid, { text: outText });
     } catch (err) {
       console.error("❌ Translate error:", err);
       await sock.sendMessage(m.key.remoteJid, {

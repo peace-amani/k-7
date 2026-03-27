@@ -1,6 +1,12 @@
+import { createRequire } from 'module';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { xwolfSearch } from '../../lib/xwolfApi.js';
+
+const _require = createRequire(import.meta.url);
+let giftedBtns;
+try { giftedBtns = _require('gifted-btns'); } catch (e) {}
 
 export default {
   name: 'yts',
@@ -29,6 +35,61 @@ export default {
         return sock.sendMessage(jid, { text: `❌ No results found for "${query}". Try different keywords.` }, { quoted: m });
       }
 
+      if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
+        try {
+          const top = items.slice(0, 8);
+          const rows = [];
+          top.forEach((v, i) => {
+            const ytUrl = `https://youtube.com/watch?v=${v.id}`;
+            const dur = v.duration ? ` (${v.duration})` : '';
+            const titleShort = v.title.substring(0, 55);
+            rows.push({
+              id: `${p}ytmp3 ${ytUrl}`,
+              title: `🎵 ${titleShort}${dur}`,
+              description: `Audio MP3 — ${v.channelTitle || 'Unknown Channel'}`
+            });
+            rows.push({
+              id: `${p}ytmp4 ${ytUrl}`,
+              title: `🎬 ${titleShort}${dur}`,
+              description: `Video MP4 — ${v.channelTitle || 'Unknown Channel'}`
+            });
+          });
+
+          const topVideo = items[0];
+          const thumbUrl = `https://img.youtube.com/vi/${topVideo.id}/hqdefault.jpg`;
+
+          await giftedBtns.sendInteractiveMessage(sock, jid, {
+            title: `🔍 YouTube Search`,
+            text: `*Query:* "${query}"\n*Results:* ${items.length} found\n\n▸ Tap the list to pick Audio or Video`,
+            footer: `🐺 ${getBotName()}`,
+            image: { url: thumbUrl },
+            interactiveButtons: [
+              {
+                name: 'single_select',
+                buttonParamsJson: JSON.stringify({
+                  title: '🎵🎬 Pick a Result',
+                  sections: [{
+                    title: `Top ${top.length} Results`,
+                    rows
+                  }]
+                })
+              },
+              {
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '🔍 Open YouTube',
+                  url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+                })
+              }
+            ]
+          });
+          await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+          return;
+        } catch (btnErr) {
+          console.log('[YTS] Button mode failed:', btnErr.message);
+        }
+      }
+
       let text = `🔍 *${getBotName()} — YouTube Search*\n`;
       text += `📝 *Query:* "${query}"\n`;
       text += `📊 *Results:* ${items.length} found\n\n`;
@@ -38,7 +99,6 @@ export default {
         text += `*${i + 1}. ${v.title}*\n`;
         text += `   🅦 *URL:* ${ytUrl}\n`;
         text += `   ⏱️ *Duration:* ${v.duration || 'N/A'}\n`;
-        text += `   📦 *Size:* ${v.size || 'N/A'}\n`;
         text += `   👤 *Channel:* ${v.channelTitle || 'Unknown'}\n\n`;
       });
 

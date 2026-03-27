@@ -299,7 +299,7 @@ export default {
         await giftedBtnsIg.sendInteractiveMessage(sock, jid, {
           body: { text: `📷 *Instagram ${mediaType} Found*\n\n🔗 ${shortUrl}\n\n▸ Tap Download to get the media` },
           footer: { text: getBotName() },
-          interactiveButtons: [{ type: 'quick_reply', display_text: '⬇️ Download', id: `${PREFIX}igdlget` }]
+          interactiveButtons: [{ name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: '⬇️ Download', id: `${PREFIX}igdlget` }) }]
         }, { quoted: m });
         await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
         return;
