@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import { downloadMediaMessage, downloadContentFromMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import { getBotName } from '../../lib/botname.js';
+import { WolfLogger } from '../../lib/wolfLogger.js';
 import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
@@ -401,7 +402,7 @@ async function downloadAndSaveStatusMedia(msgId, message, messageType, mimetype,
             statusAntideleteState.mediaCache.delete(oldest);
         }
 
-        console.log(`💾 [STATUS ANTIDELETE] Media stored ✅ | Type: ${messageType} | Size: ${sizeMB}MB | ID: ${msgId.slice(0, 12)}...`);
+        WolfLogger.statusAD(`💾 Stored ${sizeMB}MB`, messageType, msgId);
         statusAntideleteState.stats.mediaCaptured++;
         return 'db';
 
@@ -618,7 +619,6 @@ export async function statusAntideleteHandleUpdate(update) {
         const isDeleted = Object.values(checks).some(v => v);
 
         if (!isDeleted) {
-            console.log(`[STATUS-AD] Update for ${msgId.substring(0,8)} NOT detected as deletion | inner keys: ${Object.keys(inner).join(',')} | checks: ${JSON.stringify(checks)}`);
             return;
         }
 
@@ -757,7 +757,7 @@ async function sendStatusToOwnerDM(statusData, deletedByNumber) {
             try {
                 const liveResult = await getStatusMediaBuffer(statusData);
                 if (liveResult?.buffer && liveResult.buffer.length > 0) {
-                    console.log(`📥 [STATUS ANTIDELETE] On-demand fallback succeeded | Type: ${statusData.type} | Size: ${(liveResult.buffer.length/1024/1024).toFixed(2)}MB`);
+                    WolfLogger.statusAD(`📥 On-demand fallback ok`, statusData.type, null);
                     mediaCache = {
                         base64: liveResult.buffer.toString('base64'),
                         type: statusData.type,
@@ -777,7 +777,7 @@ async function sendStatusToOwnerDM(statusData, deletedByNumber) {
 
                 if (buffer && buffer.length > 0) {
                     const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-                    console.log(`📥 [STATUS ANTIDELETE] Media recovered from DB | Type: ${statusData.type} | Size: ${sizeMB}MB | ID: ${statusData.id.slice(0, 12)}...`);
+                    WolfLogger.statusAD(`📥 DB recovered ${sizeMB}MB`, statusData.type, statusData.id);
                     if (statusData.type === 'image') {
                         await retrySend(() => statusAntideleteState.sock.sendMessage(ownerJid, {
                             image: buffer,
@@ -819,7 +819,7 @@ async function sendStatusToOwnerDM(statusData, deletedByNumber) {
 
             if (mediaSent) {
                 statusAntideleteState.mediaCache.delete(statusData.id);
-                console.log(`🗑️ [STATUS ANTIDELETE] Cleaned up media after send | ID: ${statusData.id.slice(0, 12)}...`);
+                WolfLogger.statusAD('🗑️ Cleanup done', null, statusData.id);
             }
         } else {
             await retrySend(() => statusAntideleteState.sock.sendMessage(ownerJid, { text: detailsText }));

@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import { downloadMediaMessage, normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import { getBotName } from '../../lib/botname.js';
+import { WolfLogger } from '../../lib/wolfLogger.js';
 import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
@@ -328,7 +329,7 @@ async function downloadAndSaveMedia(msgId, message, messageType, mimetype) {
             console.error('❌ Antidelete: DB media upload error:', err.message);
         });
 
-        console.log(`💾 [ANTIDELETE] Media stored ✅ | Type: ${messageType} | Size: ${sizeMB}MB | ID: ${msgId.slice(0, 12)}...`);
+        WolfLogger.antidelete(`💾 Stored ${sizeMB}MB`, messageType, msgId);
         antideleteState.stats.mediaCaptured++;
         return 'db';
 
@@ -721,7 +722,7 @@ async function sendToOwnerDM(messageData, deletedByNumber) {
                 const mimetype = mediaResult.mimetype;
                 try {
                     const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-                    console.log(`📥 [ANTIDELETE-DM] Media recovered | Type: ${messageData.type} | Size: ${sizeMB}MB | ID: ${messageData.id.slice(0, 12)}...`);
+                    WolfLogger.antidelete(`📥 DM recovered ${sizeMB}MB`, messageData.type, messageData.id);
                     if (messageData.type === 'sticker') {
                         await retrySend(async () => {
                             const stickerMsg = await antideleteState.sock.sendMessage(ownerJid, {
@@ -769,7 +770,7 @@ async function sendToOwnerDM(messageData, deletedByNumber) {
                     }
                     
                     antideleteState.mediaCache.delete(messageData.id);
-                    console.log(`🗑️ [ANTIDELETE-DM] Cleaned up media after send | ID: ${messageData.id.slice(0, 12)}...`);
+                    WolfLogger.antidelete('🗑️ DM cleanup done', null, messageData.id);
                 } catch (mediaError) {
                     console.error('❌ Antidelete: Media send error:', mediaError.message);
                     try {
@@ -863,7 +864,7 @@ async function sendToChat(messageData, chatJid, deletedByNumber) {
                 const mimetype = mediaResult.mimetype;
                 try {
                     const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-                    console.log(`📥 [ANTIDELETE-CHAT] Media recovered | Type: ${messageData.type} | Size: ${sizeMB}MB | ID: ${messageData.id.slice(0, 12)}...`);
+                    WolfLogger.antidelete(`📥 Chat recovered ${sizeMB}MB`, messageData.type, messageData.id);
                     
                     if (messageData.type === 'sticker') {
                         await retrySend(async () => {
@@ -915,7 +916,7 @@ async function sendToChat(messageData, chatJid, deletedByNumber) {
                     }
                     
                     antideleteState.mediaCache.delete(messageData.id);
-                    console.log(`🗑️ [ANTIDELETE-CHAT] Cleaned up media after send | ID: ${messageData.id.slice(0, 12)}...`);
+                    WolfLogger.antidelete('🗑️ Chat cleanup done', null, messageData.id);
                 } catch (mediaError) {
                     console.error('❌ Antidelete: Media send error:', mediaError.message);
                     try {
@@ -925,7 +926,7 @@ async function sendToChat(messageData, chatJid, deletedByNumber) {
                     } catch {}
                 }
             } else {
-                console.log(`⚠️ [ANTIDELETE-CHAT] Media not recoverable | ID: ${messageData.id.slice(0, 12)}...`);
+                WolfLogger.antidelete('⚠️ Not recoverable', null, messageData.id);
                 await retrySend(() => antideleteState.sock.sendMessage(chatJid, { text: detailsText }));
             }
         } else {
