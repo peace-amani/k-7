@@ -6540,10 +6540,13 @@ async function startBot(loginMode = 'auto', loginData = null) {
             try {
                 const _t0 = messages?.[0];
                 if (_t0?.message) {
-                    const _tVo = detectViewOnceMedia(_t0.message);
-                    if (_tVo) {
+                    const _tAllKeys = Object.keys(_t0.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
+                    const _tHasMedia = _tAllKeys.some(k => k.toLowerCase().includes('viewonce') || k.toLowerCase().includes('image') || k.toLowerCase().includes('video') || k.toLowerCase().includes('audio'));
+                    if (_tHasMedia) {
                         const _tSender = (_t0.key?.participant || _t0.key?.remoteJid || '?').split('@')[0].split(':')[0];
-                        originalConsoleMethods.log(`🔍 [AV-TRACE] type="${type}" fromMe=${_t0?.key?.fromMe} sender=${_tSender} mediaType=${_tVo.type}`);
+                        const _tVo = detectViewOnceMedia(_t0.message);
+                        const _tImgVo = _t0.message?.imageMessage?.viewOnce;
+                        originalConsoleMethods.log(`🔍 [AV-RAW] type="${type}" fromMe=${_t0?.key?.fromMe} sender=${_tSender} keys=${_tAllKeys.join(',')} detected=${!!_tVo} imgVO=${_tImgVo}`);
                     }
                 }
             } catch {}
