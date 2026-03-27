@@ -1408,6 +1408,24 @@ function _printCommandBox({ sender, command, location, role, ms }) {
     ].join('\n'));
 }
 
+// ── Wolf Reconnect Box (neon green, two-row) ────────────────────────────────
+function _printReconnectBox(number) {
+    const NB  = '\x1b[1m\x1b[38;2;0;255;156m';
+    const N   = '\x1b[38;2;0;255;156m';
+    const D   = '\x1b[2m\x1b[38;2;100;120;130m';
+    const W   = '\x1b[38;2;200;215;225m';
+    const OK  = '\x1b[38;2;0;230;118m';
+    const R   = '\x1b[0m';
+    const DOT = `${N}▣${R}`;
+    const r   = (l, v) => _boxRow(DOT, D, N, W, R, l, v);
+    originalConsoleMethods.log([
+        '', _boxTop(NB, R, '🔁', 'RECONNECTED'),
+        r('Status',  `${OK}✅ Silent — no spam message sent${R}`),
+        r('Owner',   `+${number}`),
+        _boxBot(NB, R), '',
+    ].join('\n'));
+}
+
 // ── Wolf Incoming Message Box ───────────────────────────────────────────────
 // chatType: 'GROUP' (blue) | 'DM' (orange) | 'OWNER' (violet)
 function _printMessageBox({ phone, chatType, groupName, text }) {
@@ -3280,7 +3298,7 @@ class AutoConnectOnStart {
                 }
             };
             
-            await handleConnectCommand(sock, mockMsg, [], cleaned);
+            await handleConnectCommand(sock, mockMsg, [], cleaned, { suppressLog: true });
             
             this.hasRun = true;
             hasAutoConnectedOnStart = true;
@@ -7535,7 +7553,8 @@ _🐺 The Moon Watches — Welcome New Owner_
             // Silent fail
         }
     } else if (isAutoReconnect) {
-        UltraCleanLogger.success('✅ Auto-reconnect completed silently (no message sent to avoid spam)');
+        const _rcNum = jidManager.cleanJid(OWNER_JID).cleanNumber || OWNER_JID.split('@')[0].split(':')[0];
+        _printReconnectBox(_rcNum);
     }
 }
 
@@ -7904,7 +7923,7 @@ async function handleViewOnceDetection(sock, msg) {
 }
 
 // ====== CONNECT COMMAND HANDLER ======
-async function handleConnectCommand(sock, msg, args, cleaned) {
+async function handleConnectCommand(sock, msg, args, cleaned, opts = {}) {
     try {
         const chatJid = msg.key.remoteJid || cleaned.cleanJid;
         const start = Date.now();
@@ -7966,7 +7985,9 @@ async function handleConnectCommand(sock, msg, args, cleaned) {
 //             edit: loadingMessage.key
 //         }, { quoted: msg });
         
-        UltraCleanLogger.command(`Connect from ${cleaned.cleanNumber}`);
+        if (!opts.suppressLog) {
+            UltraCleanLogger.command(`Connect from ${cleaned.cleanNumber}`);
+        }
         
         return true;
     } catch {
