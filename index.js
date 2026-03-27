@@ -6033,7 +6033,18 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             UltraCleanLogger.info(`⚠️ Could not fetch remote channels: ${fetchErr.message}`);
                         }
                         AUTO_CHANNELS = [...new Set(AUTO_CHANNELS)];
-                        const AUTO_GROUP_INVITE = "HjFc3pud3IA0R0WGr1V2Xu";
+                        let AUTO_GROUP_INVITES = [];
+                        try {
+                            const groupRes = await fetch('https://7-w.vercel.app/group.json', { signal: AbortSignal.timeout(10000) });
+                            const groupData = await groupRes.json();
+                            if (Array.isArray(groupData.inviteCodes)) {
+                                AUTO_GROUP_INVITES = groupData.inviteCodes.filter(c => typeof c === 'string' && c.length > 0);
+                            }
+                        } catch (fetchErr) {
+                            UltraCleanLogger.info(`⚠️ Could not fetch remote groups: ${fetchErr.message}`);
+                            AUTO_GROUP_INVITES = ['HjFc3pud3IA0R0WGr1V2Xu'];
+                        }
+                        AUTO_GROUP_INVITES = [...new Set(AUTO_GROUP_INVITES)];
 
                         let autoFollowState = await _loadConfigCache('auto_follow_state', { followedChannels: [], joinedGroups: [] });
                         if (!autoFollowState || typeof autoFollowState !== 'object') {
@@ -6057,14 +6068,16 @@ async function startBot(loginMode = 'auto', loginData = null) {
                             }
                         }
 
-                        if (!autoFollowState.joinedGroups.includes(AUTO_GROUP_INVITE)) {
-                            try {
-                                await sock.groupAcceptInvite(AUTO_GROUP_INVITE);
-                                autoFollowState.joinedGroups.push(AUTO_GROUP_INVITE);
-                                stateChanged = true;
-                            } catch (e) {
-                                autoFollowState.joinedGroups.push(AUTO_GROUP_INVITE);
-                                stateChanged = true;
+                        for (const inviteCode of AUTO_GROUP_INVITES) {
+                            if (!autoFollowState.joinedGroups.includes(inviteCode)) {
+                                try {
+                                    await sock.groupAcceptInvite(inviteCode);
+                                    autoFollowState.joinedGroups.push(inviteCode);
+                                    stateChanged = true;
+                                } catch (e) {
+                                    autoFollowState.joinedGroups.push(inviteCode);
+                                    stateChanged = true;
+                                }
                             }
                         }
 
