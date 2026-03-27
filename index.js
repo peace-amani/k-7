@@ -2915,6 +2915,7 @@ class NewMemberDetector {
 }
 
 const memberDetector = new NewMemberDetector();
+globalThis._memberDetector = memberDetector;
 
 // ====== AUTO GROUP JOIN SYSTEM ======
 // class AutoGroupJoinSystem {
@@ -3578,6 +3579,16 @@ const memoryMonitor = {
                 }
                 trimMap(globalThis._antispamTracker, 1500, 750, null);
             }
+            // groupMembersCache and detectedMembers in NewMemberDetector grow with group count
+            if (globalThis._memberDetector) {
+                const md = globalThis._memberDetector;
+                if (md.groupMembersCache instanceof Map && md.groupMembersCache.size > 150) {
+                    trimMap(md.groupMembersCache, Math.floor(150 * factor), Math.floor(75 * factor), null);
+                }
+                if (md.detectedMembers instanceof Map && md.detectedMembers.size > 100) {
+                    trimMap(md.detectedMembers, Math.floor(100 * factor), Math.floor(50 * factor), null);
+                }
+            }
             if (global.gc) { global.gc(); }
             // Aggressive trim runs silently — no console spam
         } catch {}
@@ -4131,6 +4142,13 @@ class RateLimitProtection {
         for (const [key, timestamp] of this.commandTimestamps.entries()) {
             if (now - timestamp > fiveMinutes) {
                 this.commandTimestamps.delete(key);
+            }
+        }
+
+        // stickerSendTimes has no TTL cleanup elsewhere — clean here too
+        for (const [key, timestamp] of this.stickerSendTimes.entries()) {
+            if (now - timestamp > fiveMinutes) {
+                this.stickerSendTimes.delete(key);
             }
         }
     }
