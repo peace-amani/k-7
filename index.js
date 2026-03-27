@@ -3793,25 +3793,53 @@ class AntiViewOnceSystem {
     }
     
     detectViewOnceType(message) {
-        if (message.imageMessage?.viewOnce) {
-            return {
-                type: 'image',
-                media: message.imageMessage,
-                caption: message.imageMessage.caption || ''
-            };
-        } else if (message.videoMessage?.viewOnce) {
-            return {
-                type: 'video',
-                media: message.videoMessage,
-                caption: message.videoMessage.caption || ''
-            };
-        } else if (message.audioMessage?.viewOnce) {
-            return {
-                type: 'audio',
-                media: message.audioMessage,
-                caption: ''
-            };
+        // Priority 1: Properly wrapped view-once types — reliable, no false positives
+        let wrappedMessage = null;
+        if (message.viewOnceMessageV2?.message) {
+            wrappedMessage = message.viewOnceMessageV2.message;
+        } else if (message.viewOnceMessageV2Extension?.message) {
+            wrappedMessage = message.viewOnceMessageV2Extension.message;
+        } else if (message.viewOnceMessage?.message) {
+            wrappedMessage = message.viewOnceMessage.message;
+        } else if (message.ephemeralMessage?.message?.viewOnceMessage?.message) {
+            wrappedMessage = message.ephemeralMessage.message.viewOnceMessage.message;
         }
+
+        if (wrappedMessage) {
+            if (wrappedMessage.imageMessage) {
+                return { type: 'image', media: wrappedMessage.imageMessage, caption: wrappedMessage.imageMessage.caption || '' };
+            }
+            if (wrappedMessage.videoMessage) {
+                return { type: 'video', media: wrappedMessage.videoMessage, caption: wrappedMessage.videoMessage.caption || '' };
+            }
+            if (wrappedMessage.audioMessage) {
+                return { type: 'audio', media: wrappedMessage.audioMessage, caption: '' };
+            }
+        }
+
+        // Priority 2: Direct viewOnce flag — guard against interactive/button messages
+        // that include an imageMessage as part of their layout (not a real view-once)
+        const isInteractive = !!(
+            message.buttonsMessage ||
+            message.interactiveMessage ||
+            message.templateMessage ||
+            message.listMessage ||
+            message.buttonsResponseMessage ||
+            message.interactiveResponseMessage
+        );
+
+        if (!isInteractive) {
+            if (message.imageMessage?.viewOnce) {
+                return { type: 'image', media: message.imageMessage, caption: message.imageMessage.caption || '' };
+            }
+            if (message.videoMessage?.viewOnce) {
+                return { type: 'video', media: message.videoMessage, caption: message.videoMessage.caption || '' };
+            }
+            if (message.audioMessage?.viewOnce) {
+                return { type: 'audio', media: message.audioMessage, caption: '' };
+            }
+        }
+
         return null;
     }
     
