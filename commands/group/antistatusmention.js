@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { resolveJid } from '../tools/getjid.js';
 
 const DATA_DIR = './data/antistatusmention';
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
@@ -65,22 +66,21 @@ function findParticipant(participants, senderJid) {
     return null;
 }
 
-// Resolve a participant's JID to a kickable phone JID.
-// WhatsApp rejects groupParticipantsUpdate with @lid addresses.
-function resolveKickJid(participant, cleanSender) {
-    // If sender itself is a phone JID, use it directly
-    if (cleanSender && !cleanSender.endsWith('@lid')) return cleanSender;
-    // Try phoneNumber field on participant object
-    const pn = participant?.phoneNumber ? String(participant.phoneNumber).replace(/[^0-9]/g, '') : null;
-    if (pn) return `${pn}@s.whatsapp.net`;
-    // Try LID → phone cache
-    const lidNum = (participant?.id || cleanSender || '').split(':')[0].split('@')[0];
-    const lidPhoneCache = globalThis.lidPhoneCache;
-    if (lidPhoneCache) {
-        const phone = lidPhoneCache.get(lidNum);
-        if (phone) return `${phone}@s.whatsapp.net`;
+// Resolve a participant to a kickable @s.whatsapp.net JID using the full
+// 3-layer resolution (Baileys lidMapping → globalThis cache → contact store).
+// Tries participant.id first, then falls back to cleanSender.
+async function resolveKickJid(sock, participant, cleanSender) {
+    // 1. Try participant.id (may be LID, device-qualified, or clean)
+    if (participant?.id) {
+        const resolved = await resolveJid(sock, participant.id);
+        if (resolved && !resolved.endsWith('@lid')) return resolved;
     }
-    return null; // unresolvable
+    // 2. Fall back to cleanSender (phone JID from message key)
+    if (cleanSender) {
+        const resolved = await resolveJid(sock, cleanSender);
+        if (resolved && !resolved.endsWith('@lid')) return resolved;
+    }
+    return null; // truly unresolvable
 }
 
 export function getAntiStatusMentionConfig(groupId) {
@@ -271,7 +271,7 @@ async function processGroupMention(sock, groupId, cleanSender, userName) {
 
         case 'kick': {
             if (warningCount >= (groupConfig.maxWarnings || 1)) {
-                const kickJid = resolveKickJid(foundParticipant, cleanSender);
+                const kickJid = await resolveKickJid(sock, foundParticipant, cleanSender);
                 if (!kickJid) {
                     // LID unresolvable — warn group honestly instead of failing silently
                     await sock.sendMessage(groupId, {
