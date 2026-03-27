@@ -6539,10 +6539,32 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const _pgTs = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
                         const _pgAge = _pgTs ? Math.round((Date.now() - _pgTs) / 1000) : '?';
                         originalConsoleMethods.log(`🔍 [AV-PRE] type="${type}" fromMe=${_pg.key?.fromMe} sender=${_pgSender} keys=${_pgKeys.join(',')} age=${_pgAge}s`);
-                        // Dump full raw message structure (one-shot) — remove after root-cause found
-                        if (_pgSender !== (sock.user?.id || '').split('@')[0].split(':')[0]) {
-                            try { originalConsoleMethods.log(`🔍 [AV-STRUCT] msg.message=${JSON.stringify(_pg.message)}\n[AV-STRUCT] msg.messageStubType=${_pg.messageStubType} msg.messageStubParameters=${JSON.stringify(_pg.messageStubParameters)}`); } catch {}
-                        }
+                        // Dump imageMessage fields + top-level msg fields — remove after root-cause found
+                        try {
+                            // Top-level WebMessageInfo fields (skip message/key which are objects)
+                            const _topSafe = {};
+                            for (const [k, v] of Object.entries(_pg)) {
+                                if (k === 'message' || k === 'key') continue;
+                                if (typeof v === 'function') continue;
+                                if (v instanceof Uint8Array || Buffer.isBuffer(v)) { _topSafe[k] = `<buf${v.length}>`; continue; }
+                                if (typeof v === 'object' && v !== null) { try { _topSafe[k] = JSON.stringify(v); } catch { _topSafe[k] = '[obj]'; } continue; }
+                                _topSafe[k] = v;
+                            }
+                            originalConsoleMethods.log(`🔍 [AV-STRUCT-TOP] ${JSON.stringify(_topSafe)}`);
+                        } catch {}
+                        try {
+                            const _im = _pg.message?.imageMessage || _pg.message?.videoMessage;
+                            if (_im) {
+                                const _safe = {};
+                                for (const [k, v] of Object.entries(_im)) {
+                                    if (typeof v === 'function') continue;
+                                    if (v instanceof Uint8Array || Buffer.isBuffer(v)) { _safe[k] = `<buf${v.length}>`; continue; }
+                                    if (typeof v === 'object' && v !== null) { try { _safe[k] = JSON.stringify(v); } catch { _safe[k] = '[obj]'; } continue; }
+                                    _safe[k] = v;
+                                }
+                                originalConsoleMethods.log(`🔍 [AV-STRUCT-IM] ${JSON.stringify(_safe)}`);
+                            }
+                        } catch {}
                     }
                 }
             } catch {}
