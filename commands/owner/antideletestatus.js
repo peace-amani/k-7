@@ -233,16 +233,40 @@ function getRealWhatsAppNumber(jid) {
         const numberPart = jid.split('@')[0];
 
         if (jid.endsWith('@lid')) {
+            // 1. Check the global lidPhoneCache maintained by index.js (most up-to-date)
+            const lidCache = globalThis.lidPhoneCache;
+            if (lidCache) {
+                const fromCache = lidCache.get(numberPart) || lidCache.get(jid);
+                if (fromCache) return `+${String(fromCache).replace(/^\+/, '')}`;
+            }
+
+            // 2. Try sudo-store getPhoneFromLid
             const resolved = getPhoneFromLid(numberPart);
             if (resolved) return `+${resolved.replace(/^\+/, '')}`;
+
+            // 3. Try globalThis.resolvePhoneFromLid (signal-level resolution)
+            if (typeof globalThis.resolvePhoneFromLid === 'function') {
+                const fromGlobal = globalThis.resolvePhoneFromLid(jid);
+                if (fromGlobal && /^\d+$/.test(String(fromGlobal)) && String(fromGlobal).length >= 7) {
+                    return `+${String(fromGlobal).replace(/^\+/, '')}`;
+                }
+            }
+
+            // 4. Scan contactNames for a number whose last 6 digits match the LID
             if (global.contactNames) {
                 for (const [contactJid] of Object.entries(global.contactNames)) {
                     const cPart = contactJid.split('@')[0];
-                    if (cPart.endsWith(numberPart.slice(-6)) && /^\d+$/.test(cPart) && cPart.length >= 10 && cPart.length <= 15) {
+                    if (
+                        cPart.endsWith(numberPart.slice(-6)) &&
+                        /^\d+$/.test(cPart) &&
+                        cPart.length >= 10 &&
+                        cPart.length <= 15
+                    ) {
                         return `+${cPart}`;
                     }
                 }
             }
+
             return numberPart;
         }
 
