@@ -86,25 +86,31 @@ export default {
 
             let codeSent = false;
 
+            // Timeout: if no QR appears within 45s, WA server never responded
             const failTimer = setTimeout(async () => {
                 if (!codeSent) {
                     try { pairSock.ev.removeAllListeners(); pairSock.ws.close(); } catch (_) {}
                     clearTimeout(autoCleanTimer);
                     cleanup();
                     await sock.sendMessage(jid, {
-                        text: `❌ *Pair code timed out for +${phone}*\n\nWhatsApp did not respond in time. Try again.`
+                        text: `❌ *Pair code timed out for +${phone}*\n\nWhatsApp did not respond. Try again.`
                     }, { quoted: m });
                 }
-            }, 30000);
+            }, 45000);
 
             pairSock.ev.on('connection.update', async (update) => {
-                const { connection, qr } = update;
+                const { connection, qr, lastDisconnect } = update;
 
-                if ((qr || connection === 'connecting') && !state.creds.registered && !codeSent) {
+                // ── Request the pairing code the moment WA sends the QR challenge ──
+                // This is the correct trigger: WA's server has completed the handshake
+                // and is waiting for either a QR scan or a pairing code exchange.
+                // Calling requestPairingCode() earlier (e.g. on 'connecting') fails
+                // because the WS is still negotiating and can't send frames yet.
+                if (qr && !state.creds.registered && !codeSent) {
                     codeSent = true;
+                    clearTimeout(failTimer);
                     try {
                         const code = await pairSock.requestPairingCode(phone);
-                        clearTimeout(failTimer);
 
                         const clean = code.replace(/\s+/g, '');
                         const formatted = clean.length === 8
@@ -148,7 +154,6 @@ export default {
                         await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
                     } catch (codeErr) {
-                        clearTimeout(failTimer);
                         await sock.sendMessage(jid, {
                             text: `❌ *Failed to get code for +${phone}*\n\n_${codeErr.message}_`
                         }, { quoted: m });
@@ -165,8 +170,12 @@ export default {
                     clearTimeout(failTimer);
                     clearTimeout(autoCleanTimer);
                     cleanup();
+                    // Extract the actual disconnect reason so the user knows why
+                    const reason = lastDisconnect?.error?.output?.statusCode
+                        || lastDisconnect?.error?.message
+                        || 'unknown reason';
                     await sock.sendMessage(jid, {
-                        text: `❌ *Connection closed before code was generated for +${phone}*\n\nTry again.`
+                        text: `❌ *Connection closed for +${phone}*\n\n_Reason: ${reason}_\n\nWait a few seconds and try again.`
                     }, { quoted: m });
                 }
             });
