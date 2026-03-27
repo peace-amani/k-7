@@ -10,6 +10,7 @@ const DEFAULT_REACT_CONFIG = {
     mode: 'fixed',
     fixedEmoji: '🐺',
     reactions: ["🐺", "❤️", "👍", "🔥", "🎉", "😂", "😮", "👏", "🎯", "💯", "🌟", "✨", "⚡", "💥", "🫶"],
+    cycleIndex: 0,
     excludedContacts: [],
     logs: [],
     totalReacted: 0,
@@ -38,6 +39,7 @@ class AutoReactManager {
             config.reactedStatuses  = config.reactedStatuses || [];
             config.lastReactionTime = config.lastReactionTime || 0;
             config.viewMode         = config.viewMode || 'view+react';
+            config.cycleIndex       = config.cycleIndex || 0;
             if (!Array.isArray(config.excludedContacts)) config.excludedContacts = [];
             return { ...DEFAULT_REACT_CONFIG, ...config };
         } catch { return { ...DEFAULT_REACT_CONFIG }; }
@@ -149,10 +151,15 @@ class AutoReactManager {
     }
 
     setMode(mode) {
-        if (mode === 'random' || mode === 'fixed') {
+        if (mode === 'random' || mode === 'fixed' || mode === 'cycle') {
             this.config.mode = mode; this.saveConfigImmediate(); return true;
         }
         return false;
+    }
+
+    resetCycleIndex() {
+        this.config.cycleIndex = 0;
+        this.saveConfigImmediate();
     }
 
     setFixedEmoji(emoji) {
@@ -212,6 +219,12 @@ class AutoReactManager {
     getReaction() {
         if (this.config.mode === 'fixed') return this.config.fixedEmoji;
         if (!this.config.reactions.length) return '🐺';
+        if (this.config.mode === 'cycle') {
+            const emoji = this.config.reactions[this.config.cycleIndex % this.config.reactions.length];
+            this.config.cycleIndex = (this.config.cycleIndex + 1) % this.config.reactions.length;
+            this.saveConfig();
+            return emoji;
+        }
         return this.config.reactions[Math.floor(Math.random() * this.config.reactions.length)];
     }
 
@@ -341,7 +354,8 @@ export default {
                 text += `├─⊷ *${prefix}sr view+react*\n│  └⊷ View then react\n`;
                 text += `├─⊷ *${prefix}sr react-only*\n│  └⊷ React without viewing\n`;
                 text += `├─⊷ *${prefix}sr random*\n│  └⊷ Random emoji mode\n`;
-                text += `├─⊷ *${prefix}sr setrandom 😂,🫡,🔥*\n│  └⊷ Set random emoji pool (comma-separated)\n`;
+                text += `├─⊷ *${prefix}sr cycle*\n│  └⊷ Sequential emoji mode (1→2→3→loop)\n`;
+                text += `├─⊷ *${prefix}sr setrandom 😂,🫡,🔥*\n│  └⊷ Set cycle pool (comma-separated)\n`;
                 text += `├─⊷ *${prefix}sr emoji <emoji>*\n│  └⊷ Set fixed emoji\n`;
                 text += `├─⊷ *${prefix}sr stats*\n│  └⊷ Statistics\n`;
                 text += `╰⊷ *Powered by ${getBotName().toUpperCase()}*`;
@@ -448,13 +462,25 @@ export default {
                         return;
                     }
                     autoReactManager.config.reactions = valid;
-                    autoReactManager.setMode('random');
+                    autoReactManager.config.cycleIndex = 0;
+                    autoReactManager.setMode('cycle');
                     autoReactManager.saveConfigImmediate();
-                    let text = `✅ *RANDOM EMOJI POOL UPDATED*\n\n`;
-                    text += `🎲 Mode: RANDOM\n`;
-                    text += `📦 Pool (${valid.length}): ${valid.join(' ')}\n`;
+                    let text = `✅ *CYCLE EMOJI POOL SET*\n\n`;
+                    text += `🔄 Mode: CYCLE (in order, looping)\n`;
+                    text += `📦 Pool (${valid.length}):\n`;
+                    valid.forEach((e, i) => { text += `  ${i + 1}. ${e}\n`; });
                     if (invalid.length) text += `\n⚠️ Skipped (not emoji): ${invalid.join(' ')}`;
+                    text += `\nStatus 1→${valid[0]}, Status 2→${valid[1] || valid[0]}, ...`;
                     await reply(text);
+                    break;
+                }
+
+                case 'cycle': case 'sequential': {
+                    if (!isOwner) { await reply("❌ Owner only!"); return; }
+                    autoReactManager.setMode('cycle');
+                    autoReactManager.resetCycleIndex();
+                    const pool = autoReactManager.reactions;
+                    await reply(`🔄 *CYCLE MODE*\n\nEmojis used in order, looping.\n\n${pool.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nCounter reset to start.`);
                     break;
                 }
 
@@ -488,7 +514,8 @@ export default {
                     let text = `📊 *AUTOREACTSTATUS STATS*\n\n`;
                     text += `🟢 Status      : ${s.enabled ? 'ACTIVE ✅' : 'INACTIVE ❌'}\n`;
                     text += `👁️ View Mode   : ${vmLabel}\n`;
-                    text += `🎭 Emoji Mode  : ${s.mode === 'fixed' ? `FIXED (${s.fixedEmoji})` : 'RANDOM'}\n`;
+                    const modeLabel = s.mode === 'fixed' ? `FIXED (${s.fixedEmoji})` : s.mode === 'cycle' ? `CYCLE (pos ${autoReactManager.config.cycleIndex + 1}/${autoReactManager.reactions.length})` : 'RANDOM';
+                    text += `🎭 Emoji Mode  : ${modeLabel}\n`;
                     text += `🐺 Total       : *${s.totalReacted}*\n`;
                     text += `📝 Tracked     : ${s.reactedStatusesCount}\n`;
                     text += `🔄 Consecutive : ${s.consecutiveReactions}\n`;
