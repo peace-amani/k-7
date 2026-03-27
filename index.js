@@ -6531,13 +6531,18 @@ async function startBot(loginMode = 'auto', loginData = null) {
             // PRE-GUARD RAW TRACE — log any media/viewonce before replay guard drops it
             try {
                 const _pg = messages?.[0];
-                // BROAD CATCH: log ALL messages from test account regardless of type
-                const _pgSenderRaw = (_pg?.key?.participant || _pg?.key?.remoteJid || '').split('@')[0].split(':')[0];
-                if (_pgSenderRaw === '120363400000506333' || _pgSenderRaw === '254713046497' || _pgSenderRaw === '254703397679') {
-                    const _pgMsgKeys = _pg?.message ? Object.keys(_pg.message).join(',') : 'NULL';
-                    const _pgTs2 = _pg?.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
+                // BROAD CATCH: log ALL type=notify messages that have null/empty message
+                // — this catches view-once messages that Baileys strips before delivery
+                if (type === 'notify' && _pg && !_pg.key?.fromMe) {
+                    const _pgMsgNull = !_pg.message;
+                    const _pgMsgKeys2 = _pg.message ? Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage') : [];
+                    const _pgIsStub = _pgMsgNull || _pgMsgKeys2.length === 0;
+                    const _pgSenderRaw2 = (_pg.key?.participant || _pg.key?.remoteJid || '').split('@')[0].split(':')[0];
+                    const _pgTs2 = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
                     const _pgAge2 = _pgTs2 ? Math.round((Date.now() - _pgTs2) / 1000) : '?';
-                    originalConsoleMethods.log(`🔍 [AV-BROAD] type="${type}" fromMe=${_pg?.key?.fromMe} sender=${_pgSenderRaw} msgKeys=${_pgMsgKeys} age=${_pgAge2}s`);
+                    if (_pgIsStub) {
+                        originalConsoleMethods.log(`🔍 [AV-NULL] type="notify" sender=${_pgSenderRaw2} msgKeys=${_pgMsgNull ? 'NULL' : _pgMsgKeys2.join(',') || 'EMPTY'} age=${_pgAge2}s msgStubType=${_pg.messageStubType}`);
+                    }
                 }
                 if (_pg?.message) {
                     const _pgKeys = Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
