@@ -722,7 +722,7 @@ import { handleAutoDownloadStatus } from './commands/automation/autodownloadstat
 import { initializeAutoJoin } from './commands/group/add.js';
 import antidemote from './commands/group/antidemote.js';
 import { isBugMessage as antibugCheck, isEnabled as antibugEnabled, getAction as antibugGetAction } from './commands/group/antibug.js';
-import { checkMessageForLinks as antilinkCheck, isEnabled as antilinkEnabled, getMode as antilinkGetMode, getGroupConfig as antilinkGetConfig, isLinkExempt as antilinkIsExempt } from './commands/group/antilink.js';
+import { checkMessageForLinks as antilinkCheck, isEnabled as antilinkEnabled, getMode as antilinkGetMode, getGroupConfig as antilinkGetConfig, isLinkExempt as antilinkIsExempt, isExcludedType as antilinkIsExcludedType } from './commands/group/antilink.js';
 import { checkMessageForBadWord, isGroupEnabled as isBadWordEnabled, getGroupAction as getBadWordAction } from './lib/badwords-store.js';
 import { isEnabled as antispamEnabled, getAction as antispamGetAction, checkSpam as antispamCheck } from './commands/group/antispam.js';
 import { isBotMessage as antibotCheck, isEnabled as antibotEnabled, getMode as antibotGetMode } from './commands/group/antibot.js';
@@ -6615,7 +6615,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
                         if (!isOwnerSender) {
                             const gc = antilinkGetConfig(chatJid);
-                            if (gc?.exemptLinks && antilinkIsExempt(linkResult.links, gc.exemptLinks)) {
+                            const _alExcludedTypes = gc?.excludeTypes || [];
+                            const _alIsExcludedType = _alExcludedTypes.length > 0 && antilinkIsExcludedType(linkResult.links, _alExcludedTypes);
+                            // Skip if link is in allow list AND its type is NOT in the exclude list
+                            if (gc?.exemptLinks && antilinkIsExempt(linkResult.links, gc.exemptLinks) && !_alIsExcludedType) {
                             } else {
                                 let isSenderAdmin = false;
                                 let gMeta = null;

@@ -86,12 +86,19 @@ export default {
   },
 
   async resolveJid(sock, inputJid) {
+    return resolveJid(sock, inputJid);
+  }
+};
+
+// Named export so block/unblock can reuse the same resolution
+export async function resolveJid(sock, inputJid) {
     if (!inputJid) return inputJid;
 
     if (inputJid.endsWith('@g.us')) return inputJid;
     if (inputJid.endsWith('@newsletter')) return inputJid;
 
     if (inputJid.endsWith('@lid')) {
+      // 1. Baileys internal LID → phone mapping (most reliable)
       try {
         if (sock.signalRepository?.lidMapping?.getPNForLID) {
           const pn = await sock.signalRepository.lidMapping.getPNForLID(inputJid);
@@ -102,6 +109,12 @@ export default {
         }
       } catch {}
 
+      // 2. globalThis LID → phone cache
+      const lidNum = inputJid.split('@')[0];
+      const cached = globalThis.lidPhoneCache?.get(lidNum);
+      if (cached) return `${cached}@s.whatsapp.net`;
+
+      // 3. Contact store lookup
       try {
         if (sock.store?.contacts) {
           for (const [contactJid, contact] of Object.entries(sock.store.contacts)) {
@@ -113,10 +126,9 @@ export default {
         }
       } catch {}
 
-      return inputJid;
+      return inputJid; // unresolvable — return as-is
     }
 
     const number = inputJid.split('@')[0].split(':')[0].replace(/\D/g, '');
     return `${number}@s.whatsapp.net`;
-  }
-};
+}

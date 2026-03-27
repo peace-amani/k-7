@@ -181,6 +181,43 @@ function isLinkExempt(links, exemptLinks) {
     });
 }
 
+// ── Link-type classification ───────────────────────────────────────────────
+const LINK_TYPE_PATTERNS = {
+    grouplinks: [/chat\.whatsapp\.com/i, /wa\.me\//i],
+    instagram:  [/instagram\.com/i],
+    facebook:   [/facebook\.com/i, /fb\.com/i],
+    twitter:    [/twitter\.com/i, /x\.com\//i],
+    youtube:    [/youtube\.com/i, /youtu\.be/i],
+    tiktok:     [/tiktok\.com/i, /vm\.tiktok\.com/i],
+    telegram:   [/t\.me\//i],
+    discord:    [/discord\.gg/i, /discord\.com\/invite/i],
+    shortened:  [/bit\.ly\//i, /tinyurl\.com/i, /goo\.gl\//i, /ow\.ly\//i, /is\.gd\//i,
+                 /v\.gd\//i, /cutt\.ly\//i, /shorturl\.at\//i, /pin\.it\//i, /spotify\.link\//i],
+};
+
+const VALID_EXCLUDE_TYPES = Object.keys(LINK_TYPE_PATTERNS);
+
+function getLinkType(link) {
+    const lower = link.toLowerCase();
+    for (const [type, patterns] of Object.entries(LINK_TYPE_PATTERNS)) {
+        if (patterns.some(p => p.test(lower))) return type;
+    }
+    return 'other';
+}
+
+function isExcludedType(links, excludeTypes) {
+    if (!excludeTypes || excludeTypes.length === 0) return false;
+    return links.some(link => {
+        const t = getLinkType(link);
+        return excludeTypes.includes(t);
+    });
+}
+
+function getExcludeTypes(chatJid) {
+    const config = loadConfig();
+    return config[chatJid]?.excludeTypes || [];
+}
+
 export default {
     name: 'antilink',
     description: 'Control link sharing in the group with different actions',
@@ -191,6 +228,8 @@ export default {
     getMode,
     getGroupConfig,
     isLinkExempt,
+    isExcludedType,
+    getExcludeTypes,
     containsLink,
     extractLinks,
     extractMessageText,
@@ -269,11 +308,13 @@ export default {
         if (sub === 'status') {
             const gc = config[chatId];
             if (gc?.enabled) {
+                const excludeList = gc.excludeTypes?.length ? gc.excludeTypes.join(', ') : 'none';
                 let statusText = `╭─⌈ 🔗 *ANTI-LINK STATUS* ⌋\n│\n`;
                 statusText += `├─⊷ *Status:* ✅ ENABLED\n`;
                 statusText += `├─⊷ *Mode:* ${gc.mode.toUpperCase()}\n`;
                 statusText += `├─⊷ *Admins exempt:* ${gc.exemptAdmins ? 'Yes' : 'No'}\n`;
                 statusText += `├─⊷ *Allowed links:* ${gc.exemptLinks?.length || 0}\n`;
+                statusText += `├─⊷ *Excluded types:* ${excludeList}\n`;
                 statusText += `├─⊷ *Detection:* All message types\n`;
                 statusText += `╰───`;
                 return sock.sendMessage(chatId, { text: statusText }, { quoted: msg });
@@ -359,6 +400,58 @@ export default {
             }, { quoted: msg });
         }
 
+        if (sub === 'exclude' || sub === 'addexclude') {
+            const typeName = (args[1] || '').toLowerCase();
+            if (!typeName || !VALID_EXCLUDE_TYPES.includes(typeName)) {
+                const typeList = VALID_EXCLUDE_TYPES.join(', ');
+                return sock.sendMessage(chatId, {
+                    text: `╭─⌈ 🚫 *EXCLUDE LINK TYPE* ⌋\n│\n├─⊷ *Usage:* \`${PREFIX}antilink exclude <type>\`\n│\n├─⊷ *Available types:*\n│  └⊷ ${typeList}\n│\n├─⊷ *Example:*\n│  └⊷ \`${PREFIX}antilink exclude grouplinks\`\n│  └⊷ \`${PREFIX}antilink exclude instagram\`\n│\n├─⊷ Excluded types are *always* actioned\n│  └⊷ even if the domain is in allow list\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                }, { quoted: msg });
+            }
+            if (!config[chatId]) config[chatId] = { enabled: false, mode: 'delete', exemptAdmins: true, exemptLinks: [], warningCount: {}, excludeTypes: [] };
+            if (!config[chatId].excludeTypes) config[chatId].excludeTypes = [];
+            if (config[chatId].excludeTypes.includes(typeName)) {
+                return sock.sendMessage(chatId, { text: `⚠️ \`${typeName}\` is already in the exclude list.` }, { quoted: msg });
+            }
+            config[chatId].excludeTypes.push(typeName);
+            saveConfig(config);
+            return sock.sendMessage(chatId, {
+                text: `✅ *Excluded:* \`${typeName}\`\n\nLinks of this type will always be actioned (${getMode(chatId).toUpperCase()} mode), even if their domain is in the allow list.`
+            }, { quoted: msg });
+        }
+
+        if (sub === 'removeexclude' || sub === 'unexclude') {
+            const typeName = (args[1] || '').toLowerCase();
+            if (!typeName) {
+                return sock.sendMessage(chatId, {
+                    text: `❌ Usage: \`${PREFIX}antilink removeexclude <type>\``
+                }, { quoted: msg });
+            }
+            const excludeTypes = config[chatId]?.excludeTypes || [];
+            const idx = excludeTypes.indexOf(typeName);
+            if (idx === -1) {
+                return sock.sendMessage(chatId, { text: `❌ \`${typeName}\` is not in the exclude list.` }, { quoted: msg });
+            }
+            config[chatId].excludeTypes.splice(idx, 1);
+            saveConfig(config);
+            return sock.sendMessage(chatId, {
+                text: `✅ Removed \`${typeName}\` from exclude list. This type now follows normal allow/deny rules.`
+            }, { quoted: msg });
+        }
+
+        if (sub === 'listexclude' || sub === 'excludes') {
+            const excludeTypes = config[chatId]?.excludeTypes || [];
+            if (excludeTypes.length === 0) {
+                return sock.sendMessage(chatId, {
+                    text: `📋 *Excluded Types*\n\nNo types currently excluded.\nUse \`${PREFIX}antilink exclude <type>\` to add one.\n\nAvailable: ${VALID_EXCLUDE_TYPES.join(', ')}`
+                }, { quoted: msg });
+            }
+            const list = excludeTypes.map((t, i) => `${i + 1}. \`${t}\``).join('\n');
+            return sock.sendMessage(chatId, {
+                text: `📋 *Excluded Link Types*\n\n${list}\n\nTotal: ${excludeTypes.length}\nThese types are always actioned regardless of allow list.\n\nRemove: \`${PREFIX}antilink removeexclude <type>\``
+            }, { quoted: msg });
+        }
+
         if (sub === 'test') {
             const testText = args.slice(1).join(' ') || 'Test message with https://example.com and youtube.com/watch?v=abc';
             const hasLink = containsLink(testText);
@@ -377,7 +470,7 @@ export default {
 
         const gc = config[chatId];
         const currentStatus = gc?.enabled ? `✅ ${gc.mode.toUpperCase()}` : '❌ OFF';
-        const helpText = `╭─⌈ 🔗 *ANTI-LINK* ⌋\n├─⊷ *Status:* ${currentStatus}\n│\n├─⊷ *${PREFIX}antilink on [mode]*\n│  └⊷ warn / delete / kick\n├─⊷ *${PREFIX}antilink off*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antilink status*\n│  └⊷ View current status\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ Whitelist a link\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        const helpText = `╭─⌈ 🔗 *ANTI-LINK* ⌋\n├─⊷ *Status:* ${currentStatus}\n│\n├─⊷ *${PREFIX}antilink on [mode]*\n│  └⊷ warn / delete / kick\n├─⊷ *${PREFIX}antilink off*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antilink status*\n│  └⊷ View current settings\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ Whitelist a domain/link\n├─⊷ *${PREFIX}antilink disallow [link]*\n│  └⊷ Remove from whitelist\n├─⊷ *${PREFIX}antilink listallowed*\n│  └⊷ Show whitelisted links\n├─⊷ *${PREFIX}antilink exclude [type]*\n│  └⊷ Always action a link type\n│  └⊷ types: grouplinks, instagram,\n│  └⊷ facebook, twitter, youtube,\n│  └⊷ tiktok, telegram, discord, shortened\n├─⊷ *${PREFIX}antilink removeexclude [type]*\n│  └⊷ Remove from exclude list\n├─⊷ *${PREFIX}antilink listexclude*\n│  └⊷ Show excluded types\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
         if (isButtonModeEnabled() && giftedBtnsAl?.sendInteractiveMessage) {
             try {
                 await giftedBtnsAl.sendInteractiveMessage(sock, chatId, {
@@ -396,4 +489,4 @@ export default {
     }
 };
 
-export { checkMessageForLinks, isEnabled, getMode, getGroupConfig, isLinkExempt, containsLink, extractLinks, extractMessageText };
+export { checkMessageForLinks, isEnabled, getMode, getGroupConfig, isLinkExempt, isExcludedType, getExcludeTypes, containsLink, extractLinks, extractMessageText };
