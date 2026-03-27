@@ -3,44 +3,43 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { resolveJid } from '../tools/getjid.js';
 
 async function tryUnblock(sock, jid) {
-    const node = {
+    // Correct WA multi-device protocol: action on <list>, jid-only on <item>
+    const listNode = {
         tag: 'iq',
         attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
-        content: [{ tag: 'item', attrs: { action: 'unblock', jid } }],
+        content: [{ tag: 'list', attrs: { action: 'unblock' }, content: [{ tag: 'item', attrs: { jid } }] }],
     };
 
-    let lastMsg = null;
+    // Strategy 1: correct list-action format
+    try {
+        await sock.query(listNode);
+        return;
+    } catch (e1) {
+        const msg = e1?.message || '';
+        console.log(`[UNBLOCK] list-format query: ${msg}`);
+        if (msg === 'bad-request') throw new Error('bad-request');
+    }
 
-    // Strategy 1: Baileys helper
+    // Strategy 2: Baileys legacy helper (item-action format)
     try {
         await sock.updateBlockStatus(jid, 'unblock');
         return;
-    } catch (e1) {
-        lastMsg = e1?.message || '';
-        console.log(`[UNBLOCK] updateBlockStatus: ${lastMsg}`);
-        if (lastMsg === 'bad-request') throw new Error('bad-request');
-    }
-
-    // Strategy 2: query() — waits for server ACK
-    try {
-        await sock.query(node);
-        return;
     } catch (e2) {
-        lastMsg = e2?.message || '';
-        console.log(`[UNBLOCK] query failed: ${lastMsg}`);
-        if (lastMsg === 'bad-request') throw new Error('bad-request');
+        const msg = e2?.message || '';
+        console.log(`[UNBLOCK] updateBlockStatus: ${msg}`);
+        if (msg === 'bad-request') throw new Error('bad-request');
     }
 
-    // Strategy 3: sendNode — only for timeout/connection errors, not server rejections
+    // Strategy 3: sendNode fire-and-forget — only for timeout/connection errors
     if (typeof sock.sendNode === 'function') {
-        node.attrs.id = typeof sock.generateMessageTag === 'function'
+        listNode.attrs.id = typeof sock.generateMessageTag === 'function'
             ? sock.generateMessageTag()
             : `unblock-${Date.now()}`;
-        await sock.sendNode(node);
+        await sock.sendNode(listNode);
         return;
     }
 
-    throw new Error(lastMsg || 'All unblock strategies exhausted');
+    throw new Error('All unblock strategies exhausted');
 }
 
 export default {

@@ -590,6 +590,7 @@
 
 
 import fs from 'fs';
+import { resolveJid } from '../tools/getjid.js';
 
 const antiCallFile = './anticall.json';
 
@@ -968,29 +969,39 @@ function setupAntiCallListener(sock) {
                             console.log(`Attempting to block and decline call ${callId} from ${fromJid}`);
                             // First decline the call
                             await sock.rejectCall(callId, call.from);
-                            
-                            // Then try to block the number
-                            try {
-                                await sock.updateBlockStatus(fromJid, 'block');
-                                actionTaken = 'block';
-                                
-                                // Add to blocked list
-                                blockedNumbers.push({
-                                    number: fromJid,
-                                    blockedBy: botJid,
-                                    blockedAt: new Date().toISOString(),
-                                    reason: 'Auto-blocked by anti-call'
-                                });
-                                
-                                antiCallData.blockedNumbers = blockedNumbers;
-                                console.log(`Successfully blocked and declined call ${callId} from ${fromJid}`);
-                            } catch (blockError) {
-                                console.error('Failed to block via WhatsApp API:', blockError);
-                                actionTaken = 'decline'; // Still declined the call
+
+                            // Resolve LID → phone JID before blocking
+                            const resolvedBlockJid = await resolveJid(sock, fromJid).catch(() => null);
+                            const blockTarget = resolvedBlockJid && !resolvedBlockJid.endsWith('@lid')
+                                ? resolvedBlockJid : null;
+
+                            // Then try to block using correct WA multi-device protocol
+                            if (blockTarget) {
+                                try {
+                                    await sock.query({
+                                        tag: 'iq',
+                                        attrs: { xmlns: 'blocklist', to: 's.whatsapp.net', type: 'set' },
+                                        content: [{ tag: 'list', attrs: { action: 'block' }, content: [{ tag: 'item', attrs: { jid: blockTarget } }] }],
+                                    });
+                                    actionTaken = 'block';
+                                    blockedNumbers.push({
+                                        number: blockTarget,
+                                        blockedBy: botJid,
+                                        blockedAt: new Date().toISOString(),
+                                        reason: 'Auto-blocked by anti-call',
+                                    });
+                                    antiCallData.blockedNumbers = blockedNumbers;
+                                    console.log(`Successfully blocked and declined call ${callId} from ${blockTarget}`);
+                                } catch (blockError) {
+                                    console.error('Failed to block via WhatsApp API:', blockError);
+                                    actionTaken = 'decline';
+                                }
+                            } else {
+                                console.log(`[ANTICALL] Could not resolve ${fromJid} to phone JID — declined only`);
+                                actionTaken = 'decline';
                             }
                         } catch (error) {
                             console.error('Failed to handle block mode:', error);
-                            // Remove from tracking if failed
                             handledCalls.delete(callId);
                             continue;
                         }
