@@ -6539,6 +6539,10 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const _pgTs = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
                         const _pgAge = _pgTs ? Math.round((Date.now() - _pgTs) / 1000) : '?';
                         originalConsoleMethods.log(`🔍 [AV-PRE] type="${type}" fromMe=${_pg.key?.fromMe} sender=${_pgSender} keys=${_pgKeys.join(',')} age=${_pgAge}s`);
+                        // Dump full raw message structure (one-shot) — remove after root-cause found
+                        if (_pgSender !== (sock.user?.id || '').split('@')[0].split(':')[0]) {
+                            try { originalConsoleMethods.log(`🔍 [AV-STRUCT] msg.message=${JSON.stringify(_pg.message)}\n[AV-STRUCT] msg.messageStubType=${_pg.messageStubType} msg.messageStubParameters=${JSON.stringify(_pg.messageStubParameters)}`); } catch {}
+                        }
                     }
                 }
             } catch {}
