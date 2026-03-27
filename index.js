@@ -6586,7 +6586,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
             const _isOldMsg = _upsertTs > 0 && (Date.now() - _upsertTs > 60000 || (connectionOpenTime > 0 && _upsertTs < connectionOpenTime - 30000));
 
             // Never drop media/view-once messages as "old" — they can arrive slightly delayed
-            const _msgHasMedia = !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage
+            // Also never drop view-once stubs (msg.message=null, msg.key.isViewOnce=true)
+            const _isViewOnceStub = !msg.message && msg.key?.isViewOnce === true;
+            const _msgHasMedia = _isViewOnceStub || !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage
                 || msg.message?.viewOnceMessage || msg.message?.viewOnceMessageV2 || msg.message?.viewOnceMessageV2Extension);
             if (_isOldMsg && !_msgHasMedia) return;
 
@@ -7861,6 +7863,8 @@ function detectViewOnceMedia(rawMessage) {
 
 async function handleViewOnceStub(sock, msg) {
     try {
+        const _stubSender = (msg.key?.participant || msg.key?.remoteJid || '?').split('@')[0].split(':')[0];
+        originalConsoleMethods.log(`🔐 [AV-STUB] view-once stub from ${_stubSender} isViewOnce=${msg.key?.isViewOnce}`);
         const config = loadAntiViewOnceConfig();
         const chatId = msg.key.remoteJid;
         const isGroup = chatId?.endsWith('@g.us');
