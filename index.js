@@ -6528,70 +6528,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
         // Everything after step 7 is a fast return — handleIncomingMessage owns the
         // full command dispatch pipeline.
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            // PRE-GUARD RAW TRACE — log any media/viewonce before replay guard drops it
-            try {
-                const _pg = messages?.[0];
-                // BROAD CATCH: log ALL type=notify messages that have null/empty message
-                // — this catches view-once messages that Baileys strips before delivery
-                if (type === 'notify' && _pg && !_pg.key?.fromMe) {
-                    const _pgMsgNull = !_pg.message;
-                    const _pgMsgKeys2 = _pg.message ? Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage') : [];
-                    const _pgIsStub = _pgMsgNull || _pgMsgKeys2.length === 0;
-                    const _pgSenderRaw2 = (_pg.key?.participant || _pg.key?.remoteJid || '').split('@')[0].split(':')[0];
-                    const _pgTs2 = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
-                    const _pgAge2 = _pgTs2 ? Math.round((Date.now() - _pgTs2) / 1000) : '?';
-                    if (_pgIsStub) {
-                        originalConsoleMethods.log(`🔍 [AV-NULL] type="notify" sender=${_pgSenderRaw2} msgKeys=${_pgMsgNull ? 'NULL' : _pgMsgKeys2.join(',') || 'EMPTY'} age=${_pgAge2}s msgStubType=${_pg.messageStubType}`);
-                    }
-                }
-                if (_pg?.message) {
-                    const _pgKeys = Object.keys(_pg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
-                    const _pgHas = _pgKeys.some(k => k.toLowerCase().includes('viewonce') || k.toLowerCase().includes('image') || k.toLowerCase().includes('video') || k.toLowerCase().includes('audio'));
-                    if (_pgHas) {
-                        const _pgSender = (_pg.key?.participant || _pg.key?.remoteJid || '?').split('@')[0].split(':')[0];
-                        const _pgTs = _pg.messageTimestamp ? (typeof _pg.messageTimestamp === 'object' ? _pg.messageTimestamp.low : Number(_pg.messageTimestamp)) * 1000 : 0;
-                        const _pgAge = _pgTs ? Math.round((Date.now() - _pgTs) / 1000) : '?';
-                        originalConsoleMethods.log(`🔍 [AV-PRE] type="${type}" fromMe=${_pg.key?.fromMe} sender=${_pgSender} keys=${_pgKeys.join(',')} age=${_pgAge}s`);
-                        // Dump imageMessage fields + top-level msg fields — remove after root-cause found
-                        try {
-                            // Top-level WebMessageInfo fields (skip message/key which are objects)
-                            const _topSafe = {};
-                            for (const [k, v] of Object.entries(_pg)) {
-                                if (k === 'message' || k === 'key') continue;
-                                if (typeof v === 'function') continue;
-                                if (v instanceof Uint8Array || Buffer.isBuffer(v)) { _topSafe[k] = `<buf${v.length}>`; continue; }
-                                if (typeof v === 'object' && v !== null) { try { _topSafe[k] = JSON.stringify(v); } catch { _topSafe[k] = '[obj]'; } continue; }
-                                _topSafe[k] = v;
-                            }
-                            originalConsoleMethods.log(`🔍 [AV-STRUCT-TOP] ${JSON.stringify(_topSafe)}`);
-                        } catch {}
-                        try {
-                            const _im = _pg.message?.imageMessage || _pg.message?.videoMessage;
-                            if (_im) {
-                                // Probe specific proto fields directly (bypass Object.entries getter issue)
-                                const _probe = {
-                                    viewOnce:          _im.viewOnce,
-                                    viewOnceType:      typeof _im.viewOnce,
-                                    mediaKey:          _im.mediaKey ? `<buf${_im.mediaKey.length}>` : null,
-                                    fileEncSha256:     _im.fileEncSha256 ? `<buf${_im.fileEncSha256.length}>` : null,
-                                    mediaKeyTimestamp: _im.mediaKeyTimestamp,
-                                    fileSha256:        _im.fileSha256 ? `<buf${_im.fileSha256.length}>` : null,
-                                    mimetype:          _im.mimetype,
-                                    caption:           _im.caption,
-                                    height:            _im.height,
-                                    width:             _im.width,
-                                };
-                                // Also dump ALL own + inherited enumerable keys to catch hidden fields
-                                const _allKeys = [];
-                                for (const k in _im) { if (typeof _im[k] !== 'function') _allKeys.push(k); }
-                                _probe._allKeys = _allKeys.join(',');
-                                originalConsoleMethods.log(`🔍 [AV-STRUCT-IM] ${JSON.stringify(_probe)}`);
-                            }
-                        } catch {}
-                    }
-                }
-            } catch {}
-
             // ── QuickConnect replay guard — MUST be first ──────────────────────
             // When reconnecting with an old session WhatsApp replays thousands of
             // missed messages in a burst.  Drop them here before anything else runs
@@ -6599,21 +6535,6 @@ async function startBot(loginMode = 'auto', loginData = null) {
             // isReplayMessage() is a no-op after the 45-second drain window.
             const _qcMsg = messages?.[0];
             if (_qcMsg && isReplayMessage(_qcMsg)) return;
-
-            // TRACE: log ALL view-once arrivals (no fromMe filter) to show exact delivery type
-            try {
-                const _t0 = messages?.[0];
-                if (_t0?.message) {
-                    const _tAllKeys = Object.keys(_t0.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
-                    const _tHasMedia = _tAllKeys.some(k => k.toLowerCase().includes('viewonce') || k.toLowerCase().includes('image') || k.toLowerCase().includes('video') || k.toLowerCase().includes('audio'));
-                    if (_tHasMedia) {
-                        const _tSender = (_t0.key?.participant || _t0.key?.remoteJid || '?').split('@')[0].split(':')[0];
-                        const _tVo = detectViewOnceMedia(_t0.message);
-                        const _tImgVo = _t0.message?.imageMessage?.viewOnce;
-                        originalConsoleMethods.log(`🔍 [AV-RAW] type="${type}" fromMe=${_t0?.key?.fromMe} sender=${_tSender} keys=${_tAllKeys.join(',')} detected=${!!_tVo} imgVO=${_tImgVo}`);
-                    }
-                }
-            } catch {}
 
             if (type !== 'notify') {
                 // Also process 'append' fromMe messages that are button responses —
@@ -7157,15 +7078,17 @@ async function startBot(loginMode = 'auto', loginData = null) {
 
             handleReactDev(sock, msg).catch(() => {});
 
-            // Only call view-once handler if message is actually a view-once
-            if (msg.message) {
-                const _voDebugKeys = Object.keys(msg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
-                const _hasVoHint = _voDebugKeys.some(k => k.toLowerCase().includes('viewonce') || k === 'imageMessage' || k === 'videoMessage' || k === 'audioMessage');
-                if (_hasVoHint) {
+            // ── Anti-ViewOnce: two delivery paths ─────────────────────────────
+            // Path A: DM view-once stub — WhatsApp withholds media content;
+            //         msg.message is null but msg.key.isViewOnce === true.
+            //         We send an alert notification (can't recover media).
+            // Path B: Group view-once — full content is available; download
+            //         and forward to owner / reveal in chat.
+            if (!msg.key?.fromMe && msg.key?.remoteJid) {
+                if (!msg.message && msg.key?.isViewOnce === true) {
+                    handleViewOnceStub(sock, msg).catch(() => {});
+                } else if (msg.message) {
                     const _voResult = detectViewOnceMedia(msg.message);
-                    const _imgVo = msg.message?.imageMessage?.viewOnce;
-                    const _vidVo = msg.message?.videoMessage?.viewOnce;
-                    console.log(`[AV-DEBUG] keys=${_voDebugKeys.join(',')} fromMe=${msg.key?.fromMe} detected=${!!_voResult} imgVO=${_imgVo} vidVO=${_vidVo}`);
                     if (_voResult) {
                         handleViewOnceDetection(sock, msg).catch(err => {
                             originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
@@ -7936,6 +7859,65 @@ function detectViewOnceMedia(rawMessage) {
     return null;
 }
 
+async function handleViewOnceStub(sock, msg) {
+    try {
+        const config = loadAntiViewOnceConfig();
+        const chatId = msg.key.remoteJid;
+        const isGroup = chatId?.endsWith('@g.us');
+
+        let enabled, deliveryMode;
+        if (config.gc && config.pm) {
+            const scope = isGroup ? config.gc : config.pm;
+            enabled = scope.enabled;
+            deliveryMode = scope.mode || 'private';
+        } else {
+            enabled = config.mode !== 'off' && !!(config.mode || config.enabled);
+            deliveryMode = config.mode === 'public' ? 'chat' : 'private';
+        }
+        if (!enabled) return;
+
+        const sender = msg.key.participant || msg.key.remoteJid;
+        const senderNum = sender.split('@')[0].split(':')[0];
+        const pushName = msg.pushName || senderNum;
+        const resolvedPhone = resolvePhoneFromLid(sender) || senderNum;
+
+        const ownerJid = config.ownerJid ||
+            jidManager?.owner?.cleanJid ||
+            (OWNER_JID ? (OWNER_JID.includes('@') ? OWNER_JID : `${OWNER_JID}@s.whatsapp.net`) : null);
+
+        logAntiViewOnce(`🔐 VIEW-ONCE STUB: from +${resolvedPhone} in ${isGroup ? 'GROUP ' + chatId.split('@')[0] : 'DM'}`);
+
+        const chatLabel = isGroup
+            ? (groupMetadataCache?.get(chatId)?.subject || chatId.split('@')[0])
+            : `DM with +${resolvedPhone}`;
+
+        const alertText =
+            `🔐 *View-Once Message Detected*\n\n` +
+            `👤 *From:* @${resolvedPhone} (${pushName})\n` +
+            `💬 *Chat:* ${chatLabel}\n` +
+            `🕒 *Time:* ${new Date().toLocaleTimeString()}\n\n` +
+            `⚠️ _WhatsApp withholds view-once media from bots. ` +
+            `Ask the sender to resend as a regular image, or reply to it with /vv._`;
+
+        if (deliveryMode === 'private' || deliveryMode === 'both') {
+            if (ownerJid) {
+                await sock.sendMessage(ownerJid, {
+                    text: alertText,
+                    mentions: [sender]
+                }).catch(() => {});
+            }
+        }
+        if (deliveryMode === 'chat' || deliveryMode === 'both') {
+            await sock.sendMessage(chatId, {
+                text: alertText,
+                mentions: [sender]
+            }).catch(() => {});
+        }
+    } catch (err) {
+        originalConsoleMethods.log(`❌ [AV-STUB] ${err.message}`);
+    }
+}
+
 async function handleViewOnceDetection(sock, msg) {
     try {
         if (msg.key?.fromMe) return;
@@ -7963,11 +7945,9 @@ async function handleViewOnceDetection(sock, msg) {
             enabled = config.mode !== 'off' && (config.mode || config.enabled);
             deliveryMode = config.mode === 'public' ? 'chat' : 'private';
         }
-        console.log(`[AV-HANDLER] enabled=${enabled} mode=${deliveryMode} ownerJid=${config.ownerJid || 'unset'} gc=${JSON.stringify(config.gc)} pm=${JSON.stringify(config.pm)}`);
         if (!enabled) return;
 
         const viewOnce = detectViewOnceMedia(rawMessage);
-        console.log(`[AV-HANDLER] detectViewOnceMedia result=${JSON.stringify(viewOnce ? { type: viewOnce.type, hasMedia: !!viewOnce.media } : null)}`);
         if (!viewOnce) return;
 
         const { type, media, useMessageDownload } = viewOnce;
