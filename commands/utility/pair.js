@@ -19,10 +19,9 @@ export default {
         if (!args[0]) {
             return sock.sendMessage(jid, {
                 text:
-                    `╭─⌈ 📲 *PAIR CODE* ⌋\n│\n` +
-                    `├─⊷ *Usage:*\n│  └⊷ *${prefix}pair <phone>*\n│\n` +
-                    `├─⊷ *Example:*\n│  └⊷ ${prefix}pair 254712345678\n│\n` +
-                    `├─⊷ *Note:* Include country code, no + or spaces\n│\n` +
+                    `╭─⌈ ⚠️ *PAIR DEVICE* ⌋\n│\n` +
+                    `├─⊷ *${prefix}pair <number>*\n` +
+                    `│  └⊷ Full number, no +\n` +
                     `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
         }
