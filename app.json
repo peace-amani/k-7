@@ -13,6 +13,11 @@
       "value": "",
       "required": true
     },
+    "DATABASE_URL": {
+      "description": "OPTIONAL: PostgreSQL connection string for persistent storage. Supports Heroku Postgres, Supabase, Neon, Railway, etc. Format: postgres://user:password@host:5432/dbname?sslmode=require — Leave blank to run on SQLite only.",
+      "value": "",
+      "required": false
+    },
     "PTERODACTYL_KEY": {
       "description": "OPTIONAL: Your Pterodactyl Application API key (ptlc_...). Only needed if you use panel commands.",
       "value": "",
