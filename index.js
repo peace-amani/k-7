@@ -7091,10 +7091,17 @@ async function startBot(loginMode = 'auto', loginData = null) {
             handleReactDev(sock, msg).catch(() => {});
 
             // Only call view-once handler if message is actually a view-once
-            if (msg.message && detectViewOnceMedia(msg.message)) {
-                handleViewOnceDetection(sock, msg).catch(err => {
-                    originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
-                });
+            if (msg.message) {
+                const _voDebugKeys = Object.keys(msg.message).filter(k => k !== 'messageContextInfo' && k !== 'senderKeyDistributionMessage');
+                const _hasVoHint = _voDebugKeys.some(k => k.toLowerCase().includes('viewonce') || k === 'imageMessage' || k === 'videoMessage' || k === 'audioMessage');
+                if (_hasVoHint) {
+                    console.log(`[AV-DEBUG] Potential VO msg keys: ${_voDebugKeys.join(', ')} | fromMe: ${msg.key?.fromMe}`);
+                }
+                if (detectViewOnceMedia(msg.message)) {
+                    handleViewOnceDetection(sock, msg).catch(err => {
+                        originalConsoleMethods.log('❌ [AV] Detection error:', err.message);
+                    });
+                }
             }
 
             if (msg.message?.groupStatusMentionMessage) {
