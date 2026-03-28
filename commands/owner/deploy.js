@@ -19,21 +19,25 @@ const PLATFORMS = {
         type: 'text',
         content: (PREFIX) =>
             `🟣 *DEPLOY ON HEROKU*\n\n` +
-            `Heroku is a cloud platform that lets you build, run, and manage applications.\n\n` +
             `*📋 Steps:*\n` +
-            `1️⃣ Create an account at *heroku.com*\n` +
-            `2️⃣ Install Heroku CLI: \`npm install -g heroku\`\n` +
-            `3️⃣ Login via CLI: \`heroku login\`\n` +
-            `4️⃣ Create a new app: \`heroku create your-app-name\`\n` +
-            `5️⃣ Add your env vars in *Settings → Config Vars*\n` +
-            `6️⃣ Push your code: \`git push heroku main\`\n` +
-            `7️⃣ Scale the dyno: \`heroku ps:scale web=1\`\n\n` +
-            `*⚡ Pro Tips:*\n` +
-            `• Use *Eco dynos* for low-cost 24/7 hosting\n` +
-            `• Add a *Procfile* with: \`worker: node index.js\`\n` +
-            `• Free tier was discontinued — use Eco ($5/mo)\n` +
-            `• Set \`OWNER_NUMBER\` and session vars in Config Vars\n\n` +
-            `*🔗 Link:* https://heroku.com\n\n` +
+            `1️⃣ Create an account at *heroku.com* if you don't have one\n` +
+            `2️⃣ Open the bot's *README.md* on GitHub\n` +
+            `3️⃣ Click the *🟣 Deploy to Heroku* button in the README\n` +
+            `4️⃣ A Heroku page opens — it's pre-filled from the bot's *app.json* template\n` +
+            `5️⃣ Give your app a name (e.g. *mybot-wolf*)\n` +
+            `6️⃣ Fill in all the *Config Vars* shown on the page:\n` +
+            `   • SESSION_ID — your bot session ID\n` +
+            `   • OWNER_NUMBER — your WhatsApp number\n` +
+            `   • PREFIX — command prefix (default: .)\n` +
+            `   • Any other required vars shown on the form\n` +
+            `7️⃣ Click *Deploy app* at the bottom\n` +
+            `8️⃣ Wait for Heroku to finish building — then click *View*\n\n` +
+            `*⚡ Notes:*\n` +
+            `• No CLI or Git needed — it's all done in the browser\n` +
+            `• Free dynos are discontinued — use *Eco ($5/mo)*\n` +
+            `• To update config later: App → *Settings → Config Vars*\n` +
+            `• To redeploy: App → *Deploy → GitHub → Manual Deploy*\n\n` +
+            `*🔗 Heroku:* https://heroku.com\n\n` +
             `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
     },
     bothosting: {
