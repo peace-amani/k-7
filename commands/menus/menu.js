@@ -109,10 +109,6 @@ export default {
     const jid = m.key.remoteJid;
     let style = getCurrentMenuStyle();
     
-    if (style === 8) {
-      style = 5;
-    }
-    
     setLastMenu(style);
 
 
@@ -2434,7 +2430,7 @@ case 2: {
 📌 *Timezone:* ${getTimezoneFromPhone(m.key.participant || m.key.remoteJid || '')}
 📌 *Total Commands:* 200+
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
-📌 *Available styles: 1-7*
+📌 *Available styles: 1-9*
 
 🐺🌕*POWERED BY ${_menuGetOwnerName().toUpperCase()} TECH*🌕🐺
 `; 
