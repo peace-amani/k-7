@@ -1717,6 +1717,7 @@ case 1: {
 │  • take
 │  • imgbb
 │  • tiktok
+│  • twitter
 │  • save
 │  • screenshot
 │  • inspect
@@ -3977,6 +3978,7 @@ case 4: {
 │  • take
 │  • imgbb
 │  • tiktok
+│  • twitter
 │  • save
 │
 ├─⊷ *📝 PERSONAL TOOLS*
@@ -5799,6 +5801,7 @@ case 5: {
 │  • take
 │  • imgbb
 │  • tiktok
+│  • twitter
 │  • save
 │  • screenshot
 │  • inspect
@@ -9397,6 +9400,7 @@ case 9: {
 │  • take
 │  • imgbb
 │  • tiktok
+│  • twitter
 │  • save
 │  • screenshot
 │  • inspect
