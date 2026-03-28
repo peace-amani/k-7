@@ -45,7 +45,51 @@ async function downloadFile(url, filePath) {
   });
 }
 
-// ── Provider 1: cobalt.tools ──────────────────────────────────────────────────
+// ── Provider 1: eliteprotech ──────────────────────────────────────────────────
+async function tryEliteProtech(url) {
+  const res = await axios.get('https://eliteprotech-apis.zone.id/instagram', {
+    params: { url },
+    timeout: 25000,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  });
+
+  const d = res.data;
+  if (!d || d.status === false) return null;
+
+  const isVideo = url.includes('/reel/') || url.includes('/tv/');
+
+  // Flatten whichever field the API uses for the media list
+  const raw = d.data || d.result || d;
+  const mediaList = raw?.medias || raw?.media || raw?.links || raw?.items || [];
+
+  // Single-URL response
+  if (!Array.isArray(mediaList) || mediaList.length === 0) {
+    const single = raw?.url || raw?.download_url || raw?.videoUrl || raw?.imageUrl || d.url;
+    if (single && typeof single === 'string' && single.startsWith('http')) {
+      console.log(`[IG/eliteprotech] ✅ single`);
+      return [{ url: single, isVideo }];
+    }
+    return null;
+  }
+
+  // Multi-item / carousel response
+  const items = mediaList
+    .map(x => {
+      const u = x?.url || x?.download_url || x?.src || (typeof x === 'string' ? x : null);
+      if (!u) return null;
+      return { url: u, isVideo: x?.type === 'video' || u.includes('.mp4') || isVideo };
+    })
+    .filter(Boolean);
+
+  if (items.length > 0) {
+    console.log(`[IG/eliteprotech] ✅ ${items.length} item(s)`);
+    return items;
+  }
+
+  return null;
+}
+
+// ── Provider 2: cobalt.tools ──────────────────────────────────────────────────
 // cobalt proxies all media through its own CDN — URLs are NOT from Instagram CDN
 // so they work from ANY server IP (VPS, Pterodactyl, Railway, etc.)
 async function tryCobalt(url) {
@@ -206,9 +250,10 @@ async function downloadInstagram(url) {
 
   // ── Providers that return URLs (we stream them to temp files) ──────────────
   const urlProviders = [
-    { name: 'cobalt',    fn: () => tryCobalt(url)   },
-    { name: 'snapsave',  fn: () => trySnapSave(url) },
-    { name: 'xcasper',   fn: () => tryXcasper(url)  },
+    { name: 'eliteprotech', fn: () => tryEliteProtech(url) },
+    { name: 'cobalt',       fn: () => tryCobalt(url)       },
+    { name: 'snapsave',     fn: () => trySnapSave(url)     },
+    { name: 'xcasper',      fn: () => tryXcasper(url)      },
   ];
 
   for (const p of urlProviders) {
