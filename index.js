@@ -3,6 +3,31 @@
 
 //INNER-PEACE - SILENT WOLF
 
+// ── Silence Node.js process warnings before ANY imports run ──────────────────
+// NODE_NO_WARNINGS is the env-var equivalent of --no-warnings. Setting it here
+// guarantees it is in effect even for warnings triggered during ESM resolution.
+process.env.NODE_NO_WARNINGS = '1';
+
+// Register a warning listener that silently discards warning types that would
+// expose internal file paths (e.g. MODULE_TYPELESS_PACKAGE_JSON). This listener
+// runs BEFORE Node.js's default handler, which would write the raw path to stderr.
+// The handler intentionally does nothing — the warning is consumed and dropped.
+process.on('warning', (warning) => {
+    const name = (warning?.name || '').toUpperCase();
+    const code = (warning?.code || '').toUpperCase();
+    const msg  = (warning?.message || '').toLowerCase();
+    // Drop module-type warnings and any warning that mentions a /tmp/ path
+    if (
+        code === 'MODULE_TYPELESS_PACKAGE_JSON' ||
+        code.includes('MODULE_') ||
+        name === 'MODULE_TYPELESS_PACKAGE_JSON' ||
+        msg.includes('/tmp/') ||
+        msg.includes('module type of file') ||
+        msg.includes('does not parse as commonjs') ||
+        msg.includes('add "type": "module"')
+    ) return; // swallow silently
+    // All other warnings fall through to Node.js's default stderr output
+});
 
 // ====== SILENT WOLFBOT - ULTIMATE CLEAN EDITION (SPEED OPTIMIZED) ======
 // This is the main entry point for the entire bot.
@@ -137,7 +162,10 @@ function setupProcessFilter() {
         'sessionbuilder',
         'interactive send','native_flow','tag: \'biz\'',
         'app state resync','syncing critical app state',
-        '[dotenv'
+        '[dotenv',
+        // Block module-type warnings that would expose internal /tmp/ file paths
+        'module_typeless_package_json','module type of file',
+        'does not parse as commonjs','add "type": "module"'
     ];
     
     const filterOutput = (chunk) => {
@@ -1173,13 +1201,19 @@ const _logSuppressArr = [..._logSuppressSet];
 const _errSuppressArr = [
     'bad mac','failed to decrypt','decrypt','session error','sessioncipher',
     'sessionbuilder','session_cipher','signalprotocol','ratchet','closed session',
-    'stream errored','verifymac','libsignal','hmac','pre-key','prekey'
+    'stream errored','verifymac','libsignal','hmac','pre-key','prekey',
+    // Suppress Node.js module-type warnings that expose internal /tmp/ paths
+    'module_typeless_package_json','module type of file','does not parse as commonjs',
+    'add "type": "module"','/tmp/'
 ];
 const _warnSuppressArr = [
     'decrypted message with closed session','failed to decrypt','bad mac',
     'closing session','closing open session','incoming prekey bundle',
     'stream errored','signalprotocol','ratchet',
-    'sessioncipher','sessionbuilder','sessionentry','sessionstate','sessionerror'
+    'sessioncipher','sessionbuilder','sessionentry','sessionstate','sessionerror',
+    // Suppress Node.js module-type warnings that expose internal /tmp/ paths
+    'module_typeless_package_json','module type of file','does not parse as commonjs',
+    'add "type": "module"','/tmp/'
 ];
 function _isLogSuppressed(msg) {
     for (let i = 0; i < _logSuppressArr.length; i++) {
