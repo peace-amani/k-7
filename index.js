@@ -5243,6 +5243,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             'tts', 'say', 'speak',
             // github — help text must not get button injection
             'gitclone', 'clone', 'githubdl',
+            // site reader — plain help, no button wrap
+            'readsite', 'webread', 'siteread', 'readweb',
             // downloaders — manage their own button cards; global wrap must not
             // inject "Download Again" buttons onto help text (no-arg calls)
             'instagram', 'ig', 'igdl', 'insta',
