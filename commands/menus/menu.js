@@ -1631,6 +1631,7 @@ case 1: {
 │  • findcommands
 │  • latestupdates
 │  • platform
+│  • deploy
 │  • debugchat
 │
 ├─⊷ *🔒 PRIVACY CONTROLS*
@@ -2292,6 +2293,7 @@ case 2: {
 > • disk — check disk space
 > • hostip — get host IP
 > • findcommands — search commands
+> • deploy — deployment & hosting guide
 
 > ✨ *GENERAL UTILITIES* — info & conversions
 > • ping — bot ping
@@ -3922,6 +3924,7 @@ case 4: {
 │  • disk
 │  • hostip
 │  • findcommands
+│  • deploy
 │
 ╰─⊷
 
@@ -5710,6 +5713,7 @@ case 5: {
 │  • findcommands
 │  • latestupdates
 │  • platform
+│  • deploy
 │  • debugchat
 │
 ├─⊷ *🔒 PRIVACY CONTROLS*
@@ -9307,6 +9311,7 @@ case 9: {
 │  • findcommands
 │  • latestupdates
 │  • platform
+│  • deploy
 │  • debugchat
 │
 ├─⊷ *🔒 PRIVACY CONTROLS*
