@@ -128,12 +128,12 @@ export default {
       let styleList = `╭─⌈ 🎨 *MENU STYLE* ⌋\n│\n`;
       styleList += `│  📊 Current: Style ${currentStyle}\n│\n`;
       styleList += `├─⊷ *${PREFIX}menustyle <1-9>*\n`;
-      styleList += `│  └⊷ 1️⃣ Image Menu\n`;
+      styleList += `│  └⊷ 1️⃣ Image + Faded\n`;
       styleList += `│  └⊷ 2️⃣ Text Only\n`;
-      styleList += `│  └⊷ 3️⃣ Full Descriptions\n`;
-      styleList += `│  └⊷ 4️⃣ Ad Style\n`;
+      styleList += `│  └⊷ 3️⃣ Text + Contact Card\n`;
+      styleList += `│  └⊷ 4️⃣ Faded + Read More\n`;
       styleList += `│  └⊷ 5️⃣ Faded\n`;
-      styleList += `│  └⊷ 6️⃣ Faded + Image\n`;
+      styleList += `│  └⊷ 6️⃣ Image + Read More\n`;
       styleList += `│  └⊷ 7️⃣ Image + Text\n`;
       styleList += `│  └⊷ 8️⃣ Buttons (Interactive)\n`;
       styleList += `│  └⊷ 9️⃣ Full List + Image\n│\n`;
@@ -174,15 +174,15 @@ export default {
       
       // Style descriptions
       const styleDescriptions = {
-        1: 'Image Menu - Menu with image header',
-        2: 'Text Only - Minimal text menu',
-        3: 'Full Descriptions - Detailed command info',
-        4: 'Ad Style - Promotional format',
-        5: 'Faded - Faded aesthetic design',
-        6: 'Faded + Image - Faded with image',
-        7: 'Image + Text - Balanced layout',
+        1: 'Image + Faded - Image/video menu with faded caption',
+        2: 'Text Only - Plain text menu, no image',
+        3: 'Text + Contact Card - Text menu quoted by a fake contact card',
+        4: 'Faded + Read More - Text with fading and collapsible "Read more"',
+        5: 'Faded - Text menu with faded aesthetic',
+        6: 'Image + Read More - Image/video with collapsible "Read more" caption',
+        7: 'Image + Text - Image/video with plain text caption',
         8: 'Buttons - Interactive button menus (gifted-btns)',
-        9: 'Full List + Image - Full command list with image header'
+        9: 'Full List + Image - Full command list with image/video header'
       };
       
       let successMsg = `✅ *Menu Style Updated*\n`;
