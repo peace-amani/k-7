@@ -64,7 +64,7 @@ export default {
 
     if (!searchQuery && !flags.list) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎵 *PLAY* ⌋\n│\n├─⊷ *${p}play <song name>*\n│  └⊷ Download audio\n├─⊷ *${p}play <YouTube URL>*\n│  └⊷ Download from link\n├─⊷ *${p}play list <query>*\n│  └⊷ Search and list results\n├─⊷ Reply a message and send *${p}play*\n│\n╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`
+        text: `╭─⌈ 🎵 *PLAY* ⌋\n│\n├─⊷ *${p}play <song name>*\n│  └⊷ Download audio\n├─⊷ *${p}play <YouTube URL>*\n│  └⊷ Download from link\n├─⊷ *${p}play list <query>*\n│  └⊷ Search and list results\n├─⊷ Reply a message and send *${p}play*\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
       }, { quoted: m });
     }
 

@@ -5241,6 +5241,12 @@ async function startBot(loginMode = 'auto', loginData = null) {
             'viddl', 'dlvid', 'downloadvid',
             // tts — shows its own buttons after audio
             'tts', 'say', 'speak',
+            // downloaders — manage their own button cards; global wrap must not
+            // inject "Download Again" buttons onto help text (no-arg calls)
+            'instagram', 'ig', 'igdl', 'insta',
+            'tiktok', 'tt', 'tikdown', 'ttdl',
+            'twitter', 'twdl', 'xdl', 'twdown',
+            'tgsticker', 'tgs', 'telesticker', 'tgpack',
         ]);
         sock.sendMessage = async (jid, content, options, ...rest) => {
             // ─── Status broadcast bypass ─────────────────────────────────────
