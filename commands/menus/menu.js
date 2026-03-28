@@ -1718,6 +1718,7 @@ case 1: {
 │  • imgbb
 │  • tiktok
 │  • twitter
+│  • tgsticker
 │  • save
 │  • screenshot
 │  • inspect
@@ -3979,6 +3980,7 @@ case 4: {
 │  • imgbb
 │  • tiktok
 │  • twitter
+│  • tgsticker
 │  • save
 │
 ├─⊷ *📝 PERSONAL TOOLS*
@@ -5802,6 +5804,7 @@ case 5: {
 │  • imgbb
 │  • tiktok
 │  • twitter
+│  • tgsticker
 │  • save
 │  • screenshot
 │  • inspect
@@ -9401,6 +9404,7 @@ case 9: {
 │  • imgbb
 │  • tiktok
 │  • twitter
+│  • tgsticker
 │  • save
 │  • screenshot
 │  • inspect

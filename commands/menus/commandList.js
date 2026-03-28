@@ -148,6 +148,8 @@ export const getBoxStyleCommands = () => {
 │  • instagram
 │  • snapchat
 │  • tiktok
+│  • twitter
+│  • tgsticker
 │  • tiksearch
 │  • playlist
 │
@@ -525,6 +527,8 @@ export const getTextOnlyCommands = (botMode) => {
 > • instagram — Instagram download
 > • snapchat — Snapchat download
 > • tiktok — TikTok download
+> • twitter — Twitter/X download
+> • tgsticker — Telegram sticker packs
 > • tiksearch — TikTok search
 > • playlist — playlist download
 
@@ -874,6 +878,8 @@ export const getQuotedBoxCommands = () => {
 > │ • instagram
 > │ • snapchat
 > │ • tiktok
+> │ • twitter
+> │ • tgsticker
 > │ • tiksearch
 > │ • playlist
 > └────────────────
@@ -1284,6 +1290,8 @@ export const getPlainBoxCommands = () => {
 │ instagram
 │ snapchat
 │ tiktok
+│ twitter
+│ tgsticker
 │ tiksearch
 │ playlist
 └────────────────

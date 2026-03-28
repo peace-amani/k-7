@@ -42,7 +42,7 @@ export default {
             await new Promise(resolve => setTimeout(resolve, 800));
 
             const categoryMap = {
-                'downloaders': ['play', 'song', 'video', 'tiktok', 'instagram', 'facebook', 'twitter', 'apk', 'mediafire', 'gdrive', 'spotify', 'soundcloud', 'pinterest', 'reddit', 'snack', 'likee', 'capcut'],
+                'downloaders': ['play', 'song', 'video', 'tiktok', 'instagram', 'facebook', 'twitter', 'tgsticker', 'apk', 'mediafire', 'gdrive', 'spotify', 'soundcloud', 'pinterest', 'reddit', 'snack', 'likee', 'capcut'],
                 'ai': ['chatgpt', 'gpt', 'gemini', 'bard', 'claude', 'claudeai', 'copilot', 'bing', 'blackbox', 'cohere', 'llama', 'mistral', 'perplexity', 'venice', 'wormgpt', 'analyze', 'flux', 'imagine', 'vision', 'art', 'real', 'imagegen', 'remini', 'logo', 'brandlogo', 'companylogo', 'textlogo', 'wolf'],
                 'group': ['kick', 'remove', 'promote', 'demote', 'mute', 'unmute', 'ban', 'unban', 'warn', 'antilink', 'antispam', 'antibug', 'welcome', 'goodbye', 'setdesc', 'setname', 'invite', 'revoke', 'tagall', 'tagadmin', 'groupinfo', 'creategroup', 'approveall'],
                 'utility': ['ping', 'translate', 'weather', 'screenshot', 'shorturl', 'qrencode', 'define', 'wiki', 'news', 'covid', 'time', 'alive', 'uptime', 'prefix', 'fetch', 'npm', 'take', 'quoted', 'save', 'vcf'],
