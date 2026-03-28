@@ -733,6 +733,7 @@ const __dirname = dirname(__filename);
 
 // ── Seed Pterodactyl & Paystack configs from ENV (optional) ─────────────────
 import { seedConfigsFromEnv, getKeyStatus } from './lib/envConfig.js';
+import { isTranslationEnabled, translateText, getBotLanguage } from './lib/translator.js';
 seedConfigsFromEnv();
 
 
@@ -5270,6 +5271,20 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 if (typeof content.caption === 'string' && content.caption.length > 0) {
                     content = { ...content, caption: _applyFont(content.caption, _activeFont) };
                 }
+            }
+            // ─── Language translation ────────────────────────────────────────
+            if (isTranslationEnabled() && content && typeof content === 'object'
+                && !content.react && !content.delete && !content.sticker
+                && !content.audio && !content.contacts && !content.poll) {
+                try {
+                    const _tLang = getBotLanguage().code;
+                    if (typeof content.text === 'string' && content.text.length > 0) {
+                        content = { ...content, text: await translateText(content.text, _tLang) };
+                    }
+                    if (typeof content.caption === 'string' && content.caption.length > 0) {
+                        content = { ...content, caption: await translateText(content.caption, _tLang) };
+                    }
+                } catch {}
             }
             // ─── Channel mode: wrap all outgoing messages as forwarded ───────
             if (content && content._skipChannelMode) {
