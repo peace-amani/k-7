@@ -2475,14 +2475,8 @@ case 3: {
   
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
-  
-  const _loadFade = (() => {
-    const _fc = ['\u200D','\u200C','\u2060','\uFEFF','\u200B','\u200E','\u200F','\u2061','\u2062','\u2063','\u2064'];
-    let s = '';
-    for (let i = 0; i < 900; i++) s += _fc[i % _fc.length];
-    return s + '\n\u200B\u200B\u200B\u200B\u200B\u200B\u200B\u200B\n';
-  })();
-  await sock.sendMessage(jid, { text: `${_loadFade}⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: m });
+
+  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: fkontak });
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
