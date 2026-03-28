@@ -130,9 +130,9 @@ export default {
       styleList += `├─⊷ *${PREFIX}menustyle <1-9>*\n`;
       styleList += `│  └⊷ 1️⃣ Image + Faded\n`;
       styleList += `│  └⊷ 2️⃣ Text Only\n`;
-      styleList += `│  └⊷ 3️⃣ Text + Contact Card\n`;
-      styleList += `│  └⊷ 4️⃣ Faded + Read More\n`;
-      styleList += `│  └⊷ 5️⃣ Faded\n`;
+      styleList += `│  └⊷ 3️⃣ Faded + Contact Card\n`;
+      styleList += `│  └⊷ 4️⃣ Read More\n`;
+      styleList += `│  └⊷ 5️⃣ Text + Read More\n`;
       styleList += `│  └⊷ 6️⃣ Image + Read More\n`;
       styleList += `│  └⊷ 7️⃣ Image + Text\n`;
       styleList += `│  └⊷ 8️⃣ Buttons (Interactive)\n`;
@@ -176,9 +176,9 @@ export default {
       const styleDescriptions = {
         1: 'Image + Faded - Image/video menu with faded caption',
         2: 'Text Only - Plain text menu, no image',
-        3: 'Text + Contact Card - Text menu quoted by a fake contact card',
-        4: 'Faded + Read More - Text with fading and collapsible "Read more"',
-        5: 'Faded - Text menu with faded aesthetic',
+        3: 'Faded + Contact Card - Faded/collapsed sections quoted by a contact card',
+        4: 'Read More - Text menu with collapsible "Read more" sections',
+        5: 'Text + Read More - Full text menu with a single "Read more" collapse',
         6: 'Image + Read More - Image/video with collapsible "Read more" caption',
         7: 'Image + Text - Image/video with plain text caption',
         8: 'Buttons - Interactive button menus (gifted-btns)',
