@@ -375,7 +375,7 @@ export default {
 //         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
 //           return ownerInfo.contact.trim();
 //         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
 //           return owner;
 //         }
 //       }
@@ -1172,7 +1172,7 @@ case 1: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -1189,7 +1189,7 @@ case 1: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -2610,7 +2610,7 @@ case 3: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -2627,7 +2627,7 @@ case 3: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -3626,7 +3626,7 @@ case 4: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -3643,7 +3643,7 @@ case 4: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -4463,7 +4463,7 @@ case 4: {
 //         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
 //           return ownerInfo.contact.trim();
 //         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
 //           return owner;
 //         }
 //       }
@@ -5287,7 +5287,7 @@ case 5: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -5304,7 +5304,7 @@ case 5: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -6369,7 +6369,7 @@ case 6: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -6386,7 +6386,7 @@ case 6: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -7399,7 +7399,7 @@ case 6: {
 //         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
 //           return ownerInfo.contact.trim();
 //         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+//           const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
 //           return owner;
 //         }
 //       }
@@ -8167,7 +8167,7 @@ case 7: {
         } else if (ownerInfo.contact && ownerInfo.contact.trim() !== '') {
           return ownerInfo.contact.trim();
         } else if (Array.isArray(ownerInfo) && ownerInfo.length > 0) {
-          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : "Wolf";
+          const owner = typeof ownerInfo[0] === 'string' ? ownerInfo[0] : 'WOLF';
           return owner;
         }
       }
@@ -8184,7 +8184,7 @@ case 7: {
       
     } catch (error) {}
     
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix = () => {
@@ -9111,13 +9111,13 @@ case 9: {
         if (o.number?.trim())  return o.number.trim();
         if (o.phone?.trim())   return o.phone.trim();
         if (o.contact?.trim()) return o.contact.trim();
-        if (Array.isArray(o) && o.length > 0) return typeof o[0] === 'string' ? o[0] : 'Wolf';
+        if (Array.isArray(o) && o.length > 0) return typeof o[0] === 'string' ? o[0] : 'WOLF';
       }
       if (global.OWNER_NAME)       return global.OWNER_NAME;
       if (global.owner)            return global.owner;
       if (process.env.OWNER_NUMBER) return process.env.OWNER_NUMBER;
     } catch (e) {}
-    return 'Wolf';
+    return 'WOLF';
   };
   
   const getBotPrefix9 = () => {
