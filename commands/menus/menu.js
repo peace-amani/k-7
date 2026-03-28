@@ -2039,6 +2039,7 @@ case 1: {
 │  • device
 │  • movie
 │  • trailer
+│  • readsite
 │  • goodmorning
 │  • goodnight
 │  • channelstatus
@@ -3303,6 +3304,7 @@ case 3: {
 │ device
 │ movie
 │ trailer
+│ readsite
 │ goodmorning
 │ goodnight
 │ channelstatus
@@ -6125,6 +6127,7 @@ case 5: {
 │  • device
 │  • movie
 │  • trailer
+│  • readsite
 │  • goodmorning
 │  • goodnight
 │  • channelstatus
@@ -7108,6 +7111,7 @@ case 6: {
 > │ device
 > │ movie
 > │ trailer
+> │ readsite
 > │ goodmorning
 > │ goodnight
 > │ channelstatus
@@ -8924,6 +8928,7 @@ case 7: {
 │ device
 │ movie
 │ trailer
+│ readsite
 │ goodmorning
 │ goodnight
 │ channelstatus
@@ -9725,6 +9730,7 @@ case 9: {
 │  • device
 │  • movie
 │  • trailer
+│  • readsite
 │  • goodmorning
 │  • goodnight
 │  • channelstatus
