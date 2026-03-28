@@ -3,7 +3,7 @@
 // Extracts: title, description, headings, links, text body, and any JSON data URLs
 
 import axios from 'axios';
-import { getBotName } from '../../lib/botname.js';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
 const MAX_TEXT = 2800;
 
@@ -119,7 +119,7 @@ export default {
 
     if (!rawUrl) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🌐 *SITE READER* ⌋\n│\n├─⊷ *Usage:* readsite <url>\n│\n├─⊷ *Examples:*\n│  └⊷ readsite https://apiskeith.top/download\n│  └⊷ readsite https://example.com\n│\n├─⊷ *Extracts:*\n│  ├⊷ Page title & description\n│  ├⊷ Headings (H1–H3)\n│  ├⊷ Navigation links\n│  ├⊷ Visible body text\n│  └⊷ Data/API JSON URLs found in scripts\n│\n╰⊷ *${getBotName()}*`
+        text: `╭─⌈ 🌐 *SITE READER* ⌋\n│\n├─⊷ *Usage:* readsite <url>\n│\n├─⊷ *Examples:*\n│  └⊷ readsite https://apiskeith.top/download\n│  └⊷ readsite https://example.com\n│\n├─⊷ *Extracts:*\n│  ├⊷ Page title & description\n│  ├⊷ Headings (H1–H3)\n│  ├⊷ Navigation links\n│  ├⊷ Visible body text\n│  └⊷ Data/API JSON URLs found in scripts\n│\n╰⊷ *Powered by ${(getOwnerName() || 'WOLF').toUpperCase()} TECH*`
       }, { quoted: m });
     }
 
@@ -193,7 +193,7 @@ export default {
       out += jsonPreview.slice(0, 1000) + '\n';
     }
 
-    out += `│\n╰⊷ *${getBotName()}*`;
+    out += `│\n╰⊷ *Powered by ${(getOwnerName() || 'WOLF').toUpperCase()} TECH*`;
 
     // WhatsApp max message length guard
     if (out.length > 4000) out = out.slice(0, 3990) + '...\n╰⊷ *(truncated)*';
