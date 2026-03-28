@@ -2476,7 +2476,22 @@ case 3: {
   // Create fake contact for quoted messages
   const fkontak = createFakeContact(m);
 
-  await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: fkontak });
+  try {
+    const _loadMsg = generateWAMessageFromContent(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: { text: null },
+            footer: { text: `⚡ ${currentBotName} menu loading...` },
+            nativeFlowMessage: { buttons: [{ text: null }] },
+          },
+        },
+      },
+    }, { quoted: fkontak, userJid: sock.user?.id || jid });
+    await sock.relayMessage(jid, _loadMsg.message, { messageId: _loadMsg.key.id });
+  } catch {
+    await sock.sendMessage(jid, { text: `⚡ ${currentBotName} menu loading...`, _skipChannelMode: true }, { quoted: fkontak });
+  }
   await new Promise(resolve => setTimeout(resolve, 800));
 
   // ========== REST OF YOUR EXISTING CODE ==========
