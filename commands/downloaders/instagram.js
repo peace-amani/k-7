@@ -10,6 +10,13 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 
+let _getUserCaption;
+try {
+  const _tk = await import('./tiktok.js');
+  _getUserCaption = _tk.getUserCaption || ((uid) => `${getBotName()} is the Alpha`);
+} catch { _getUserCaption = (uid) => `${getBotName()} is the Alpha`; }
+function getCaption(uid) { return typeof _getUserCaption === 'function' ? _getUserCaption(uid) : `${getBotName()} is the Alpha`; }
+
 const _req = createRequire(import.meta.url);
 let giftedBtnsIg;
 try { giftedBtnsIg = _req('gifted-btns'); } catch {}
@@ -313,6 +320,7 @@ export default {
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;
+    const userId = m.key.participant || m.key.remoteJid;
 
     // Show help if no explicit URL typed — check args[0] BEFORE falling back
     // to quoted text, so typing `.ig` alone always returns help regardless of
@@ -378,7 +386,7 @@ export default {
           }
 
           const caption = sentCount === 0
-            ? `📷 *Instagram ${isVideo ? 'Video' : 'Photo'}*\n📦 ${sizeMB}MB | 🐺 ${getBotName()}`
+            ? `📷 *Instagram ${isVideo ? 'Video' : 'Photo'}*\n📦 ${sizeMB}MB | 🐺 ${getBotName()}\n\n${getCaption(userId)}`
             : `Part ${sentCount + 1} | ${sizeMB}MB`;
 
           if (isVideo) {

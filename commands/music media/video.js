@@ -7,6 +7,13 @@ import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { keithVideo, keithFacebook } from '../../lib/keithApi.js';
 
+let _getUserCaption;
+try {
+  const _tk = await import('../downloaders/tiktok.js');
+  _getUserCaption = _tk.getUserCaption || ((uid) => `${getBotName()} is the Alpha`);
+} catch { _getUserCaption = (uid) => `${getBotName()} is the Alpha`; }
+function getCaption(uid) { return typeof _getUserCaption === 'function' ? _getUserCaption(uid) : `${getBotName()} is the Alpha`; }
+
 const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch {}
@@ -23,6 +30,7 @@ export default {
 
     async execute(sock, m, args, prefix) {
         const jid = m.key.remoteJid;
+        const userId = m.key.participant || m.key.remoteJid;
         const p = prefix || '.';
         const quotedText = m.quoted?.text?.trim()
             || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim()
@@ -59,7 +67,7 @@ export default {
 
                 await sock.sendMessage(jid, {
                     video: videoBuffer, mimetype: 'video/mp4',
-                    caption: `🎬 *Facebook Video*\n📦 *${fileSizeMB}MB*\n\n🐺 *Downloaded by ${getBotName()}*`,
+                    caption: `🎬 *Facebook Video*\n📦 *${fileSizeMB}MB*\n\n🐺 *Downloaded by ${getBotName()}*\n\n${getCaption(userId)}`,
                     fileName: 'facebook_video.mp4',
                     gifPlayback: false
                 }, { quoted: m });
@@ -153,7 +161,7 @@ export default {
 
             await sock.sendMessage(jid, {
                 video: videoBuffer, mimetype: 'video/mp4',
-                caption: `🎬 *${metaTitle || 'Video'}*\n${metaAuthor ? `👤 *${metaAuthor}*\n` : ''}${metaDuration ? `⏱️ *${metaDuration}*\n` : ''}📦 *Size:* ${fileSizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*`,
+                caption: `🎬 *${metaTitle || 'Video'}*\n${metaAuthor ? `👤 *${metaAuthor}*\n` : ''}${metaDuration ? `⏱️ *${metaDuration}*\n` : ''}📦 *Size:* ${fileSizeMB}MB\n\n🐺 *Downloaded by ${getBotName()}*\n\n${getCaption(userId)}`,
                 fileName: `${cleanTitle}.mp4`, thumbnail: thumbnailBuffer, gifPlayback: false
             }, { quoted: m });
 

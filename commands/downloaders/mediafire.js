@@ -2,6 +2,13 @@ import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
+let _getUserCaption;
+try {
+  const _tk = await import('./tiktok.js');
+  _getUserCaption = _tk.getUserCaption || ((uid) => `${getBotName()} is the Alpha`);
+} catch { _getUserCaption = (uid) => `${getBotName()} is the Alpha`; }
+function getCaption(uid) { return typeof _getUserCaption === 'function' ? _getUserCaption(uid) : `${getBotName()} is the Alpha`; }
+
 const GIFTED_API = 'https://api.giftedtech.co.ke/api/download/mediafire';
 
 async function downloadBuffer(url) {
@@ -25,6 +32,7 @@ export default {
 
   async execute(sock, m, args, prefix) {
     const jid = m.key.remoteJid;
+    const userId = m.key.participant || m.key.remoteJid;
     const quotedText = m.quoted?.text?.trim() || m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation?.trim() || '';
 
     const url = args.length > 0 ? args.join(' ').trim() : quotedText;
@@ -76,7 +84,7 @@ export default {
           `├⊷ 📏 *Size:* ${fileSize || fileSizeMB + 'MB'}\n` +
           `├⊷ 🗂️ *Type:* ${fileType || detectedMime}\n` +
           `${uploadedOn ? `├⊷ 📅 *Uploaded:* ${uploadedOn}\n` : ''}` +
-          `╰⊷ *Powered by ${BOT_NAME}*`
+          `╰⊷ *Powered by ${BOT_NAME}*\n\n${getCaption(userId)}`
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });

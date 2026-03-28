@@ -12,6 +12,13 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 
+let _getUserCaption;
+try {
+  const _tk = await import('./tiktok.js');
+  _getUserCaption = _tk.getUserCaption || ((uid) => `${getBotName()} is the Alpha`);
+} catch { _getUserCaption = (uid) => `${getBotName()} is the Alpha`; }
+function getCaption(uid) { return typeof _getUserCaption === 'function' ? _getUserCaption(uid) : `${getBotName()} is the Alpha`; }
+
 const _req = createRequire(import.meta.url);
 let giftedBtnsTw;
 try { giftedBtnsTw = _req('gifted-btns'); } catch {}
@@ -72,6 +79,7 @@ export default {
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;
+    const userId = m.key.participant || m.key.remoteJid;
     const url = (args[0] || '').trim();
 
     if (!url) {
@@ -155,7 +163,7 @@ export default {
       }
 
       const shortDesc = meta.desc?.slice(0, 100) || '';
-      const caption   = `🐦 *Twitter ${quality} Video*\n${shortDesc ? `📝 ${shortDesc}\n` : ''}📦 ${sizeMB}MB | 🐺 ${getBotName()}`;
+      const caption   = `🐦 *Twitter ${quality} Video*\n${shortDesc ? `📝 ${shortDesc}\n` : ''}📦 ${sizeMB}MB | 🐺 ${getBotName()}\n\n${getCaption(userId)}`;
 
       await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });

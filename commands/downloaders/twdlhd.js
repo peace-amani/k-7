@@ -8,6 +8,13 @@ import axios from 'axios';
 import { getActionSession, deleteActionSession } from '../../lib/actionSession.js';
 import { getBotName } from '../../lib/botname.js';
 
+let _getUserCaption;
+try {
+  const _tk = await import('./tiktok.js');
+  _getUserCaption = _tk.getUserCaption || ((uid) => `${getBotName()} is the Alpha`);
+} catch { _getUserCaption = (uid) => `${getBotName()} is the Alpha`; }
+function getCaption(uid) { return typeof _getUserCaption === 'function' ? _getUserCaption(uid) : `${getBotName()} is the Alpha`; }
+
 async function downloadFile(url, filePath) {
   const writer = createWriteStream(filePath);
   const response = await axios({
@@ -36,7 +43,8 @@ export default {
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;
-    const senderClean = (m.key.participant || m.key.remoteJid).split(':')[0].split('@')[0];
+    const userId = m.key.participant || m.key.remoteJid;
+    const senderClean = userId.split(':')[0].split('@')[0];
     const sessionKey  = `twitter:${senderClean}:${jid.split('@')[0]}`;
     const session     = getActionSession(sessionKey);
 
@@ -73,7 +81,7 @@ export default {
       }
 
       const shortDesc = session.desc?.slice(0, 100) || '';
-      const caption   = `🐦 *Twitter ${quality} Video*\n${shortDesc ? `📝 ${shortDesc}\n` : ''}📦 ${sizeMB}MB | 🐺 ${getBotName()}`;
+      const caption   = `🐦 *Twitter ${quality} Video*\n${shortDesc ? `📝 ${shortDesc}\n` : ''}📦 ${sizeMB}MB | 🐺 ${getBotName()}\n\n${getCaption(userId)}`;
 
       await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });

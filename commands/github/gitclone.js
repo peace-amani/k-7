@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
 
 export default {
     name: 'gitclone',
-    alias: ['clone', 'download', 'githubdl'],
+    alias: ['clone', 'githubdl'],
     description: 'Clone GitHub repositories and send as ZIP',
     category: 'utility',
     ownerOnly: false,
