@@ -4005,17 +4005,13 @@ function ensureSessionDir() {
     }
 }
 
-// Replace the cleanSession function with this:
 function cleanSession(preserveExisting = false) {
     try {
         if (preserveExisting && fs.existsSync(SESSION_DIR)) {
-            // Backup existing session if it exists
             const backupDir = './session_backup';
             if (!fs.existsSync(backupDir)) {
                 fs.mkdirSync(backupDir, { recursive: true });
             }
-            
-            // Copy session files to backup
             const files = fs.readdirSync(SESSION_DIR);
             for (const file of files) {
                 const source = path.join(SESSION_DIR, file);
@@ -4024,32 +4020,45 @@ function cleanSession(preserveExisting = false) {
             }
             UltraCleanLogger.info('📁 Existing session backed up');
         }
-        
+
+        // ── Wipe file-based session ─────────────────────────────────────────
         if (fs.existsSync(SESSION_DIR)) {
             fs.rmSync(SESSION_DIR, { recursive: true, force: true });
         }
-        
-        // Restore backup if needed
+
+        // ── Wipe SESSION_HASH so next boot force-applies SESSION_ID from env ─
+        const hashFile = './.session_id_hash';
+        if (fs.existsSync(hashFile)) {
+            try { fs.unlinkSync(hashFile); } catch {}
+        }
+
+        // ── Wipe SQLite session tables (session_creds + session_keys) ────────
+        try {
+            const rawDb = supabaseDb.getClient();
+            try { rawDb.prepare('DELETE FROM session_keys').run(); } catch {}
+            try { rawDb.prepare('DELETE FROM session_creds').run(); } catch {}
+            UltraCleanLogger.info('🗑️  DB session tables cleared');
+        } catch (dbErr) {
+            UltraCleanLogger.warning(`DB session clear warning: ${dbErr.message}`);
+        }
+
         if (preserveExisting) {
             const backupDir = './session_backup';
             if (fs.existsSync(backupDir)) {
                 if (!fs.existsSync(SESSION_DIR)) {
                     fs.mkdirSync(SESSION_DIR, { recursive: true });
                 }
-                
                 const files = fs.readdirSync(backupDir);
                 for (const file of files) {
                     const source = path.join(backupDir, file);
                     const dest = path.join(SESSION_DIR, file);
                     fs.copyFileSync(source, dest);
                 }
-                
-                // Clean up backup
                 fs.rmSync(backupDir, { recursive: true, force: true });
                 UltraCleanLogger.info('📁 Session restored from backup');
             }
         }
-        
+
         return true;
     } catch (error) {
         UltraCleanLogger.error(`Session cleanup error: ${error.message}`);
@@ -6930,17 +6939,20 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
     const loggedOut = statusCode === DisconnectReason.loggedOut;
     
     if (loggedOut) {
+        // Always clean ALL session remnants (files + DB tables + hash) on any logout
+        UltraCleanLogger.warning(`🧹 Session logged out (attempt ${connectionAttempts}). Clearing all session remnants...`);
+        cleanSession();
+
         if (connectionAttempts >= 3) {
-            UltraCleanLogger.error('❌ Session logged out permanently after multiple attempts.');
+            UltraCleanLogger.error('❌ Session logged out permanently — all remnants cleared.');
             UltraCleanLogger.error('❌ Your SESSION_ID has expired or been revoked by WhatsApp.');
-            UltraCleanLogger.error('❌ Please generate a new SESSION_ID and update your environment.');
-            UltraCleanLogger.info('💡 To fix: Get a new SESSION_ID → set it in your .env or environment → restart the bot.');
+            UltraCleanLogger.info('💡 Update your SESSION_ID env var with a fresh one, then restart the bot.');
+            // Do NOT loop — wait for operator to update SESSION_ID and restart
             return;
         }
-        UltraCleanLogger.warning(`Session logged out (attempt ${connectionAttempts}/3). Cleaning session and retrying...`);
-        cleanSession();
+
         const logoutDelay = Math.min(15000 * Math.pow(2, Math.min(connectionAttempts, 3)), 120000);
-        UltraCleanLogger.info(`🔄 Restarting in ${Math.round(logoutDelay/1000)}s after logout...`);
+        UltraCleanLogger.info(`🔄 Restarting in ${Math.round(logoutDelay/1000)}s with fresh session from SESSION_ID...`);
         setTimeout(async () => {
             await main();
         }, logoutDelay);
@@ -7939,35 +7951,62 @@ async function main() {
         DiskManager.start();
         
         // ====== AUTO-RECONNECT LOGIC ======
-        // 1. First try SESSION_ID from .env (works on any platform)
+        // SESSION_ID is always the source of truth.
+        // We store a fingerprint (.session_id_hash) of the last applied SESSION_ID.
+        // If SESSION_ID changed (or hash file missing/deleted after logout),
+        // we force-apply the new SESSION_ID and clear any stale session data.
         const sessionIdFromEnv = process.env.SESSION_ID;
         const hasEnvSession = sessionIdFromEnv && sessionIdFromEnv.trim() !== '';
-        
-        const sessionDirExists = fs.existsSync(SESSION_DIR);
-        const credsPath = path.join(SESSION_DIR, 'creds.json');
-        const credsExist = fs.existsSync(credsPath);
 
-        if (sessionDirExists && credsExist) {
-            try {
-                const existingCreds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
-                if (existingCreds && (existingCreds.noiseKey || existingCreds.signedIdentityKey)) {
-                    UltraCleanLogger.success('🔐 Found existing evolved session, using it (not overwriting with SESSION_ID)...');
-                    await startBot('auto', null);
-                    return;
-                }
-            } catch (readErr) {
-                UltraCleanLogger.warning(`⚠️ Existing creds.json unreadable: ${readErr.message}`);
-            }
-        }
+        const credsPath = path.join(SESSION_DIR, 'creds.json');
+        const hashFile  = './.session_id_hash';
 
         if (hasEnvSession) {
-            UltraCleanLogger.info('🔐 No valid existing session, applying SESSION_ID...');
+            // Compute a fingerprint of the current SESSION_ID (first 64 chars)
+            const currentFingerprint = sessionIdFromEnv.trim().substring(0, 64);
+            let storedFingerprint = null;
+            try { storedFingerprint = fs.existsSync(hashFile) ? fs.readFileSync(hashFile, 'utf8').trim() : null; } catch {}
+
+            const sessionChanged = currentFingerprint !== storedFingerprint;
+            const credsExist = fs.existsSync(credsPath);
+
+            if (!sessionChanged && credsExist) {
+                // Same SESSION_ID as last time — use the existing (possibly evolved) creds
+                try {
+                    const existingCreds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+                    if (existingCreds && (existingCreds.noiseKey || existingCreds.signedIdentityKey)) {
+                        UltraCleanLogger.success('🔐 Same SESSION_ID — using existing evolved session...');
+                        await startBot('auto', null);
+                        return;
+                    }
+                } catch (readErr) {
+                    UltraCleanLogger.warning(`⚠️ Existing creds.json unreadable: ${readErr.message}`);
+                }
+            }
+
+            // SESSION_ID is new, changed, or creds are gone — force apply
+            if (sessionChanged) {
+                UltraCleanLogger.warning('🔄 SESSION_ID changed — clearing stale session and applying new one...');
+                // Clear stale files + DB tables
+                if (fs.existsSync(SESSION_DIR)) {
+                    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+                }
+                try {
+                    const rawDb = supabaseDb.getClient();
+                    try { rawDb.prepare('DELETE FROM session_keys').run(); } catch {}
+                    try { rawDb.prepare('DELETE FROM session_creds').run(); } catch {}
+                } catch {}
+            }
+
+            UltraCleanLogger.info('🔐 Applying SESSION_ID to creds.json...');
             try {
                 const parsedSession = parseWolfBotSession(sessionIdFromEnv);
                 if (parsedSession) {
                     ensureSessionDir();
                     fs.writeFileSync(credsPath, JSON.stringify(parsedSession, null, 2));
-                    UltraCleanLogger.success('✅ Session ID applied to creds.json, auto-connecting...');
+                    // Save fingerprint so we don't re-apply on normal restarts
+                    try { fs.writeFileSync(hashFile, currentFingerprint, 'utf8'); } catch {}
+                    UltraCleanLogger.success('✅ SESSION_ID applied — connecting...');
                     await startBot('auto', null);
                     return;
                 }
@@ -7975,6 +8014,10 @@ async function main() {
                 UltraCleanLogger.warning(`⚠️ SESSION_ID parsing failed: ${error.message}`);
             }
         }
+
+        // No SESSION_ID in env — fall back to whatever creds.json exists on disk
+        const sessionDirExists = fs.existsSync(SESSION_DIR);
+        const credsExist = fs.existsSync(credsPath);
         
         // 3. Fallback: try existing session that might have creds but no noise/signal keys
         if (sessionDirExists && credsExist) {
