@@ -9,7 +9,7 @@ export default {
   name: 'getjid',
   description: 'Get the JID of a chat, user, group or channel',
   category: 'utility',
-  aliases: ['jid', 'id', 'whois'],
+  aliases: ['jid', 'id'],
 
   async execute(sock, m, args) {
     const chatJid = m.key.remoteJid;
