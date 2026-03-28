@@ -5241,6 +5241,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
             'viddl', 'dlvid', 'downloadvid',
             // tts — shows its own buttons after audio
             'tts', 'say', 'speak',
+            // github — help text must not get button injection
+            'gitclone', 'clone', 'githubdl',
             // downloaders — manage their own button cards; global wrap must not
             // inject "Download Again" buttons onto help text (no-arg calls)
             'instagram', 'ig', 'igdl', 'insta',
