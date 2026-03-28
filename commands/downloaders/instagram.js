@@ -313,13 +313,18 @@ export default {
 
   async execute(sock, m, args, PREFIX) {
     const jid = m.key.remoteJid;
-    const url = (args[0] || m.quoted?.text?.trim() || '').trim();
 
-    if (!url) {
+    // Show help if no explicit URL typed — check args[0] BEFORE falling back
+    // to quoted text, so typing `.ig` alone always returns help regardless of
+    // whether the user is quoting a message that contains a link.
+    if (!args[0]) {
       return sock.sendMessage(jid, {
         text: `╭─⌈ 📷 *INSTAGRAM DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}ig <url>*\n│  └⊷ Download reels / posts\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}ig https://instagram.com/reel/xyz\n│  └⊷ ${PREFIX}ig https://instagram.com/p/xyz\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
       }, { quoted: m });
     }
+
+    // Resolve URL — explicit arg first, then quoted text as convenience fallback
+    const url = (args[0] || m.quoted?.text?.trim() || '').trim();
 
     if (!isValidInstagramUrl(url)) {
       return sock.sendMessage(jid, {
