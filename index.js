@@ -6844,6 +6844,7 @@ async function handleSuccessfulConnection(sock, loginMode, loginData) {
         const userIdNum = userId?.split('@')[0]?.split(':')[0];
         const userLidNum = userLid?.split('@')[0]?.split(':')[0];
         UltraCleanLogger.info(`🔑 sock.user → id: ${userId || 'none'} | lid: ${userLid || 'none'}`);
+        console.log(`[BOT-JID] id=${userId} lid=${userLid}`);
         if (userLid && userIdNum && userLidNum && !userId.includes('@lid')) {
             cacheLidPhone(userLidNum, userIdNum);
             UltraCleanLogger.info(`📱 Cached owner LID→Phone: ${userLidNum} → ${userIdNum}`);
