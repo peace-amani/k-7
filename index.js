@@ -6282,7 +6282,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 const _bwIsCmd = !isPrefixless && getCurrentPrefix() && _bwRawText.trimStart().startsWith(getCurrentPrefix());
                 if (!_bwIsCmd && isBadWordEnabled(_bwScope)) {
                     const _bwSenderJid = msg.key.participant || _bwJid;
-                    const _bwIsOwner = jidManager.isOwner(msg);
+                    const _bwIsOwner = _bwIsGroup && jidManager.isOwner(msg);
                     if (!_bwIsOwner) {
                         const _bwMsg = msg.message;
                         const _bwText = _bwMsg?.conversation || _bwMsg?.extendedTextMessage?.text || _bwMsg?.imageMessage?.caption || _bwMsg?.videoMessage?.caption || '';
