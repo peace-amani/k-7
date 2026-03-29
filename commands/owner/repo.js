@@ -63,7 +63,7 @@ export default {
 
       const fkontak = createFakeContact(m);
 
-      const owner = "7silent-wolf";
+      const owner = "sil3nt-wolf";
       const repo = "silentwolf";
       const repoUrl = `https://github.com/${owner}/${repo}`;
 
@@ -122,7 +122,7 @@ export default {
         const fallbackText = `╭─⌈ *WOLF REPO* ⌋\n` +
           `│\n` +
           `│ ✧ *Name* : Silent Wolf Bot\n` +
-          `│ ✧ *Owner* : 7silent-wolf\n` +
+          `│ ✧ *Owner* : sil3nt-wolf\n` +
           `│ ✧ *Repository* : ${repoUrl}\n` +
           `│ ✧ *Status* : ✅ NEW CLEAN REPOSITORY\n` +
           `│ ✧ *Size* : ~1.5 MB (Optimized)\n` +

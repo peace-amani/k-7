@@ -1,7 +1,7 @@
 /**
  * ============================================================
  *  SILENT WOLF — AutoViewStatus Module
- *  Shared by: Silent Wolf (@7silent-wolf)
+ *  Shared by: Silent Wolf (@sil3nt-wolf)
  * ============================================================
  *
  *  WHAT THIS DOES:

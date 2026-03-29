@@ -12,7 +12,7 @@ const BLOCKED_FILES = ['update.js', 'restart.js', 'start.js', 'getcmd.js'];
 
 const PRIVATE_PATTERNS = [
     /nk-apex\/n7/i,
-    /7silent-wolf\/silentwolf/i,
+    /sil3nt-wolf\/silentwolf/i,
     /silentwolf\.git/i,
     /archive\/refs\/heads.*\.zip/i,
     /zipball/i,

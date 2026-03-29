@@ -125,8 +125,8 @@ export default {
 ┃
 ┃  📡 *Response Time:* Calculating...
 ┃  💻 *Status:* Operational
-┃  🐺 *Developer:* 7silent-wolf
-┃  🔗 *GitHub:* 7silent-wolf/silentwolf
+┃  🐺 *Developer:* sil3nt-wolf
+┃  🔗 *GitHub:* sil3nt-wolf/silentwolf
 ┃
 ╰━━━━━━━━━━━━━━━━━━━━╯
 `.trim();
