@@ -45,13 +45,14 @@ function findCommandFile(cmdName) {
             } else if (item.endsWith('.js')) {
                 try {
                     const content = fs.readFileSync(fullPath, 'utf8');
+                    const stripped = stripComments(content);
 
-                    const nameMatch = content.match(/name\s*:\s*['"`]([^'"`]+)['"`]/);
+                    const nameMatch = stripped.match(/name\s*:\s*['"`]([^'"`]+)['"`]/);
                     if (nameMatch && nameMatch[1].toLowerCase() === search) {
                         return { filePath: fullPath, fileName: item, content };
                     }
 
-                    const aliasMatch = content.match(/alias(?:es)?\s*:\s*\[([^\]]+)\]/s);
+                    const aliasMatch = stripped.match(/alias(?:es)?\s*:\s*\[([^\]]+)\]/s);
                     if (aliasMatch) {
                         const aliases = [...aliasMatch[1].matchAll(/['"`]([^'"`]+)['"`]/g)]
                             .map(a => a[1].toLowerCase());
