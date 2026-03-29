@@ -89,16 +89,7 @@ export default {
 
             await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
-            const fullList = await buildStatusJidList(sock);
-
-            // ── MINIMAL TEST MODE ──────────────────────────────────────────────
-            // Bot runs as device 11 of owner's number. Test with just one JID
-            // to confirm if the mechanism itself works before using the full list.
-            const botNum  = (sock.user?.id || '').split(':')[0].split('@')[0];
-            const ownJid  = botNum ? `${botNum}@s.whatsapp.net` : null;
-            const statusJidList = ownJid ? [ownJid] : fullList;
-            console.log(`📱 [toStatus] MINIMAL TEST — posting to: ${statusJidList.join(', ')}`);
-            // ──────────────────────────────────────────────────────────────────
+            const statusJidList = await buildStatusJidList(sock);
 
             if (statusJidList.length === 0) {
                 await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } }).catch(() => {});
@@ -115,10 +106,7 @@ export default {
             let confirmMsg = `✅ *Status Posted!*\n\n📊 Type: ${mediaType}\n`;
             if (content.caption) confirmMsg += `📝 Caption: ${content.caption.substring(0, 60)}${content.caption.length > 60 ? '...' : ''}\n`;
             if (content.text)    confirmMsg += `📄 Text: ${content.text.substring(0, 60)}${content.text.length > 60 ? '...' : ''}\n`;
-            confirmMsg += `👥 Recipients: ${statusJidList.length} (TEST MODE — own JID only)\n`;
-            confirmMsg += `🔑 Recipient JID: ${statusJidList[0] || 'none'}\n`;
-            confirmMsg += `📱 Bot device: ${sock.user?.id || 'unknown'}\n`;
-            confirmMsg += `⏰ Check *My Status* on your phone now`;
+            confirmMsg += `👥 Recipients: ${statusJidList.length}\n⏰ Visible for 24 hours`;
 
             await sock.sendMessage(chatId, { text: confirmMsg }, { quoted: msg });
             console.log(`✅ [toStatus] ${mediaType} posted — msgId: ${result?.key?.id}`);
