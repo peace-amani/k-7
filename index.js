@@ -7296,7 +7296,54 @@ async function handleIncomingMessage(sock, msg) {
                                 msgContent.videoMessage?.contextInfo;
                 
                 if (replyCtx?.quotedMessage) {
-                    
+                    // ── Owner sticker/emoji reply → view-once retrieval ──────────
+                    // If the quoted message is a view-once photo or video,
+                    // silently download it and send it to the owner's private DM.
+                    try {
+                        const _qm = replyCtx.quotedMessage;
+
+                        // Unwrap any view-once variant
+                        const _voWrap = _qm.viewOnceMessage
+                            || _qm.viewOnceMessageV2
+                            || _qm.viewOnceMessageV2Extension;
+                        const _voInner = _voWrap?.message || {};
+
+                        const _isImg   = !!_voInner.imageMessage;
+                        const _isVid   = !!_voInner.videoMessage;
+
+                        if (_voWrap && (_isImg || _isVid)) {
+                            // Reconstruct a full WAMessage so Baileys can download it
+                            const _syntheticMsg = {
+                                key: {
+                                    remoteJid: chatId,
+                                    id:        replyCtx.stanzaId || '',
+                                    participant: replyCtx.participant,
+                                    fromMe:    false,
+                                },
+                                message: _qm,
+                            };
+
+                            const _buf = await downloadMediaMessage(_syntheticMsg, 'buffer', {});
+
+                            // Send to owner's private DM, completely silent in original chat
+                            const _ownerInfo  = jidManager.getOwnerInfo();
+                            const _ownerDmJid = _ownerInfo?.ownerJid
+                                || `${senderJid.split('@')[0].split(':')[0]}@s.whatsapp.net`;
+
+                            const _botLabel = global.BOT_NAME || 'WOLFBOT';
+                            const _caption  = `*Retrieved by ${_botLabel}* 🐺`;
+
+                            const _mime = _isVid
+                                ? (_voInner.videoMessage?.mimetype || 'video/mp4')
+                                : (_voInner.imageMessage?.mimetype || 'image/jpeg');
+
+                            await sock.sendMessage(_ownerDmJid, _isVid
+                                ? { video: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true }
+                                : { image: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true }
+                            );
+                        }
+                    } catch {}
+                    // Always silent — no reply, no reaction in the original chat
                 }
             }
         } catch {}
