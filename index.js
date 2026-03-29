@@ -7297,50 +7297,84 @@ async function handleIncomingMessage(sock, msg) {
                 
                 if (replyCtx?.quotedMessage) {
                     // ── Owner sticker/emoji reply → view-once retrieval ──────────
-                    // If the quoted message is a view-once photo or video,
-                    // silently download it and send it to the owner's private DM.
+                    // Silently download view-once media and send to owner's private DM.
                     try {
                         const _qm = replyCtx.quotedMessage;
 
-                        // Unwrap any view-once variant
-                        const _voWrap = _qm.viewOnceMessage
-                            || _qm.viewOnceMessageV2
-                            || _qm.viewOnceMessageV2Extension;
-                        const _voInner = _voWrap?.message || {};
+                        // ── isViewOnceMessage (mirrors vv.js logic exactly) ──────
+                        const _isVO = !!(
+                            _qm.imageMessage?.viewOnce             ||
+                            _qm.videoMessage?.viewOnce             ||
+                            _qm.audioMessage?.viewOnce             ||
+                            _qm.viewOnceMessageV2                  ||
+                            _qm.viewOnceMessageV2Extension         ||
+                            _qm.viewOnceMessage                    ||
+                            _qm.ephemeralMessage?.message?.viewOnceMessage
+                        );
 
-                        const _isImg   = !!_voInner.imageMessage;
-                        const _isVid   = !!_voInner.videoMessage;
+                        if (_isVO) {
+                            // ── extractViewOnceMedia (mirrors vv.js logic) ───────
+                            let _mediaType = null;
+                            let _mediaMsg  = null;
 
-                        if (_voWrap && (_isImg || _isVid)) {
-                            // Reconstruct a full WAMessage so Baileys can download it
-                            const _syntheticMsg = {
-                                key: {
-                                    remoteJid: chatId,
-                                    id:        replyCtx.stanzaId || '',
-                                    participant: replyCtx.participant,
-                                    fromMe:    false,
-                                },
-                                message: _qm,
-                            };
+                            if (_qm.imageMessage?.viewOnce) {
+                                _mediaType = 'image'; _mediaMsg = _qm.imageMessage;
+                            } else if (_qm.videoMessage?.viewOnce) {
+                                _mediaType = 'video'; _mediaMsg = _qm.videoMessage;
+                            } else if (_qm.audioMessage?.viewOnce) {
+                                _mediaType = 'audio'; _mediaMsg = _qm.audioMessage;
+                            } else {
+                                const _inner = _qm.viewOnceMessageV2?.message
+                                    || _qm.viewOnceMessageV2Extension?.message
+                                    || _qm.viewOnceMessage?.message
+                                    || _qm.ephemeralMessage?.message?.viewOnceMessage?.message;
+                                if (_inner?.imageMessage) { _mediaType = 'image'; _mediaMsg = _inner.imageMessage; }
+                                else if (_inner?.videoMessage) { _mediaType = 'video'; _mediaMsg = _inner.videoMessage; }
+                                else if (_inner?.audioMessage) { _mediaType = 'audio'; _mediaMsg = _inner.audioMessage; }
+                            }
 
-                            const _buf = await downloadMediaMessage(_syntheticMsg, 'buffer', {});
+                            if (_mediaType) {
+                                // Reconstruct WAMessage for downloader
+                                const _syntheticMsg = {
+                                    key: {
+                                        remoteJid:   chatId,
+                                        id:          replyCtx.stanzaId || '',
+                                        participant: replyCtx.participant,
+                                        fromMe:      replyCtx.fromMe || false,
+                                    },
+                                    message: _qm,
+                                };
 
-                            // Send to owner's private DM, completely silent in original chat
-                            const _ownerInfo  = jidManager.getOwnerInfo();
-                            const _ownerDmJid = _ownerInfo?.ownerJid
-                                || `${senderJid.split('@')[0].split(':')[0]}@s.whatsapp.net`;
+                                // reuploadRequest is CRITICAL — refreshes expired view-once URLs
+                                const _buf = await downloadMediaMessage(
+                                    _syntheticMsg, 'buffer', {},
+                                    { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
+                                );
 
-                            const _botLabel = global.BOT_NAME || 'WOLFBOT';
-                            const _caption  = `*Retrieved by ${_botLabel}* 🐺`;
+                                if (!_buf || _buf.length === 0) throw new Error('empty buffer');
 
-                            const _mime = _isVid
-                                ? (_voInner.videoMessage?.mimetype || 'video/mp4')
-                                : (_voInner.imageMessage?.mimetype || 'image/jpeg');
+                                const _ownerInfo  = jidManager.getOwnerInfo();
+                                const _ownerDmJid = _ownerInfo?.ownerJid
+                                    || `${senderJid.split('@')[0].split(':')[0]}@s.whatsapp.net`;
 
-                            await sock.sendMessage(_ownerDmJid, _isVid
-                                ? { video: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true }
-                                : { image: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true }
-                            );
+                                const _caption = `*Retrieved by ${global.BOT_NAME || 'WOLFBOT'}* 🐺`;
+                                const _mime    = _mediaMsg.mimetype
+                                    || (_mediaType === 'video' ? 'video/mp4' : _mediaType === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+
+                                if (_mediaType === 'video') {
+                                    await sock.sendMessage(_ownerDmJid, {
+                                        video: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true
+                                    });
+                                } else if (_mediaType === 'audio') {
+                                    await sock.sendMessage(_ownerDmJid, {
+                                        audio: _buf, mimetype: _mime, _skipChannelMode: true
+                                    });
+                                } else {
+                                    await sock.sendMessage(_ownerDmJid, {
+                                        image: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true
+                                    });
+                                }
+                            }
                         }
                     } catch {}
                     // Always silent — no reply, no reaction in the original chat
