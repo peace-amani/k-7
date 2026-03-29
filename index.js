@@ -6286,7 +6286,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     if (!_bwIsOwner) {
                         const _bwMsg = msg.message;
                         const _bwText = _bwMsg?.conversation || _bwMsg?.extendedTextMessage?.text || _bwMsg?.imageMessage?.caption || _bwMsg?.videoMessage?.caption || '';
-                        const _bwFound = checkMessageForBadWord(_bwText);
+                        const _bwFound = checkMessageForBadWord(_bwText, _bwScope);
                         if (_bwFound) {
                             const _bwAction = getBadWordAction(_bwScope);
                             const _bwSenderNum = _bwSenderJid.split('@')[0].split(':')[0];

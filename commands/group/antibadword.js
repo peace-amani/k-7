@@ -16,13 +16,23 @@ export default {
 
         if (!sub || sub === 'status') {
             const config = getFullConfig();
-            const cfg = config[scope] || config['global'] || {};
+            const cfg = config[scope] || {};
             const enabled = cfg.enabled || false;
             const act = cfg.action || 'warn';
-            const wordCount = getBadWords().length;
+            const scopeWords = getBadWords(scope).length;
+            const scopeLabel = isGroup ? 'This group' : 'DMs';
 
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ *Status:* ${enabled ? '✅ ON' : '❌ OFF'}\n├─⊷ *Action:* ${act}\n├─⊷ *Words in list:* ${wordCount}\n│\n├─⊷ *Usage:*\n│  .antibadword on [warn/kick/block]\n│  .antibadword off\n│  .antibadword global on [action] ← owner\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text:
+                    `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n` +
+                    `├─⊷ *Scope:* ${scopeLabel}\n` +
+                    `├─⊷ *Status:* ${enabled ? '✅ ON' : '❌ OFF'}\n` +
+                    `├─⊷ *Action:* ${act}\n` +
+                    `├─⊷ *Words here:* ${scopeWords}\n│\n` +
+                    `├─⊷ *Usage:*\n` +
+                    `│  .antibadword on [warn/kick/block/delete]\n` +
+                    `│  .antibadword off\n` +
+                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
             }, { quoted: msg });
         }
 
