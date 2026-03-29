@@ -15,10 +15,10 @@ import { getOwnerName } from '../../lib/menuHelper.js';
 
 const CONFIG = {
     MAX_SIZE_MB: 50,
-    get DEFAULT_CAPTION() { return `Retrieved by ${getBotName()}`; },
-    SHOW_SENDER_INFO: true,
-    SHOW_FILE_INFO: true,
-    SHOW_ORIGINAL_CAPTION: true
+    get DEFAULT_CAPTION() { return `*Retrieved by ${getBotName()}* 🐺`; },
+    SHOW_SENDER_INFO: false,
+    SHOW_FILE_INFO: false,
+    SHOW_ORIGINAL_CAPTION: false
 };
 
 const userPreferences = new Map();
@@ -205,37 +205,8 @@ async function getChatPreferences(chatId) {
 }
 
 async function generateCaption(mediaInfo, fileSizeKB, senderNumber, originalCaption, chatId) {
-    const prefs = await getChatPreferences(chatId);
-    let caption = '';
-    
-    // Start with custom caption if set
-    if (prefs.customCaption && prefs.customCaption !== 'none') {
-        caption += prefs.customCaption + '\n';
-    }
-    
-    // Add sender info if enabled
-    if (prefs.showSenderInfo) {
-        caption += `👤 From: ${senderNumber}\n`;
-    }
-    
-    // Add file info if enabled
-    if (prefs.showFileInfo) {
-        caption += `📊 Size: ${fileSizeKB} KB\n`;
-        if (mediaInfo.type === 'video' && mediaInfo.message.seconds) {
-            caption += `⏱️ Duration: ${mediaInfo.message.seconds}s\n`;
-        }
-        if (mediaInfo.message.width && mediaInfo.message.height) {
-            caption += `📐 ${mediaInfo.message.width}x${mediaInfo.message.height}\n`;
-        }
-    }
-    
-    // Add original caption if enabled and exists
-    if (prefs.showOriginalCaption && originalCaption) {
-        caption += `📝 Original: ${originalCaption}\n`;
-    }
-    
-    // Remove trailing newline
-    return caption.trim() || null;
+    // Always use the live bot name so caption reflects any name changes
+    return `*Retrieved by ${getBotName()}* 🐺`;
 }
 
 // Download media and send to chat
