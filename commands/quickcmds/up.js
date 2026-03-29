@@ -38,11 +38,11 @@ export default {
       const seconds = Math.floor(uptime % 60);
 
       let githubAvatar = "https://avatars.githubusercontent.com/u/10639145";
-      let githubUrl = "https://github.com/7silent-wolf/silentwolf";
+      let githubUrl = "https://github.com/sil3nt-wolf/silentwolf";
 
       try {
         const { data: githubData } = await axios.get(
-          "https://api.github.com/users/7silent-wolf",
+          "https://api.github.com/users/sil3nt-wolf",
           {
             headers: {
               "User-Agent": "Silent-Wolf-Bot",
@@ -92,7 +92,7 @@ export default {
                 body: "Bot is online",
                 mediaType: 1,
                 thumbnailUrl: "https://avatars.githubusercontent.com/u/10639145",
-                sourceUrl: "https://github.com/7silent-wolf/silentwolf"
+                sourceUrl: "https://github.com/sil3nt-wolf/silentwolf"
               }
             }
           },

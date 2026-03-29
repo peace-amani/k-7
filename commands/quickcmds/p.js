@@ -63,7 +63,7 @@ export default {
         ownerInfo.jid = "254703397679@s.whatsapp.net";
       }
 
-      const githubOwner = "7silent-wolf";
+      const githubOwner = "sil3nt-wolf";
       let githubData = _cachedGithubData || {
         avatar_url: "https://avatars.githubusercontent.com/u/10639145",
         html_url: `https://github.com/${githubOwner}`,
@@ -109,7 +109,7 @@ export default {
               mediaType: 1,
               thumbnailUrl: githubData.avatar_url,
               sourceUrl: githubData.html_url,
-              mediaUrl: `https://github.com/7silent-wolf/silentwolf`,
+              mediaUrl: `https://github.com/sil3nt-wolf/silentwolf`,
               renderLargerThumbnail: true
             },
           },
@@ -142,7 +142,7 @@ export default {
                 body: "Bot is online • Basic metrics",
                 mediaType: 1,
                 thumbnailUrl: "https://avatars.githubusercontent.com/u/10639145",
-                sourceUrl: "https://github.com/7silent-wolf/silentwolf"
+                sourceUrl: "https://github.com/sil3nt-wolf/silentwolf"
               }
             }
           },

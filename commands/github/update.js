@@ -36,7 +36,7 @@
 // const API_ZIP_URL = `https://api.github.com/repos/nk-apex/n7/zipball/main`;
 
 // // Public repo URL for display purposes only
-// const OWNER_REPO_URL = "https://github.com/7silent-wolf/silentwolf.git";
+// const OWNER_REPO_URL = "https://github.com/sil3nt-wolf/silentwolf.git";
 
 // // Timeout configurations
 // const DOWNLOAD_TIMEOUT = 120000;

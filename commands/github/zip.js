@@ -14,8 +14,8 @@ export default {
 
     async execute(sock, m, args, PREFIX, extras) {
         const chatId = m.key.remoteJid;
-        const repoUrl = 'https://github.com/7silent-wolf/silentwolf';
-        const repoFullName = '7silent-wolf/silentwolf';
+        const repoUrl = 'https://github.com/sil3nt-wolf/silentwolf';
+        const repoFullName = 'sil3nt-wolf/silentwolf';
         const repoName = 'silentwolf';
 
         try {

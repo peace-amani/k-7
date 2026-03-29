@@ -158,7 +158,7 @@ export default {
 
       const simpleText = `*WOLF REPO*\n\n` +
         `• *New Repository* : ✅ YES\n` +
-        `• *URL* : https://github.com/7silent-wolf/silentwolf\n` +
+        `• *URL* : https://github.com/sil3nt-wolf/silentwolf\n` +
         `• *Status* : Clean and optimized\n` +
         `• *Size* : ~1.5 MB\n\n` +
         `Hey @${(m.key.participant || m.key.remoteJid).split('@')[0]}! _Thank you for choosing Silent Wolf!_`;

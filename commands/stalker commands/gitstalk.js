@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 const XWOLF_API = 'https://apis.xwolf.space/api/stalk/github';
-const DEFAULT_USER = '7silent-wolf';
+const DEFAULT_USER = 'sil3nt-wolf';
 
 export default {
   name: 'gitstalk',
