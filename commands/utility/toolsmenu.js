@@ -40,6 +40,8 @@ export default {
 │  • getpp
 │  • getgpp
 │  • prefixinfo
+│  • onwhatsapp
+│  • country
 │
 ╰─⊷
 
