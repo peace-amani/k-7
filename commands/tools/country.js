@@ -1,4 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
+import { resolveJid } from './getjid.js';
 
 // ─── phone prefix database ────────────────────────────────────────────────────
 // Sorted longest-prefix first so we match the most specific code first.
@@ -234,13 +235,15 @@ function extractNumberFromJid(jid) {
     return (jid || '').split('@')[0].split(':')[0].replace(/\D/g, '');
 }
 
-function resolveTarget(msg, args) {
+async function resolveTarget(sock, msg, args) {
     const contextInfo =
         msg.message?.extendedTextMessage?.contextInfo ||
         msg.message?.imageMessage?.contextInfo ||
         msg.message?.videoMessage?.contextInfo ||
         msg.message?.documentMessage?.contextInfo ||
-        msg.message?.stickerMessage?.contextInfo || {};
+        msg.message?.stickerMessage?.contextInfo ||
+        msg.message?.buttonsResponseMessage?.contextInfo ||
+        msg.message?.templateButtonReplyMessage?.contextInfo || {};
 
     // 1. Number supplied as arg
     if (args.length) {
@@ -248,13 +251,27 @@ function resolveTarget(msg, args) {
         if (/^\d{7,15}$/.test(raw)) return { number: raw, source: 'arg' };
     }
 
-    // 2. Mentioned user
+    // 2. Mentioned user — resolve @lid if needed
     const mentioned = contextInfo.mentionedJid?.[0];
-    if (mentioned) return { number: extractNumberFromJid(mentioned), source: 'mention' };
+    if (mentioned) {
+        const resolved = await resolveJid(sock, mentioned);
+        const number = extractNumberFromJid(resolved);
+        if (number.length >= 7) return { number, source: 'mention' };
+    }
 
-    // 3. Quoted message sender
+    // 3. Quoted message sender — resolve @lid if needed
     if (contextInfo.quotedMessage && contextInfo.participant) {
-        return { number: extractNumberFromJid(contextInfo.participant), source: 'reply' };
+        const resolved = await resolveJid(sock, contextInfo.participant);
+        const number = extractNumberFromJid(resolved);
+        if (number.length >= 7) return { number, source: 'reply' };
+    }
+
+    // 4. Sender of the message itself (group: key.participant; DM: remoteJid)
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    if (senderJid && !senderJid.endsWith('@g.us') && !senderJid.endsWith('@newsletter')) {
+        const resolved = await resolveJid(sock, senderJid);
+        const number = extractNumberFromJid(resolved);
+        if (number.length >= 7) return { number, source: 'sender' };
     }
 
     return null;
@@ -271,7 +288,7 @@ export default {
     async execute(sock, msg, args, PREFIX) {
         const chatId = msg.key.remoteJid;
 
-        const target = resolveTarget(msg, args);
+        const target = await resolveTarget(sock, msg, args);
 
         if (!target) {
             return sock.sendMessage(chatId, {
@@ -298,9 +315,10 @@ export default {
             }, { quoted: msg });
         }
 
-        const sourceLabel = source === 'arg' ? 'Direct number'
-                          : source === 'mention' ? 'Mentioned user'
-                          : 'Replied user';
+        const sourceLabel = source === 'arg'     ? 'Direct number'
+                          : source === 'mention'  ? 'Mentioned user'
+                          : source === 'reply'    ? 'Replied user'
+                          : 'Message sender';
 
         await sock.sendMessage(chatId, {
             text: `╭⊷『 ${info.flag} COUNTRY LOOKUP 』\n│\n` +
