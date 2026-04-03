@@ -252,6 +252,7 @@ async function resolveTarget(sock, msg, args) {
     }
 
     // 2. Mentioned user — resolve @lid if needed
+    // If a mention exists but can't be resolved, stop here — do NOT fall back to sender
     const mentioned = contextInfo.mentionedJid?.[0];
     if (mentioned) {
         const resolved = await resolveJid(sock, mentioned);
@@ -259,18 +260,21 @@ async function resolveTarget(sock, msg, args) {
             const number = extractNumberFromJid(resolved);
             if (/^\d{7,15}$/.test(number)) return { number, source: 'mention' };
         }
+        return { unresolvable: true };
     }
 
     // 3. Quoted message sender — resolve @lid if needed
+    // Same rule: if a reply exists but can't be resolved, stop here
     if (contextInfo.quotedMessage && contextInfo.participant) {
         const resolved = await resolveJid(sock, contextInfo.participant);
         if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
             const number = extractNumberFromJid(resolved);
             if (/^\d{7,15}$/.test(number)) return { number, source: 'reply' };
         }
+        return { unresolvable: true };
     }
 
-    // 4. Sender of the message itself (group: key.participant; DM: remoteJid)
+    // 4. Sender of the message itself — only used when no mention/reply present
     const senderJid = msg.key.participant || msg.key.remoteJid;
     if (senderJid && !senderJid.endsWith('@g.us') && !senderJid.endsWith('@newsletter')) {
         const resolved = await resolveJid(sock, senderJid);
@@ -307,6 +311,18 @@ export default {
                       `├⊷ ${PREFIX}country @mention\n` +
                       `├⊷ Reply to a message + ${PREFIX}country\n` +
                       `└⊷ *Tip:* Number must include country code\n\n` +
+                      `╰⊷ *${getBotName()} Tools* 🐾`
+            }, { quoted: msg });
+        }
+
+        if (target.unresolvable) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+            return sock.sendMessage(chatId, {
+                text: `╭⊷『 🌍 COUNTRY LOOKUP 』\n│\n` +
+                      `├⊷ *Result:* ❌ Could not resolve this user's number\n` +
+                      `├⊷ *Why:* This user's account uses a privacy ID\n` +
+                      `├⊷ *Fix:* Try passing their number directly\n` +
+                      `└⊷ *Example:* ${PREFIX}country 923001234567\n\n` +
                       `╰⊷ *${getBotName()} Tools* 🐾`
             }, { quoted: msg });
         }
