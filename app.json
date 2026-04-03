@@ -57,16 +57,6 @@
       "description": "OPTIONAL: Your WhatsApp number in international format without + (e.g. 2348012345678). Used to scope settings to your bot instance and grant owner privileges.",
       "value": "",
       "required": false
-    },
-    "HEROKU_API_KEY": {
-      "description": "OPTIONAL: Your Heroku API key (from Account Settings). Allows the bot to automatically update Config Vars when settings change at runtime (e.g. after .setprefix or .setmode).",
-      "value": "",
-      "required": false
-    },
-    "HEROKU_APP_NAME": {
-      "description": "OPTIONAL: The name of this Heroku app. Required together with HEROKU_API_KEY to enable automatic Config Var updates when settings change at runtime.",
-      "value": "",
-      "required": false
     }
   },
   "formation": {
