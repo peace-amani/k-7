@@ -1,5 +1,4 @@
 import { getBotName } from '../../lib/botname.js';
-import { resolveJid } from './getjid.js';
 
 // ─── phone prefix database ────────────────────────────────────────────────────
 // Sorted longest-prefix first so we match the most specific code first.
@@ -235,7 +234,62 @@ function extractNumberFromJid(jid) {
     return (jid || '').split('@')[0].split(':')[0].replace(/\D/g, '');
 }
 
+// Resolve a raw JID (may be @lid, @s.whatsapp.net, or bare number) to a phone
+// number string using group participant list when available — same strategy as kick.js
+function phoneFromParticipant(p, fallbackJid) {
+    if (!p) {
+        const num = extractNumberFromJid(fallbackJid || '');
+        return /^\d{7,15}$/.test(num) ? num : null;
+    }
+    // p.id is the preferred field — use it if it is not @lid
+    const id = p.id || fallbackJid || '';
+    if (!id.includes('@lid')) {
+        const num = extractNumberFromJid(id);
+        return /^\d{7,15}$/.test(num) ? num : null;
+    }
+    // p.phoneNumber is set by Baileys when it can map the LID
+    if (p.phoneNumber) {
+        const num = String(p.phoneNumber).replace(/\D/g, '');
+        if (/^\d{7,15}$/.test(num)) return num;
+    }
+    // globalThis LID → phone cache populated by the bot's JID manager
+    const lidKey = id.split(':')[0].split('@')[0];
+    const cached = globalThis.lidPhoneCache?.get(lidKey);
+    if (cached) return cached;
+    return null;
+}
+
+async function findParticipant(sock, chatId, jid) {
+    try {
+        if (!chatId.endsWith('@g.us')) return null;
+        const meta = await sock.groupMetadata(chatId);
+        const jidKey = jid.split(':')[0].split('@')[0];
+        // Match by numeric/lid key against both p.id and p.lid fields
+        return meta.participants.find(p => {
+            const pIdKey  = (p.id  || '').split(':')[0].split('@')[0];
+            const pLidKey = (p.lid || '').split(':')[0].split('@')[0];
+            return pIdKey === jidKey || pLidKey === jidKey;
+        }) || null;
+    } catch {
+        return null;
+    }
+}
+
+async function resolveToPhone(sock, chatId, jid) {
+    if (!jid) return null;
+    // If already a plain phone JID, extract directly
+    if (!jid.includes('@lid')) {
+        const num = extractNumberFromJid(jid);
+        if (/^\d{7,15}$/.test(num)) return num;
+    }
+    // For @lid (or any JID): look up in group participant list first
+    const participant = await findParticipant(sock, chatId, jid);
+    const num = phoneFromParticipant(participant, jid);
+    return num;
+}
+
 async function resolveTarget(sock, msg, args) {
+    const chatId = msg.key.remoteJid;
     const contextInfo =
         msg.message?.extendedTextMessage?.contextInfo ||
         msg.message?.imageMessage?.contextInfo ||
@@ -251,37 +305,26 @@ async function resolveTarget(sock, msg, args) {
         if (/^\d{7,15}$/.test(raw)) return { number: raw, source: 'arg' };
     }
 
-    // 2. Mentioned user — resolve @lid if needed
-    // If a mention exists but can't be resolved, stop here — do NOT fall back to sender
+    // 2. Mentioned user
     const mentioned = contextInfo.mentionedJid?.[0];
     if (mentioned) {
-        const resolved = await resolveJid(sock, mentioned);
-        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
-            const number = extractNumberFromJid(resolved);
-            if (/^\d{7,15}$/.test(number)) return { number, source: 'mention' };
-        }
+        const number = await resolveToPhone(sock, chatId, mentioned);
+        if (number) return { number, source: 'mention' };
         return { unresolvable: true };
     }
 
-    // 3. Quoted message sender — resolve @lid if needed
-    // Same rule: if a reply exists but can't be resolved, stop here
+    // 3. Quoted message sender
     if (contextInfo.quotedMessage && contextInfo.participant) {
-        const resolved = await resolveJid(sock, contextInfo.participant);
-        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
-            const number = extractNumberFromJid(resolved);
-            if (/^\d{7,15}$/.test(number)) return { number, source: 'reply' };
-        }
+        const number = await resolveToPhone(sock, chatId, contextInfo.participant);
+        if (number) return { number, source: 'reply' };
         return { unresolvable: true };
     }
 
-    // 4. Sender of the message itself — only used when no mention/reply present
+    // 4. Sender of the message itself — only when no mention/reply was attempted
     const senderJid = msg.key.participant || msg.key.remoteJid;
     if (senderJid && !senderJid.endsWith('@g.us') && !senderJid.endsWith('@newsletter')) {
-        const resolved = await resolveJid(sock, senderJid);
-        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
-            const number = extractNumberFromJid(resolved);
-            if (/^\d{7,15}$/.test(number)) return { number, source: 'sender' };
-        }
+        const number = await resolveToPhone(sock, chatId, senderJid);
+        if (number) return { number, source: 'sender' };
     }
 
     return null;
