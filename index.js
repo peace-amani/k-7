@@ -3459,7 +3459,9 @@ class AutoLinkSystem {
                 successMsg += `• Only YOU can use owner commands now\n\n`;
             }
             
-            successMsg += `🎉 *You're all set!* Bot is now ready to use.`;
+            successMsg += `🎉 *You're all set!* Bot is now ready to use.\n\n`;
+            successMsg += `─────────────────────\n`;
+            successMsg += `⭐ Follow me on GitHub: https://github.com/sil3nt-wolf`;
             
             await sock.sendMessage(senderJid, { text: successMsg });
             
@@ -5675,7 +5677,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const ownerInfo = jidManager.getOwnerInfo();
                         const displayOwnerNumber = ownerInfo?.ownerNumber ? ownerInfo.ownerNumber.split(':')[0] : 'Not set';
                         
-                        const successMessage = `╭⊷『 🐺 ${getCurrentBotName()} 』\n│\n├⊷ *Name:* ${getCurrentBotName()}\n├⊷ *Prefix:* ${getCurrentPrefix() || 'none (prefixless)'}\n├⊷ *Owner:* (${displayOwnerNumber})\n├⊷ *Platform:* ${detectPlatform()}\n├⊷ *Mode:* ${BOT_MODE}\n└⊷ *Status:* ✅ Connected\n\n╰⊷ *Silent Wolf Online* 🐾`;
+                        const successMessage = `╭⊷『 🐺 ${getCurrentBotName()} 』\n│\n├⊷ *Name:* ${getCurrentBotName()}\n├⊷ *Prefix:* ${getCurrentPrefix() || 'none (prefixless)'}\n├⊷ *Owner:* (${displayOwnerNumber})\n├⊷ *Platform:* ${detectPlatform()}\n├⊷ *Mode:* ${BOT_MODE}\n└⊷ *Status:* ✅ Connected\n\n╰⊷ *Silent Wolf Online* 🐾\n\n─────────────────────\n⭐ Follow me on GitHub: https://github.com/sil3nt-wolf`;
                         
                         const targetJid = (ownerInfo && ownerInfo.ownerJid) ? ownerInfo.ownerJid : sock.user.id;
                         const sendPromise = sock.sendMessage(targetJid, { text: successMessage });
