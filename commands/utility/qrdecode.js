@@ -1,52 +1,89 @@
-// // commands/utility/qrdecode.js
-// import Jimp from 'jimp';
-// import QrCode from 'qrcode-reader';
-// import { downloadContentFromMessage } from '@whiskeysockets/baileys';
+import { getBotName } from '../../lib/botname.js';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 
-// export default {
-//   name: 'qrdecode',
-//   alias: ['decodeqr'],
-//   description: '🕵️ Decode a QR code from an image',
-//   category: 'utility',
-//   usage: '.qrdecode <reply to image>',
+const DECODE_API = 'https://api.qrserver.com/v1/read-qr-code/';
 
-//   async execute(sock, m, args, from, isGroup, sender) {
-//     try {
-//       const jid = typeof from === 'string' ? from : m.key.remoteJid;
-//       const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+export default {
+    name: 'qrdecode',
+    alias: ['decodeqr', 'readqr', 'scanqr'],
+    description: 'Decode / read a QR code from an image',
+    category: 'utility',
 
-//       if (!quoted) {
-//         return sock.sendMessage(jid, { text: '❌ Please reply to an image containing a QR code.' }, { quoted: m });
-//       }
+    async execute(sock, m, args, PREFIX) {
+        const chatId = m.key.remoteJid;
 
-//       // Download image buffer
-//       const stream = await downloadContentFromMessage(quoted, 'image');
-//       let buffer = Buffer.from([]);
-//       for await (const chunk of stream) {
-//         buffer = Buffer.concat([buffer, chunk]);
-//       }
+        const contextInfo = m.message?.extendedTextMessage?.contextInfo;
+        const quotedMsg   = contextInfo?.quotedMessage;
+        const imageMsg    = quotedMsg?.imageMessage || quotedMsg?.stickerMessage;
 
-//       const image = await Jimp.read(buffer);
-//       const qr = new QrCode();
+        if (!quotedMsg || !imageMsg) {
+            return sock.sendMessage(chatId, {
+                text: `╭⊷『 🔍 QR DECODER 』\n│\n` +
+                      `├⊷ *Usage:*\n` +
+                      `├⊷ Reply to an image containing a QR code\n` +
+                      `└⊷ Then send ${PREFIX}qrdecode\n\n` +
+                      `╰⊷ *${getBotName()} Utility* 🐾`
+            }, { quoted: m });
+        }
 
-//       const qrResult = await new Promise((resolve, reject) => {
-//         qr.callback = (err, value) => {
-//           if (err) reject(err);
-//           else resolve(value?.result);
-//         };
-//         qr.decode(image.bitmap);
-//       });
+        await sock.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
 
-//       if (!qrResult) {
-//         return sock.sendMessage(jid, { text: '❌ Could not decode QR code. Make sure it is clear and valid.' }, { quoted: m });
-//       }
+        try {
+            const fakeMsg = {
+                key: {
+                    id:         contextInfo.stanzaId,
+                    remoteJid:  chatId,
+                    participant: contextInfo.participant || undefined
+                },
+                message: quotedMsg
+            };
 
-//       await sock.sendMessage(jid, { text: `🔍 QR Code Content:\n\n${qrResult}` }, { quoted: m });
+            const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {});
+            if (!buffer || buffer.length === 0) throw new Error('Failed to download image');
 
-//     } catch (error) {
-//       console.error('[QR Decode Error]', error);
-//       const jid = typeof from === 'string' ? from : m.key.remoteJid;
-//       await sock.sendMessage(jid, { text: '❌ Failed to decode QR code. Please try again.' }, { quoted: m });
-//     }
-//   },
-// };
+            const { default: FormData } = await import('form-data');
+            const form = new FormData();
+            form.append('file', buffer, { filename: 'qr.png', contentType: 'image/png' });
+
+            const res = await fetch(DECODE_API, {
+                method: 'POST',
+                headers: form.getHeaders(),
+                body: form.getBuffer()
+            });
+
+            if (!res.ok) throw new Error(`Decode API error: HTTP ${res.status}`);
+
+            const json = await res.json();
+            const decoded = json?.[0]?.symbol?.[0]?.data;
+            const decodeError = json?.[0]?.symbol?.[0]?.error;
+
+            if (decodeError || !decoded) {
+                await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } });
+                return sock.sendMessage(chatId, {
+                    text: `╭⊷『 🔍 QR DECODER 』\n│\n` +
+                          `├⊷ *Result:* ❌ No QR code found in image\n` +
+                          `└⊷ Make sure the QR code is clear and fully visible\n\n` +
+                          `╰⊷ *${getBotName()} Utility* 🐾`
+                }, { quoted: m });
+            }
+
+            await sock.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+            await sock.sendMessage(chatId, {
+                text: `╭⊷『 🔍 QR DECODED 』\n│\n` +
+                      `├⊷ *Content:*\n` +
+                      `│  ${decoded}\n` +
+                      `│\n` +
+                      `╰⊷ *${getBotName()} Utility* 🐾`
+            }, { quoted: m });
+
+        } catch (err) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } });
+            await sock.sendMessage(chatId, {
+                text: `╭⊷『 🔍 QR DECODER 』\n│\n` +
+                      `├⊷ *Error:* ${err.message}\n` +
+                      `└⊷ Please try again with a clearer image\n\n` +
+                      `╰⊷ *${getBotName()} Utility* 🐾`
+            }, { quoted: m });
+        }
+    }
+};
