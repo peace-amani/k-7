@@ -320,13 +320,6 @@ async function resolveTarget(sock, msg, args) {
         return { unresolvable: true };
     }
 
-    // 4. Sender of the message itself — only when no mention/reply was attempted
-    const senderJid = msg.key.participant || msg.key.remoteJid;
-    if (senderJid && !senderJid.endsWith('@g.us') && !senderJid.endsWith('@newsletter')) {
-        const number = await resolveToPhone(sock, chatId, senderJid);
-        if (number) return { number, source: 'sender' };
-    }
-
     return null;
 }
 
@@ -384,10 +377,9 @@ export default {
             }, { quoted: msg });
         }
 
-        const sourceLabel = source === 'arg'     ? 'Direct number'
-                          : source === 'mention'  ? 'Mentioned user'
-                          : source === 'reply'    ? 'Replied user'
-                          : 'Message sender';
+        const sourceLabel = source === 'arg'    ? 'Direct number'
+                          : source === 'mention' ? 'Mentioned user'
+                          : 'Replied user';
 
         await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
         await sock.sendMessage(chatId, {
