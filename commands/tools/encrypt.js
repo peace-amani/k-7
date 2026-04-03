@@ -1,4 +1,9 @@
 import { getBotName } from '../../lib/botname.js';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+let giftedBtns;
+try { giftedBtns = _require('gifted-btns'); } catch {}
 
 const API = 'https://apiskeith.top/tools/encrypt';
 
@@ -41,31 +46,47 @@ export default {
 
         try {
             const url = `${API}?q=${encodeURIComponent(code)}`;
-            const res = await fetch(url, {
-                headers: { 'User-Agent': 'Mozilla/5.0' }
-            });
+            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
 
             if (!res.ok) throw new Error(`API returned HTTP ${res.status}`);
 
             const json = await res.json();
+            if (!json.status || !json.result) throw new Error('API returned no result');
 
-            if (!json.status || !json.result) {
-                throw new Error('API returned no result');
-            }
+            const encrypted = json.result;
+            const resultText =
+                `╭⊷『 🔐 JS ENCRYPT 』\n│\n` +
+                `├⊷ *Status:* ✅ Encrypted successfully\n` +
+                `├⊷ *Original length:* ${code.length} chars\n` +
+                `├⊷ *Encrypted length:* ${encrypted.length} chars\n` +
+                `│\n` +
+                `├⊷ *Result:*\n` +
+                `│\n` +
+                `${encrypted}\n` +
+                `│\n` +
+                `╰⊷ *${getBotName()} Tools* 🐾`;
 
             await sock.sendMessage(chatId, { react: { text: '✅', key: m.key } });
-            await sock.sendMessage(chatId, {
-                text: `╭⊷『 🔐 JS ENCRYPT 』\n│\n` +
-                      `├⊷ *Status:* ✅ Encrypted successfully\n` +
-                      `├⊷ *Original length:* ${code.length} chars\n` +
-                      `├⊷ *Encrypted length:* ${json.result.length} chars\n` +
-                      `│\n` +
-                      `├⊷ *Result:*\n` +
-                      `│\n` +
-                      `${json.result}\n` +
-                      `│\n` +
-                      `╰⊷ *${getBotName()} Tools* 🐾`
-            }, { quoted: m });
+
+            if (giftedBtns?.sendInteractiveMessage) {
+                try {
+                    await giftedBtns.sendInteractiveMessage(sock, chatId, {
+                        text: resultText,
+                        interactiveButtons: [
+                            {
+                                name: 'cta_copy',
+                                buttonParamsJson: JSON.stringify({
+                                    display_text: '📋 Copy Encrypted Code',
+                                    copy_code: encrypted
+                                })
+                            }
+                        ]
+                    }, { quoted: m });
+                    return;
+                } catch {}
+            }
+
+            await sock.sendMessage(chatId, { text: resultText }, { quoted: m });
 
         } catch (err) {
             await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } });
