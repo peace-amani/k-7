@@ -288,9 +288,12 @@ export default {
     async execute(sock, msg, args, PREFIX) {
         const chatId = msg.key.remoteJid;
 
+        await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
+
         const target = await resolveTarget(sock, msg, args);
 
         if (!target) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
             return sock.sendMessage(chatId, {
                 text: `╭⊷『 🌍 COUNTRY LOOKUP 』\n│\n` +
                       `├⊷ *Usage:*\n` +
@@ -306,6 +309,7 @@ export default {
         const info = lookupByNumber(number);
 
         if (!info) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
             return sock.sendMessage(chatId, {
                 text: `╭⊷『 🌍 COUNTRY LOOKUP 』\n│\n` +
                       `├⊷ *Number:* +${number}\n` +
@@ -320,6 +324,7 @@ export default {
                           : source === 'reply'    ? 'Replied user'
                           : 'Message sender';
 
+        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
         await sock.sendMessage(chatId, {
             text: `╭⊷『 ${info.flag} COUNTRY LOOKUP 』\n│\n` +
                   `├⊷ *Number:* +${number}\n` +

@@ -35,14 +35,13 @@ export default {
         const jid = `${number}@s.whatsapp.net`;
 
         try {
-            await sock.sendMessage(chatId, {
-                text: `⏳ *Checking* +${number} *on WhatsApp...*`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
             const result = await sock.onWhatsApp(jid);
             const exists = result && result.length > 0 && result[0]?.exists;
 
             if (exists) {
+                await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
                 await sock.sendMessage(chatId, {
                     text: `╭⊷『 ✅ WHATSAPP CHECK 』\n│\n` +
                           `├⊷ *Number:* +${number}\n` +
@@ -52,6 +51,7 @@ export default {
                           `╰⊷ *${getBotName()} Tools* 🐾`
                 }, { quoted: msg });
             } else {
+                await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
                 await sock.sendMessage(chatId, {
                     text: `╭⊷『 ❌ WHATSAPP CHECK 』\n│\n` +
                           `├⊷ *Number:* +${number}\n` +
@@ -62,6 +62,7 @@ export default {
             }
 
         } catch (e) {
+            await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
             await sock.sendMessage(chatId, {
                 text: `❌ *Failed to check number.*\n\nError: ${e.message}\n\nMake sure the number includes a valid country code.`
             }, { quoted: msg });
