@@ -247,7 +247,7 @@ import { startScheduler, updateSchedulerSock } from './lib/scheduler.js';
 import { resumeQueueIfPending } from './commands/group/creategroup.js';
 import { resumeExportQueueIfPending } from './commands/group/export.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
-import { migrateWarningsToSupabase } from './lib/warnings-store.js';
+import { migrateWarningsToSupabase, addWarning, getWarnLimit, resetWarnings } from './lib/warnings-store.js';
 import { detectPlatform } from './lib/platformDetect.js';
 import { applyFont as _applyFont } from './lib/fontTransformer.js';
 
@@ -6204,12 +6204,65 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                     }
 
                                     if (mode === 'warn') {
-                                        try {
-                                            await sock.sendMessage(chatJid, {
-                                                text: `⚠️ *Link Warning* @${senderClean}\n\nLinks are not allowed in this group!\nDetected: ${linkResult.links.length} link(s)\n\n⚠️ Repeated violations may result in removal.`,
-                                                mentions: [senderJid]
-                                            });
-                                        } catch {}
+                                        // Delete the link message first
+                                        try { await sock.sendMessage(chatJid, { delete: msg.key }); } catch {}
+
+                                        // Use the shared warn system (respects setwarn limit)
+                                        const warnCount = addWarning(chatJid, senderJid);
+                                        const warnLimit = getWarnLimit(chatJid);
+
+                                        if (warnCount >= warnLimit) {
+                                            // Limit reached — resolve JID then kick
+                                            let kickJid;
+                                            if (senderJid.includes('@lid')) {
+                                                const pn = senderP?.phoneNumber ? String(senderP.phoneNumber).replace(/[^0-9]/g, '') : null;
+                                                if (pn) {
+                                                    kickJid = `${pn}@s.whatsapp.net`;
+                                                } else {
+                                                    const cachedPhone = lidPhoneCache.get(senderClean) || getPhoneFromLid(senderClean);
+                                                    kickJid = cachedPhone ? `${cachedPhone}@s.whatsapp.net` : null;
+                                                }
+                                            } else {
+                                                kickJid = `${senderClean}@s.whatsapp.net`;
+                                            }
+
+                                            resetWarnings(chatJid, senderJid);
+
+                                            if (!kickJid) {
+                                                UltraCleanLogger.warning(`🔗 ANTILINK WARN: LID unresolvable for ${senderClean}, kick skipped`);
+                                                try {
+                                                    await sock.sendMessage(chatJid, {
+                                                        text: `⚠️ @${senderClean} has reached the warning limit (${warnLimit}/${warnLimit}) for sharing links but could not be removed — user identity unresolved.`,
+                                                        mentions: [senderJid]
+                                                    });
+                                                } catch {}
+                                            } else {
+                                                const kickDisplay = kickJid.split('@')[0];
+                                                try {
+                                                    await sock.groupParticipantsUpdate(chatJid, [kickJid], 'remove');
+                                                    await sock.sendMessage(chatJid, {
+                                                        text: `🚫 *@${kickDisplay} KICKED!*\n\n⚠️ Warnings: ${warnLimit}/${warnLimit} (LIMIT REACHED)\n📝 Reason: Sharing links (Antilink)\n\nUser has been removed from the group.`,
+                                                        mentions: [kickJid]
+                                                    });
+                                                } catch (kickErr) {
+                                                    UltraCleanLogger.warning(`🔗 ANTILINK WARN kick failed for ${kickJid}: ${kickErr.message}`);
+                                                    try {
+                                                        await sock.sendMessage(chatJid, {
+                                                            text: `⚠️ @${kickDisplay} reached the warn limit but could not be kicked. Make sure I have admin permissions.`,
+                                                            mentions: [kickJid]
+                                                        });
+                                                    } catch {}
+                                                }
+                                            }
+                                        } else {
+                                            // Still within limit — send warning with count
+                                            try {
+                                                await sock.sendMessage(chatJid, {
+                                                    text: `⚠️ *Link Warning* @${senderClean}\n\nLinks are not allowed in this group!\n📊 Warnings: ${warnCount}/${warnLimit}\n💡 ${warnLimit - warnCount} warning(s) left before kick.`,
+                                                    mentions: [senderJid]
+                                                });
+                                            } catch {}
+                                        }
                                     } else if (mode === 'delete') {
                                         try {
                                             await sock.sendMessage(chatJid, {
