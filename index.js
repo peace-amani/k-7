@@ -1849,7 +1849,7 @@ let connectionStableTimer = null;
 let MAX_RETRY_ATTEMPTS = 10;
 // BOT_MODE is written to .env on every mode change (updateBotModeCache).
 // Reading it here means it survives Pterodactyl egg reinstalls that wipe all tracked files.
-const _validModes = new Set(['public','private','group','solo','sudo','super','buttons','channel']);
+const _validModes = new Set(['public','groups','dms','silent','buttons','channel','default','private','group','solo','sudo','super']);
 let BOT_MODE = (_validModes.has(process.env.BOT_MODE) ? process.env.BOT_MODE : null) || 'public';
 let WHITELIST = new Set();
 let AUTO_LINK_ENABLED = true;
