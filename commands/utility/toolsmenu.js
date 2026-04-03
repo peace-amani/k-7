@@ -59,6 +59,12 @@ export default {
 │
 ╰─⊷
 
+╭─⊷ *🔐 CODE TOOLS*
+│
+│  • encrypt
+│
+╰─⊷
+
 ╭─⊷ *📇 CONTACT TOOLS*
 │
 │  • vcf
