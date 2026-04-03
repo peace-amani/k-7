@@ -255,23 +255,29 @@ async function resolveTarget(sock, msg, args) {
     const mentioned = contextInfo.mentionedJid?.[0];
     if (mentioned) {
         const resolved = await resolveJid(sock, mentioned);
-        const number = extractNumberFromJid(resolved);
-        if (number.length >= 7) return { number, source: 'mention' };
+        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
+            const number = extractNumberFromJid(resolved);
+            if (/^\d{7,15}$/.test(number)) return { number, source: 'mention' };
+        }
     }
 
     // 3. Quoted message sender — resolve @lid if needed
     if (contextInfo.quotedMessage && contextInfo.participant) {
         const resolved = await resolveJid(sock, contextInfo.participant);
-        const number = extractNumberFromJid(resolved);
-        if (number.length >= 7) return { number, source: 'reply' };
+        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
+            const number = extractNumberFromJid(resolved);
+            if (/^\d{7,15}$/.test(number)) return { number, source: 'reply' };
+        }
     }
 
     // 4. Sender of the message itself (group: key.participant; DM: remoteJid)
     const senderJid = msg.key.participant || msg.key.remoteJid;
     if (senderJid && !senderJid.endsWith('@g.us') && !senderJid.endsWith('@newsletter')) {
         const resolved = await resolveJid(sock, senderJid);
-        const number = extractNumberFromJid(resolved);
-        if (number.length >= 7) return { number, source: 'sender' };
+        if (!resolved.endsWith('@lid') && !resolved.endsWith('@g.us')) {
+            const number = extractNumberFromJid(resolved);
+            if (/^\d{7,15}$/.test(number)) return { number, source: 'sender' };
+        }
     }
 
     return null;
