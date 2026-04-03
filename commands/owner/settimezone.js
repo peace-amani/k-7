@@ -1,5 +1,23 @@
 import { getConfig, setConfig } from '../../lib/database.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const _tzDirname = path.dirname(fileURLToPath(import.meta.url));
+const _tzEnvPath = path.join(_tzDirname, '../../.env');
+
+function _saveTzToEnv(value) {
+    try {
+        let content = '';
+        try { content = fs.readFileSync(_tzEnvPath, 'utf8'); } catch {}
+        const line = `BOT_TIMEZONE=${value}`;
+        const regex = /^BOT_TIMEZONE=.*$/m;
+        content = regex.test(content) ? content.replace(regex, line) : content.trimEnd() + '\n' + line + '\n';
+        fs.writeFileSync(_tzEnvPath, content, 'utf8');
+        process.env.BOT_TIMEZONE = value;
+    } catch {}
+}
 
 const COMMON_TIMEZONES = [
   'Africa/Lagos',        'Africa/Nairobi',     'Africa/Cairo',
@@ -80,6 +98,7 @@ export default {
     if (arg === 'reset' || arg === 'default' || arg === 'utc') {
       await setConfig('timezone_config', { timezone: 'UTC' });
       globalThis._timezone = 'UTC';
+      _saveTzToEnv('UTC');
       return sock.sendMessage(jid, {
         text: `✅ Timezone reset to *UTC*`
       }, { quoted: m });
@@ -100,6 +119,7 @@ export default {
 
     await setConfig('timezone_config', { timezone: tzInput });
     globalThis._timezone = tzInput;
+    _saveTzToEnv(tzInput);
 
     const now = new Date();
     const previewTime = now.toLocaleTimeString('en-US', {

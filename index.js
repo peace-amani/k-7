@@ -881,6 +881,12 @@ globalThis._saveAntiforwardConfig = function(data) {
         }
     }).catch(() => { if (!globalThis._antiforwardConfig) globalThis._antiforwardConfig = {}; });
 })();
+// Bootstrap timezone from .env immediately so menus/messages use the right tz before
+// reloadConfigCaches() runs after the WhatsApp connection is established.
+if (process.env.BOT_TIMEZONE && !globalThis._timezone) {
+    globalThis._timezone = process.env.BOT_TIMEZONE;
+}
+
 globalThis.reloadConfigCaches = reloadConfigCaches;
 async function reloadConfigCaches() {
     try {
@@ -918,15 +924,15 @@ async function reloadConfigCaches() {
         _cache_owner_data = await _loadConfigCache('owner_data', {});
         _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: DEFAULT_PREFIX });
         _cache_bot_settings = await _loadConfigCache('bot_settings', {});
-        _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: 'public' });
+        _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: process.env.BOT_MODE || 'public' });
         _cache_whitelist = await _loadConfigCache('whitelist', { whitelist: [] });
         _cache_blocked_users = await _loadConfigCache('blocked_users', { blocked: [] });
         _cache_welcome_data = await _loadConfigCache('welcome_data', {});
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
 
-        // Defensive: treat empty/stale DB rows as if they don't exist.
-        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
+        // Defensive: treat empty/stale DB rows as if they don't exist — prefer .env over hardcoded fallback.
+        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: process.env.BOT_MODE || 'public' };
         if (_cache_prefix_config && typeof _cache_prefix_config.prefix === 'undefined' && !_cache_prefix_config.isPrefixless) {
             _cache_prefix_config = { prefix: DEFAULT_PREFIX };
         }
@@ -962,8 +968,12 @@ async function reloadConfigCaches() {
         }
         globalThis._antiforwardConfig = antiforwardData || globalThis._antiforwardConfig || {};
 
-        const tzData = await _loadConfigCache('timezone_config', { timezone: 'UTC' });
-        globalThis._timezone = tzData?.timezone || 'UTC';
+        const tzData = await _loadConfigCache('timezone_config', { timezone: process.env.BOT_TIMEZONE || 'UTC' });
+        globalThis._timezone = tzData?.timezone || process.env.BOT_TIMEZONE || 'UTC';
+        // Write-through so timezone survives filesystem wipes
+        if (globalThis._timezone && globalThis._timezone !== 'UTC') {
+            updateEnvFile('BOT_TIMEZONE', globalThis._timezone);
+        }
 
         if (_cache_owner_data && Object.keys(_cache_owner_data).length === 0) _cache_owner_data = null;
         if (_cache_bot_settings && Object.keys(_cache_bot_settings).length === 0) _cache_bot_settings = null;
@@ -4933,16 +4943,16 @@ async function runDataMigrations() {
         _cache_owner_data = await _loadConfigCache('owner_data', {});
         _cache_prefix_config = await _loadConfigCache('prefix_config', { prefix: DEFAULT_PREFIX });
         _cache_bot_settings = await _loadConfigCache('bot_settings', {});
-        _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: 'public' });
+        _cache_bot_mode = await _loadConfigCache('bot_mode', { mode: process.env.BOT_MODE || 'public' });
         _cache_whitelist = await _loadConfigCache('whitelist', { whitelist: [] });
         _cache_blocked_users = await _loadConfigCache('blocked_users', { blocked: [] });
         _cache_welcome_data = await _loadConfigCache('welcome_data', {});
         _cache_status_logs = await _loadConfigCache('status_detection_logs', {});
         _cache_member_detection = await _loadConfigCache('member_detection', {});
 
-        // If bot_mode came back as an empty object (stale DB row), reset to proper default.
-        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: 'public' };
-        BOT_MODE = _cache_bot_mode?.mode || 'public';
+        // If bot_mode came back as an empty object (stale DB row), prefer .env over hardcoded default.
+        if (_cache_bot_mode && !_cache_bot_mode.mode) _cache_bot_mode = { mode: process.env.BOT_MODE || 'public' };
+        BOT_MODE = _cache_bot_mode?.mode || process.env.BOT_MODE || 'public';
 
         // If prefix_config came back empty/invalid, reset to proper default.
         if (_cache_prefix_config && typeof _cache_prefix_config.prefix === 'undefined' && !_cache_prefix_config.isPrefixless) {
