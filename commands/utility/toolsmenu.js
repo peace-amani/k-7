@@ -58,6 +58,8 @@ export default {
 │  • extractword
 │  • toexcel
 │  • extractexcel
+│  • toppt
+│  • extractppt
 │  • take
 │  • imgbb
 │  • save
