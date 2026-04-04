@@ -6,7 +6,7 @@ import { getBotName } from '../../lib/botname.js';
 const CONFIG_DB_KEY = 'autoreact_config';
 const DEFAULT_REACT_CONFIG = {
     enabled: true,
-    onlyOnOwnerReply: true,
+    onlyOnOwnerReply: false,
     viewMode: 'view+react',
     mode: 'fixed',
     fixedEmoji: '🐺',
@@ -41,7 +41,7 @@ class AutoReactManager {
             config.lastReactionTime = config.lastReactionTime || 0;
             config.viewMode         = config.viewMode || 'view+react';
             config.cycleIndex       = config.cycleIndex || 0;
-            if (config.onlyOnOwnerReply === undefined) config.onlyOnOwnerReply = true;
+            config.onlyOnOwnerReply = false; // always default off — auto-react to all statuses
             if (!Array.isArray(config.excludedContacts)) config.excludedContacts = [];
             return { ...DEFAULT_REACT_CONFIG, ...config };
         } catch { return { ...DEFAULT_REACT_CONFIG }; }
