@@ -684,7 +684,7 @@ async function autoScanGroupsForSudo(sock) {
 //   antideletestatus  — same thing but for deleted WA statuses
 //   welcome/goodbye   — sends a message when members join/leave a group
 //   joinapproval      — posts a note when the bot approves a join request
-import { handleAutoReact, triggerReactFromOwnerReply } from './commands/automation/autoreactstatus.js';
+import { handleAutoReact } from './commands/automation/autoreactstatus.js';
 import { handleChannelReact, discoverNewsletters, channelReactManager } from './commands/channel/channelreact.js';
 import { handleReactOwner } from './commands/automation/reactowner.js';
 import { handleReactDev } from './commands/automation/reactdev.js';
@@ -7365,24 +7365,6 @@ async function handleIncomingMessage(sock, msg) {
             const trimmed = rawText.trim();
             const isEmojiOnly = trimmed.length > 0 && trimmed.length <= 10 && /^[\p{Emoji_Presentation}\p{Emoji}\u200d\ufe0f\s]+$/u.test(trimmed);
             
-            // ── Owner replied to a status with text or sticker → trigger autoreact ──
-            if (isOwnerMsg && msg.key.fromMe) {
-                const _srCtx = msgContent.extendedTextMessage?.contextInfo
-                             || msgContent.stickerMessage?.contextInfo
-                             || msgContent.conversation && null;
-                const _isTextReply    = !!(msgContent.extendedTextMessage?.text || msgContent.conversation);
-                const _isStickerReply = !!msgContent.stickerMessage;
-                if ((_isTextReply || _isStickerReply) && _srCtx?.remoteJid === 'status@broadcast' && _srCtx?.stanzaId) {
-                    const _statusKey = {
-                        remoteJid:   'status@broadcast',
-                        id:          _srCtx.stanzaId,
-                        participant: _srCtx.participant || _srCtx.remoteJid,
-                        fromMe:      false
-                    };
-                    triggerReactFromOwnerReply(sock, _statusKey).catch(() => {});
-                }
-            }
-
             if ((isSticker || isEmojiOnly) && isOwnerMsg) {
                 const replyCtx = msgContent.stickerMessage?.contextInfo || 
                                 msgContent.extendedTextMessage?.contextInfo ||
