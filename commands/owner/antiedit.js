@@ -282,13 +282,11 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         
         if (chatJid === 'status@broadcast') return null;
         
-        const { type, text, hasMedia, mimetype } = extractMessageContent(message);
-        
-        if (!text && !hasMedia && type === 'text') return null;
-        
+        let { type, text, hasMedia, mimetype } = extractMessageContent(message);
+
         let version = 1;
         let history = antieditState.messageHistory.get(msgId) || [];
-        
+
         if (isEdit) {
             version = history.length + 1;
         } else {
@@ -298,6 +296,17 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
                 originalMessageData = existing;
                 version = history.length + 1;
             }
+        }
+
+        // Antiedit is text-only — for edits, treat caption as the text and ignore media
+        if (isEdit) {
+            if (!text) return null;   // no text content → nothing to report
+            hasMedia = false;         // never attempt media download for edits
+            mimetype = '';
+        } else {
+            // For new incoming messages, only store if there's text (or it's a media msg
+            // with caption that could later be edited — store caption as text)
+            if (!text && !hasMedia) return null;
         }
         
         const messageData = {
@@ -400,6 +409,14 @@ async function handleMessageUpdates(updates) {
             const protoEdit     = updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage : null;
             const editedContent = editedWrapper?.message || protoEdit?.editedMessage?.message;
             if (!editedContent) continue;
+
+            // Antiedit is text-only — skip media edits that have no text/caption
+            const editedText =
+                editedContent.conversation ||
+                editedContent.extendedTextMessage?.text ||
+                editedContent.imageMessage?.caption ||
+                editedContent.videoMessage?.caption || '';
+            if (!editedText.trim()) continue;
 
             // Look up original message — memory first, then DB
             let existingMessage = antieditState.currentMessages.get(msgId);
