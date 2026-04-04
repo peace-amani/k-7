@@ -1,4 +1,4 @@
-import { downloadMediaMessage, getContentType, normalizeMessageContent } from "@whiskeysockets/baileys";
+import { downloadMediaMessage, downloadContentFromMessage, getContentType, normalizeMessageContent } from "@whiskeysockets/baileys";
 import { getBotName } from '../../lib/botname.js';
 
 const silentLogger = {
@@ -36,15 +36,42 @@ function getTextFromContent(msgContent) {
     return n.extendedTextMessage?.text || n.conversation || null;
 }
 
+// Unwrap group status — extracts the inner media message from groupStatusMessageV2
+function unwrapGroupStatus(quotedMsg) {
+    return quotedMsg?.groupStatusMessageV2?.message || null;
+}
+
+// Download group status media using downloadContentFromMessage (same as togroupstatus.js)
+async function downloadGroupStatusBuffer(innerMsg) {
+    const typeMap = {
+        imageMessage:    'image',
+        videoMessage:    'video',
+        audioMessage:    'audio',
+        stickerMessage:  'sticker',
+        documentMessage: 'document',
+    };
+    for (const [field, type] of Object.entries(typeMap)) {
+        if (innerMsg[field]) {
+            const stream = await downloadContentFromMessage(innerMsg[field], type);
+            let buffer = Buffer.from([]);
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
+            return buffer;
+        }
+    }
+    return null;
+}
+
 export default {
     name: "save",
     alias: ["story", "status"],
-    desc: "Save and send a WhatsApp status/story to this chat.",
+    desc: "Save a WhatsApp status, story, or group status to this chat.",
     category: "utility",
-    usage: ".save [reply to a status]",
+    usage: ".save [reply to a status or group status]",
 
     async execute(sock, m, args, PREFIX) {
-        const chatId = m.key.remoteJid;
+        const chatId  = m.key.remoteJid;
         const botName = getBotName();
 
         const contextInfo = getContextInfo(m);
@@ -52,12 +79,21 @@ export default {
 
         if (!quotedMsg) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 💾 *SAVE STATUS* ⌋\n│\n├⊷ Reply to a status/story with *${PREFIX}save*\n│\n╰⊷ *${botName.toUpperCase()}*`
+                text: `╭─⌈ 💾 *SAVE STATUS* ⌋\n│\n` +
+                      `├⊷ Reply to a *WhatsApp status* with *${PREFIX}save*\n` +
+                      `├⊷ Reply to a *group status* with *${PREFIX}save*\n` +
+                      `│\n` +
+                      `╰⊷ *${botName.toUpperCase()}*`
             }, { quoted: m });
         }
 
-        const mediaInfo = getMediaKind(quotedMsg);
-        const textContent = getTextFromContent(quotedMsg);
+        // ── Detect group status (groupStatusMessageV2 wrapper) ──────────────────
+        const isGroupStatus = !!quotedMsg.groupStatusMessageV2;
+        const innerMsg      = isGroupStatus ? unwrapGroupStatus(quotedMsg) : null;
+        const effectiveMsg  = innerMsg || quotedMsg;
+
+        const mediaInfo   = getMediaKind(effectiveMsg);
+        const textContent = getTextFromContent(effectiveMsg);
 
         if (!mediaInfo && !textContent) {
             return await sock.sendMessage(chatId, {
@@ -65,39 +101,53 @@ export default {
             }, { quoted: m });
         }
 
+        // ── Text-only status ─────────────────────────────────────────────────────
         if (textContent && !mediaInfo) {
+            const label = isGroupStatus ? '📝 *GROUP STATUS*' : '📝 *TEXT STATUS*';
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 📝 *TEXT STATUS* ⌋\n│\n├⊷ ${textContent}\n│\n╰⊷ *${botName.toUpperCase()}*`
+                text: `╭─⌈ ${label} ⌋\n│\n├⊷ ${textContent}\n│\n╰⊷ *${botName.toUpperCase()}*`
             }, { quoted: m });
         }
 
         await sock.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
 
         try {
-            const senderJid  = contextInfo?.participant || contextInfo?.remoteJid || '';
-            const senderNum  = senderJid ? '+' + senderJid.split('@')[0].split(':')[0].replace(/\D/g, '') : 'Unknown';
-            const caption    = mediaInfo.content?.caption || '';
+            const senderJid = contextInfo?.participant || contextInfo?.remoteJid || '';
+            const senderNum = senderJid ? '+' + senderJid.split('@')[0].split(':')[0].replace(/\D/g, '') : 'Unknown';
+            const caption   = mediaInfo.content?.caption || '';
 
-            const fakeMsg = {
-                key: { remoteJid: 'status@broadcast', id: contextInfo?.stanzaId || m.key.id, participant: senderJid },
-                message: quotedMsg
-            };
+            let buffer;
 
-            const buffer = await Promise.race([
-                downloadMediaMessage(fakeMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))
-            ]);
+            if (isGroupStatus && innerMsg) {
+                // Group status — use downloadContentFromMessage (same method as togroupstatus.js)
+                buffer = await Promise.race([
+                    downloadGroupStatusBuffer(innerMsg),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))
+                ]);
+            } else {
+                // Regular WhatsApp status (status@broadcast)
+                const fakeMsg = {
+                    key: { remoteJid: 'status@broadcast', id: contextInfo?.stanzaId || m.key.id, participant: senderJid },
+                    message: quotedMsg
+                };
+                buffer = await Promise.race([
+                    downloadMediaMessage(fakeMsg, 'buffer', {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage }),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))
+                ]);
+            }
 
             if (!buffer || buffer.length === 0) {
                 throw new Error('Empty buffer — media may have expired');
             }
 
-            const payload = {};
-            let statusCaption = `╭─⌈ 💾 *STATUS SAVED* ⌋\n`;
+            const label = isGroupStatus ? '💾 *GROUP STATUS SAVED*' : '💾 *STATUS SAVED*';
+            let statusCaption = `╭─⌈ ${label} ⌋\n`;
             statusCaption += `│ 👤 *From:* ${senderNum}\n`;
+            if (isGroupStatus) statusCaption += `│ 👥 *Type:* Group Status\n`;
             if (caption) statusCaption += `│ 💬 ${caption}\n`;
             statusCaption += `╰⊷ *${botName.toUpperCase()}*`;
 
+            const payload = {};
             if (mediaInfo.key === 'sticker') {
                 payload.sticker = buffer;
             } else {
