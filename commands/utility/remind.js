@@ -22,16 +22,25 @@ function saveData(data) {
 
 // ── Time helpers ─────────────────────────────────────────────────────────────
 
-function nowInOffset(utcOffset) {
+// Wall clock "now" expressed as a Date where .getUTC* gives wall-clock values
+function wallNow(utcOffset) {
     return new Date(Date.now() + utcOffset * 3600000);
 }
 
-// Return a Date object (UTC ms) for a wall-clock time string "HH:MM" in given UTC offset
+// Convert a wall-clock HH:MM (on today + addDays in the owner's timezone) to real UTC ms.
+// Correct approach: build the wall time as if it were UTC, then subtract the offset.
 function wallClockToUtcMs(hh, mm, utcOffset, addDays = 0) {
-    const now = nowInOffset(utcOffset);
-    const y = now.getUTCFullYear(), mo = now.getUTCMonth(), d = now.getUTCDate();
-    // Build a UTC timestamp representing that wall time in the owner's offset
-    return Date.UTC(y, mo, d + addDays, hh - utcOffset, mm);
+    const wn = wallNow(utcOffset);
+    // Midnight of the target wall-clock day, expressed as a UTC timestamp
+    const midnight = Date.UTC(wn.getUTCFullYear(), wn.getUTCMonth(), wn.getUTCDate() + addDays);
+    // Add target HH:MM in ms (still in wall-clock space), then subtract offset to get real UTC
+    return midnight + hh * 3600000 + mm * 60000 - utcOffset * 3600000;
+}
+
+// Current wall-clock time as "HH:MM" string
+function wallTimeStr(utcOffset) {
+    const wn = wallNow(utcOffset);
+    return `${String(wn.getUTCHours()).padStart(2,'0')}:${String(wn.getUTCMinutes()).padStart(2,'0')}`;
 }
 
 // ── Time parser helpers ───────────────────────────────────────────────────────
@@ -290,14 +299,18 @@ export default {
         });
         saveData(data);
 
-        const timeStr = formatFireAt(parsed.fireAt, data.utcOffset);
-        const left    = msUntil(parsed.fireAt);
+        const timeStr  = formatFireAt(parsed.fireAt, data.utcOffset);
+        const left     = msUntil(parsed.fireAt);
+        const nowStr   = wallTimeStr(data.utcOffset);
+        const tzLabel  = `UTC${data.utcOffset >= 0 ? '+' : ''}${data.utcOffset}`;
 
         return reply(
             `╭─⌈ ⏰ *REMINDER SET* ⌋\n│\n` +
             `│ 📝 *Message:* ${reminderText}\n` +
-            `│ 🕐 *Time:*    ${timeStr}\n` +
-            `│ ⏳ *In:*      ${left}\n│\n` +
+            `│ 🕐 *Fires at:* ${timeStr}\n` +
+            `│ ⏳ *In:*       ${left}\n` +
+            `│ 🌐 *Bot clock:* ${nowStr} (${tzLabel})\n│\n` +
+            `│ _If clock looks wrong, set: *${prefix}rem timezone +1*_\n│\n` +
             `╰⊷ Cancel: *${prefix}rem cancel ${data.reminders.length}*`
         );
     }
