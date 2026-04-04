@@ -1,8 +1,8 @@
 import { getBotName } from '../../lib/botname.js';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { writeFileSync, unlinkSync, existsSync } from 'fs';
 
 export default {
     name: 'extractpdf',
@@ -43,6 +43,8 @@ export default {
 
         await sock.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
 
+        const tmpPath = join(tmpdir(), `wolfbot_pdf_${Date.now()}.pdf`);
+
         try {
             const fakeMsg = {
                 key: {
@@ -56,11 +58,15 @@ export default {
             const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {});
             if (!buffer || buffer.length === 0) throw new Error('Failed to download PDF');
 
-            const pdfParse = require('pdf-parse');
-            const data     = await pdfParse(buffer);
+            writeFileSync(tmpPath, buffer);
+
+            const { PDFParse } = await import('pdf-parse');
+            const fileUrl = `file://${tmpPath}`;
+            const parser  = new PDFParse({ url: fileUrl });
+            const data    = await parser.getText();
 
             const rawText  = (data.text || '').trim();
-            const pages    = data.numpages || '?';
+            const pages    = data.total ?? data.totalPages ?? data.numpages ?? '?';
             const fileName = docMsg.fileName || 'document.pdf';
 
             if (!rawText) {
@@ -106,6 +112,8 @@ export default {
                       `└⊷ Make sure the PDF is not corrupted or encrypted\n\n` +
                       `╰⊷ *${getBotName()} Utility* 🐾`
             }, { quoted: m });
+        } finally {
+            if (existsSync(tmpPath)) unlinkSync(tmpPath);
         }
     }
 };
