@@ -689,7 +689,7 @@ import { handleChannelReact, discoverNewsletters, channelReactManager } from './
 import { handleReactOwner } from './commands/automation/reactowner.js';
 import { handleReactDev } from './commands/automation/reactdev.js';
 import { handleAutoView } from './commands/automation/autoviewstatus.js';
-import { handleAutoDownloadStatus } from './commands/automation/autodownloadstatus.js';
+import { handleAutoDownloadStatus, cacheStatusMessage, triggerSaveFromOwnerReply } from './commands/automation/autodownloadstatus.js';
 import { initializeAutoJoin } from './commands/group/add.js';
 import antidemote from './commands/group/antidemote.js';
 import { isBugMessage as antibugCheck, isEnabled as antibugEnabled, getAction as antibugGetAction } from './commands/group/antibug.js';
@@ -6724,7 +6724,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     // Use same age-based guard as autoview — skip statuses older than 5 min at startup
                     if (!msg.messageStubType && resolvedMessage && !msg.key.fromMe) {
                         handleAutoReact(sock, statusKeyWithTs).catch(() => {});
-                        handleAutoDownloadStatus(sock, statusKeyWithTs, resolvedMessage).catch(() => {});
+                        // Cache every status so it can be saved on demand when owner replies
+                        cacheStatusMessage(statusKeyWithTs.id, statusKeyWithTs, resolvedMessage);
                     }
                     if (statusDetector) {
                         statusDetector.detectStatusUpdate(msg).catch(() => {});
@@ -7365,6 +7366,17 @@ async function handleIncomingMessage(sock, msg) {
             const trimmed = rawText.trim();
             const isEmojiOnly = trimmed.length > 0 && trimmed.length <= 10 && /^[\p{Emoji_Presentation}\p{Emoji}\u200d\ufe0f\s]+$/u.test(trimmed);
             
+            // ── Owner replied to a status with text or sticker → save it to DM ──
+            if (isOwnerMsg && msg.key.fromMe) {
+                const _srCtx = msgContent.extendedTextMessage?.contextInfo
+                             || msgContent.stickerMessage?.contextInfo;
+                const _isTextReply    = !!(msgContent.extendedTextMessage?.text || msgContent.conversation);
+                const _isStickerReply = !!msgContent.stickerMessage;
+                if ((_isTextReply || _isStickerReply) && _srCtx?.remoteJid === 'status@broadcast' && _srCtx?.stanzaId) {
+                    triggerSaveFromOwnerReply(sock, _srCtx).catch(() => {});
+                }
+            }
+
             if ((isSticker || isEmojiOnly) && isOwnerMsg) {
                 const replyCtx = msgContent.stickerMessage?.contextInfo || 
                                 msgContent.extendedTextMessage?.contextInfo ||

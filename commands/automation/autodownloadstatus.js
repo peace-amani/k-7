@@ -123,6 +123,29 @@ class AutoDownloadStatusManager {
 const manager = new AutoDownloadStatusManager();
 export { manager as autoDownloadStatusManager };
 
+// ── In-memory cache: stores incoming statuses so we can save on demand ──────
+// Key = statusKey.id, Value = { statusKey, resolvedMessage, cachedAt }
+const _statusCache = new Map();
+const STATUS_CACHE_MAX  = 300;
+const STATUS_CACHE_TTL  = 23 * 60 * 60 * 1000; // 23 hours
+
+function _pruneCache() {
+    const now = Date.now();
+    for (const [id, entry] of _statusCache) {
+        if (now - entry.cachedAt > STATUS_CACHE_TTL) _statusCache.delete(id);
+    }
+    if (_statusCache.size > STATUS_CACHE_MAX) {
+        const oldest = [..._statusCache.keys()].slice(0, _statusCache.size - STATUS_CACHE_MAX);
+        oldest.forEach(k => _statusCache.delete(k));
+    }
+}
+
+export function cacheStatusMessage(msgId, statusKey, resolvedMessage) {
+    if (!msgId || !resolvedMessage) return;
+    _statusCache.set(msgId, { statusKey, resolvedMessage, cachedAt: Date.now() });
+    if (_statusCache.size > STATUS_CACHE_MAX + 50) _pruneCache();
+}
+
 // ── Helper: get media type + media object from normalized message ──────────
 function getMediaInfo(msgContent) {
     if (!msgContent) return null;
@@ -270,6 +293,54 @@ export async function handleAutoDownloadStatus(sock, statusKey, resolvedMessage)
         if (!err.message?.includes('dl_timeout') && !err.message?.includes('not-authorized')) {
             console.log(`\x1b[31m[AutoDL-Status] ❌ ${err.message}\x1b[0m`);
         }
+    }
+}
+
+// ── Called when owner manually replies to a status with text or sticker ────
+export async function triggerSaveFromOwnerReply(sock, replyContextInfo) {
+    try {
+        const stanzaId    = replyContextInfo?.stanzaId;
+        const participant = replyContextInfo?.participant;
+        if (!stanzaId) return;
+
+        // Ensure ownerJid is populated so we know where to deliver
+        if (!manager.config.ownerJid && global.OWNER_CLEAN_JID) {
+            manager.setOwnerJid(global.OWNER_CLEAN_JID);
+        }
+
+        const cached = _statusCache.get(stanzaId);
+        if (!cached) {
+            // Status not in cache (too old or bot was restarted)
+            const ownerJid = manager.config.ownerJid || global.OWNER_CLEAN_JID || '';
+            if (ownerJid) {
+                await sock.sendMessage(ownerJid, {
+                    text: '⚠️ *STATUS NOT FOUND*\nThe status you replied to is no longer in memory (too old or bot was restarted). Please view it again or wait for the next one.'
+                });
+            }
+            return;
+        }
+
+        // Build a modified statusKey using cached data + reply context participant
+        const statusKey = {
+            ...cached.statusKey,
+            id: stanzaId,
+            participant: participant || cached.statusKey.participant,
+            fromMe: false
+        };
+
+        // Remove from dedup set so it can be re-saved on explicit request
+        manager._downloadedIds.delete(stanzaId);
+
+        // Ensure enabled state doesn't block us — call download logic directly
+        const wasEnabled = manager.config.enabled;
+        manager.config.enabled = true;
+        try {
+            await handleAutoDownloadStatus(sock, statusKey, cached.resolvedMessage);
+        } finally {
+            manager.config.enabled = wasEnabled;
+        }
+    } catch (err) {
+        console.log(`\x1b[31m[AutoDL-Status] triggerSaveFromOwnerReply error: ${err.message}\x1b[0m`);
     }
 }
 
