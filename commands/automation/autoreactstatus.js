@@ -6,6 +6,7 @@ import { getBotName } from '../../lib/botname.js';
 const CONFIG_DB_KEY = 'autoreact_config';
 const DEFAULT_REACT_CONFIG = {
     enabled: true,
+    onlyOnOwnerReply: true,
     viewMode: 'view+react',
     mode: 'fixed',
     fixedEmoji: '🐺',
@@ -40,6 +41,7 @@ class AutoReactManager {
             config.lastReactionTime = config.lastReactionTime || 0;
             config.viewMode         = config.viewMode || 'view+react';
             config.cycleIndex       = config.cycleIndex || 0;
+            if (config.onlyOnOwnerReply === undefined) config.onlyOnOwnerReply = true;
             if (!Array.isArray(config.excludedContacts)) config.excludedContacts = [];
             return { ...DEFAULT_REACT_CONFIG, ...config };
         } catch { return { ...DEFAULT_REACT_CONFIG }; }
@@ -143,6 +145,11 @@ class AutoReactManager {
         this.saveConfigImmediate(); return this.config.enabled;
     }
 
+    setOnlyOnOwnerReply(value) {
+        this.config.onlyOnOwnerReply = !!value;
+        this.saveConfigImmediate();
+    }
+
     setViewMode(mode) {
         if (mode === 'view+react' || mode === 'react-only') {
             this.config.viewMode = mode; this.saveConfigImmediate(); return true;
@@ -206,7 +213,8 @@ class AutoReactManager {
 
     getStats() {
         return {
-            enabled: this.config.enabled, viewMode: this.config.viewMode,
+            enabled: this.config.enabled, onlyOnOwnerReply: this.config.onlyOnOwnerReply,
+            viewMode: this.config.viewMode,
             mode: this.config.mode, fixedEmoji: this.config.fixedEmoji,
             reactions: [...this.config.reactions], totalReacted: this.config.totalReacted,
             lastReacted: this.config.lastReacted, consecutiveReactions: this.config.consecutiveReactions,
@@ -319,6 +327,11 @@ const autoReactManager = new AutoReactManager();
 globalThis._autoReactManager = autoReactManager;
 
 export async function handleAutoReact(sock, statusKey) {
+    if (autoReactManager.config.onlyOnOwnerReply) return;
+    autoReactManager.enqueue(sock, statusKey);
+}
+
+export async function triggerReactFromOwnerReply(sock, statusKey) {
     autoReactManager.enqueue(sock, statusKey);
 }
 
@@ -351,6 +364,7 @@ export default {
                 text += `├─⊷ *${prefix}sr exclude <number>*\n│  └⊷ Skip a contact\n`;
                 text += `├─⊷ *${prefix}sr include <number>*\n│  └⊷ Remove from skip list\n`;
                 text += `├─⊷ *${prefix}sr excluded*\n│  └⊷ Show skip list\n`;
+                text += `├─⊷ *${prefix}sr ownerreply*\n│  └⊷ Toggle: react only when you reply (current: ${autoReactManager.config.onlyOnOwnerReply ? 'ON ✅' : 'OFF ❌'})\n`;
                 text += `├─⊷ *${prefix}sr view+react*\n│  └⊷ View then react\n`;
                 text += `├─⊷ *${prefix}sr react-only*\n│  └⊷ React without viewing\n`;
                 text += `├─⊷ *${prefix}sr random*\n│  └⊷ Random emoji mode\n`;
@@ -508,11 +522,25 @@ export default {
                     break;
                 }
 
+                case 'ownerreply': case 'onlyownerreply': case 'replymode': {
+                    if (!isOwner) { await reply("❌ Owner only!"); return; }
+                    const cur = autoReactManager.config.onlyOnOwnerReply;
+                    autoReactManager.setOnlyOnOwnerReply(!cur);
+                    const now = autoReactManager.config.onlyOnOwnerReply;
+                    if (now) {
+                        await reply(`✅ *OWNER-REPLY MODE ON*\n\nBot will only react to a status when you reply to it with a text or sticker.\nIt will NOT auto-react to all statuses.`);
+                    } else {
+                        await reply(`🔄 *AUTO-REACT ALL MODE ON*\n\nBot will now automatically react to every status it receives.`);
+                    }
+                    break;
+                }
+
                 case 'stats': case 'statistics': case 'info': {
                     const s = autoReactManager.getStats();
                     const vmLabel = s.viewMode === 'view+react' ? '👁️ + 🐺 View then React' : '🐺 React only';
                     let text = `📊 *AUTOREACTSTATUS STATS*\n\n`;
                     text += `🟢 Status      : ${s.enabled ? 'ACTIVE ✅' : 'INACTIVE ❌'}\n`;
+                    text += `💬 Trigger     : ${s.onlyOnOwnerReply ? 'Owner-reply only 📩' : 'Auto-react all 🔄'}\n`;
                     text += `👁️ View Mode   : ${vmLabel}\n`;
                     const modeLabel = s.mode === 'fixed' ? `FIXED (${s.fixedEmoji})` : s.mode === 'cycle' ? `CYCLE (pos ${autoReactManager.config.cycleIndex + 1}/${autoReactManager.reactions.length})` : 'RANDOM';
                     text += `🎭 Emoji Mode  : ${modeLabel}\n`;
