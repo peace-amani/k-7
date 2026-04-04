@@ -1697,6 +1697,7 @@ case 1: {
 │  • time
 │  • uptime
 │  • define
+│  • remind
 │  • news
 │  • covid
 │  • weather
@@ -1731,6 +1732,14 @@ case 1: {
 │  • tts
 │  • trebleboost
 │  • jarvis
+│  • topdf
+│  • extractpdf
+│  • toword
+│  • extractword
+│  • toexcel
+│  • extractexcel
+│  • toppt
+│  • extractppt
 │
 ├─⊷ *📇 CONTACT TOOLS*
 │  • vcf
@@ -2306,6 +2315,7 @@ case 2: {
 > • uptime — bot uptime
 > • alive — check if bot is alive
 > • define — word definition
+> • remind — set a reminder
 > • news — latest news
 > • weather — weather info
 > • covid — covid stats
@@ -2318,6 +2328,14 @@ case 2: {
 > • tostatus — convert to status
 > • toaudio — convert to audio
 > • tovoice — convert to voice
+> • topdf — text to PDF
+> • extractpdf — extract PDF text
+> • toword — text to Word doc
+> • extractword — extract Word text
+> • toexcel — text to Excel
+> • extractexcel — extract Excel data
+> • toppt — text to PowerPoint
+> • extractppt — extract PPT text
 > • save — save content
 > • url — get URL info
 > • goodmorning — morning message
@@ -3023,6 +3041,7 @@ case 3: {
 │ time
 │ uptime
 │ define
+│ remind
 │ news
 │ covid
 │ weather
@@ -3054,6 +3073,14 @@ case 3: {
 │ tts
 │ trebleboost
 │ jarvis
+│ topdf
+│ extractpdf
+│ toword
+│ extractword
+│ toexcel
+│ extractexcel
+│ toppt
+│ extractppt
 └───────────────`,
 `┌──⌈ \`CONTACT TOOLS\` ⌋
 │ vcf
@@ -3986,6 +4013,7 @@ case 4: {
 │  • time
 │  • connection
 │  • define
+│  • remind
 │  • news
 │  • covid
 │  • iplookup
@@ -4005,6 +4033,14 @@ case 4: {
 │  • twitter
 │  • tgsticker
 │  • save
+│  • topdf
+│  • extractpdf
+│  • toword
+│  • extractword
+│  • toexcel
+│  • extractexcel
+│  • toppt
+│  • extractppt
 │
 ├─⊷ *📝 PERSONAL TOOLS*
 │  • pair
@@ -5806,6 +5842,7 @@ case 5: {
 │  • time
 │  • uptime
 │  • define
+│  • remind
 │  • news
 │  • covid
 │  • weather
@@ -5840,6 +5877,14 @@ case 5: {
 │  • tts
 │  • trebleboost
 │  • jarvis
+│  • topdf
+│  • extractpdf
+│  • toword
+│  • extractword
+│  • toexcel
+│  • extractexcel
+│  • toppt
+│  • extractppt
 │
 ├─⊷ *📇 CONTACT TOOLS*
 │  • vcf
@@ -8653,6 +8698,7 @@ case 7: {
 │ time
 │ uptime
 │ define
+│ remind
 │ news
 │ covid
 │ weather
@@ -8684,6 +8730,14 @@ case 7: {
 │ tts
 │ trebleboost
 │ jarvis
+│ topdf
+│ extractpdf
+│ toword
+│ extractword
+│ toexcel
+│ extractexcel
+│ toppt
+│ extractppt
 └───────────────`,
 `┌──⌈ \`CONTACT TOOLS\` ⌋
 │ vcf
@@ -9413,6 +9467,7 @@ case 9: {
 │  • time
 │  • uptime
 │  • define
+│  • remind
 │  • news
 │  • covid
 │  • weather
@@ -9447,6 +9502,14 @@ case 9: {
 │  • tts
 │  • trebleboost
 │  • jarvis
+│  • topdf
+│  • extractpdf
+│  • toword
+│  • extractword
+│  • toexcel
+│  • extractexcel
+│  • toppt
+│  • extractppt
 │
 ├─⊷ *📇 CONTACT TOOLS*
 │  • vcf
