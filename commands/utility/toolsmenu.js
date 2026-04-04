@@ -56,6 +56,8 @@ export default {
 │  • extractpdf
 │  • toword
 │  • extractword
+│  • toexcel
+│  • extractexcel
 │  • take
 │  • imgbb
 │  • save

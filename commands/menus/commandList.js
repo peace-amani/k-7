@@ -284,6 +284,8 @@ export const getBoxStyleCommands = () => {
 │  • extractpdf
 │  • toword
 │  • extractword
+│  • toexcel
+│  • extractexcel
 │  • resetwarn
 │  • save
 │  • screenshot
@@ -637,6 +639,8 @@ export const getTextOnlyCommands = (botMode) => {
 > • extractpdf — extract text from PDF
 > • toword — convert text to Word doc
 > • extractword — extract text from Word doc
+> • toexcel — convert text to Excel spreadsheet
+> • extractexcel — extract data from Excel file
 > • resetwarn — reset warnings
 > • save — save content
 > • screenshot — screenshot website
@@ -1031,6 +1035,8 @@ export const getQuotedBoxCommands = () => {
 > │ • extractpdf
 > │ • toword
 > │ • extractword
+> │ • toexcel
+> │ • extractexcel
 > │ • resetwarn
 > │ • save
 > │ • screenshot
@@ -1453,6 +1459,8 @@ export const getPlainBoxCommands = () => {
 │ extractpdf
 │ toword
 │ extractword
+│ toexcel
+│ extractexcel
 │ resetwarn
 │ save
 │ screenshot
