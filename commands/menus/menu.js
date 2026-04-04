@@ -1698,6 +1698,7 @@ case 1: {
 │  • uptime
 │  • define
 │  • remind
+│  • sessioninfo
 │  • news
 │  • covid
 │  • weather
@@ -2316,6 +2317,7 @@ case 2: {
 > • alive — check if bot is alive
 > • define — word definition
 > • remind — set a reminder
+> • sessioninfo — view session details
 > • news — latest news
 > • weather — weather info
 > • covid — covid stats
@@ -3042,6 +3044,7 @@ case 3: {
 │ uptime
 │ define
 │ remind
+│ sessioninfo
 │ news
 │ covid
 │ weather
@@ -4014,6 +4017,7 @@ case 4: {
 │  • connection
 │  • define
 │  • remind
+│  • sessioninfo
 │  • news
 │  • covid
 │  • iplookup
@@ -5843,6 +5847,7 @@ case 5: {
 │  • uptime
 │  • define
 │  • remind
+│  • sessioninfo
 │  • news
 │  • covid
 │  • weather
@@ -8699,6 +8704,7 @@ case 7: {
 │ uptime
 │ define
 │ remind
+│ sessioninfo
 │ news
 │ covid
 │ weather
@@ -9468,6 +9474,7 @@ case 9: {
 │  • uptime
 │  • define
 │  • remind
+│  • sessioninfo
 │  • news
 │  • covid
 │  • weather

@@ -30,6 +30,7 @@ export default {
 │  • uptime
 │  • define
 │  • remind
+│  • sessioninfo
 │  • news
 │  • covid
 │  • weather
