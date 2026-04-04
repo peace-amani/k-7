@@ -383,14 +383,25 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
 async function handleMessageUpdates(updates) {
     try {
         if (!antieditState.sock) return;
-        
+
         for (const update of updates) {
             const msgKey = update.key;
-            if (!msgKey || !msgKey.id) continue;
-            
-            const msgId = msgKey.id;
+            if (!msgKey?.id || msgKey.fromMe) continue;
+
+            const msgId   = msgKey.id;
             const chatJid = msgKey.remoteJid;
-            
+            if (chatJid === 'status@broadcast') continue;
+
+            const updMsg = update.update?.message;
+            if (!updMsg) continue;
+
+            // Parse both known WhatsApp edit structures
+            const editedWrapper = updMsg.editedMessage || updMsg.protocolMessage?.editedMessage;
+            const protoEdit     = updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage : null;
+            const editedContent = editedWrapper?.message || protoEdit?.editedMessage?.message;
+            if (!editedContent) continue;
+
+            // Look up original message — memory first, then DB
             let existingMessage = antieditState.currentMessages.get(msgId);
             if (!existingMessage) {
                 try {
@@ -401,35 +412,35 @@ async function handleMessageUpdates(updates) {
                     }
                 } catch {}
             }
-            if (!existingMessage) continue;
-            
-            const updateContent = update.update;
-            if (!updateContent || typeof updateContent !== 'object') continue;
-            
-            const contentType = getContentType(updateContent);
-            if (!contentType) continue;
-            
-            const isMessageEdit = [
-                'extendedTextMessage',
-                'conversation',
-                'imageMessage',
-                'videoMessage',
-                'audioMessage',
-                'documentMessage'
-            ].some(type => updateContent[type]);
-            
-            if (isMessageEdit) {
-                console.log(`🔍 Antiedit: Detected edit for message ${msgId} in ${chatJid}`);
-                
-                const editedMessage = {
-                    key: msgKey,
-                    message: { [contentType]: updateContent[contentType] },
-                    pushName: existingMessage.pushName,
-                    messageTimestamp: Math.floor(Date.now() / 1000)
+
+            // If we never saw the original, create a placeholder so alerts don't crash
+            if (!existingMessage) {
+                existingMessage = {
+                    id: msgId,
+                    chatJid,
+                    senderJid: msgKey.participant || chatJid,
+                    pushName: update.pushName || 'Unknown',
+                    timestamp: Date.now(),
+                    type: 'unknown',
+                    text: '[Original not captured]',
+                    hasMedia: false,
+                    version: 1,
+                    isEdit: false,
+                    editTime: Date.now()
                 };
-                
-                await storeIncomingMessage(editedMessage, true, existingMessage);
+                antieditState.currentMessages.set(msgId, existingMessage);
             }
+
+            console.log(`🔍 Antiedit: Detected edit for message ${msgId} in ${chatJid}`);
+
+            const syntheticMsg = {
+                key: msgKey,
+                message: editedContent,
+                pushName: existingMessage.pushName || update.pushName || '',
+                messageTimestamp: Math.floor(Date.now() / 1000)
+            };
+
+            await storeIncomingMessage(syntheticMsg, true, existingMessage);
         }
     } catch (error) {
         console.error('❌ Antiedit: Error handling message updates:', error.message);
@@ -709,15 +720,19 @@ function setupListeners(sock) {
     console.log('✅ Antiedit: Listeners active');
 }
 
-async function initializeSystem(sock) {
+async function initializeSystem(sock, ownerJid) {
     try {
         await loadData();
-        
-        if (sock.user?.id) {
+
+        // Prefer the explicitly passed owner JID (from OWNER_CLEAN_JID in index.js)
+        // Fall back to sock.user.id only if nothing is provided
+        if (ownerJid) {
+            antieditState.ownerJid = ownerJid;
+        } else if (sock.user?.id) {
             antieditState.ownerJid = sock.user.id;
-            console.log(`👑 Antiedit: Owner set to ${sock.user.id}`);
         }
-        
+        console.log(`👑 Antiedit: Owner set to ${antieditState.ownerJid}`);
+
         setupListeners(sock);
         
         console.log(`🎯 Antiedit: System initialized`);
@@ -737,8 +752,14 @@ async function initializeSystem(sock) {
     }
 }
 
-export async function initAntiedit(sock) {
-    await initializeSystem(sock);
+export async function initAntiedit(sock, ownerJid) {
+    await initializeSystem(sock, ownerJid);
+}
+
+export function updateAntieditSock(sock) {
+    if (!sock) return;
+    antieditState.sock = sock;
+    console.log('🔄 Antiedit: Socket updated after reconnect');
 }
 
 export function getAntieditInfo() {

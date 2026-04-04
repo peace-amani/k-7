@@ -713,6 +713,7 @@ import { setupAntiGroupStatusListener } from './commands/group/antigroupstatus.j
 
 // Import antidelete system (listeners registered in index.js, always active)
 import { initAntidelete, antideleteStoreMessage, antideleteHandleUpdate, updateAntideleteSock } from './commands/owner/antidelete.js';
+import { initAntiedit, updateAntieditSock } from './commands/owner/antiedit.js';
 
 // Import status antidelete system (always on, handles status messages exclusively)
 import { initStatusAntidelete, statusAntideleteStoreMessage, statusAntideleteHandleUpdate, updateStatusAntideleteSock } from './commands/owner/antideletestatus.js';
@@ -3597,6 +3598,7 @@ const memoryMonitor = {
 
 let antideleteInitDone = false;
 let statusAntideleteInitDone = false;
+let antieditInitDone = false;
 
 // ====== SECTION 15: RATE LIMIT PROTECTION ======
 // Prevents the bot from being banned by WhatsApp for sending too many messages
@@ -5555,6 +5557,16 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     updateStatusAntideleteSock(sock);
                     updateSchedulerSock(sock);
                 }
+
+                if (!antieditInitDone) {
+                    antieditInitDone = true;
+                    initAntiedit(sock, OWNER_CLEAN_JID).catch(err => {
+                        console.error('❌ Antiedit init error:', err.message);
+                        antieditInitDone = false;
+                    });
+                } else {
+                    updateAntieditSock(sock);
+                }
                 
                 
 
@@ -6810,16 +6822,14 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                 editedContent.imageMessage?.caption ||
                                 editedContent.videoMessage?.caption || '';
 
-                            if (editedText) {
-                                console.log(`[EDIT] Message edited → "${editedText}" — re-processing`);
-                                const syntheticMsg = {
-                                    key: update.key,
-                                    message: editedContent,
-                                    messageTimestamp: Math.floor(Date.now() / 1000),
-                                    pushName: update.pushName || ''
-                                };
-                                sock.ev.emit('messages.upsert', { messages: [syntheticMsg], type: 'notify' });
-                            }
+                            console.log(`[EDIT] Message edited${editedText ? ` → "${editedText}"` : ' (media)'} — re-processing`);
+                            const syntheticMsg = {
+                                key: update.key,
+                                message: editedContent,
+                                messageTimestamp: Math.floor(Date.now() / 1000),
+                                pushName: update.pushName || ''
+                            };
+                            sock.ev.emit('messages.upsert', { messages: [syntheticMsg], type: 'notify' });
                         }
                     }
                 } catch {}
