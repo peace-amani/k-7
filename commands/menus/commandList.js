@@ -282,6 +282,8 @@ export const getBoxStyleCommands = () => {
 │  • qrdecode
 │  • topdf
 │  • extractpdf
+│  • toword
+│  • extractword
 │  • resetwarn
 │  • save
 │  • screenshot
@@ -633,6 +635,8 @@ export const getTextOnlyCommands = (botMode) => {
 > • qrdecode — QR decode from image
 > • topdf — convert text to PDF
 > • extractpdf — extract text from PDF
+> • toword — convert text to Word doc
+> • extractword — extract text from Word doc
 > • resetwarn — reset warnings
 > • save — save content
 > • screenshot — screenshot website
@@ -1025,6 +1029,8 @@ export const getQuotedBoxCommands = () => {
 > │ • qrdecode
 > │ • topdf
 > │ • extractpdf
+> │ • toword
+> │ • extractword
 > │ • resetwarn
 > │ • save
 > │ • screenshot
@@ -1445,6 +1451,8 @@ export const getPlainBoxCommands = () => {
 │ qrdecode
 │ topdf
 │ extractpdf
+│ toword
+│ extractword
 │ resetwarn
 │ save
 │ screenshot

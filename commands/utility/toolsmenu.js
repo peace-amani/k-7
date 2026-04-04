@@ -54,6 +54,8 @@ export default {
 │  • qrdecode
 │  • topdf
 │  • extractpdf
+│  • toword
+│  • extractword
 │  • take
 │  • imgbb
 │  • save
