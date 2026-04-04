@@ -264,6 +264,7 @@ export const getBoxStyleCommands = () => {
 │  • ping
 │  • ping2
 │  • covid
+│  • remind
 │  • define
 │  • fetch
 │  • getpp
@@ -621,6 +622,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • ping — bot ping
 > • ping2 — advanced ping
 > • covid — covid stats
+> • remind — set a reminder
 > • define — word definition
 > • fetch — fetch URL
 > • getpp — get profile pic
@@ -1024,6 +1026,7 @@ export const getQuotedBoxCommands = () => {
 > │ • ping
 > │ • ping2
 > │ • covid
+> │ • remind
 > │ • define
 > │ • fetch
 > │ • getpp
@@ -1445,6 +1448,7 @@ export const getPlainBoxCommands = () => {
 │ ping
 │ ping2
 │ covid
+│ remind
 │ define
 │ fetch
 │ getpp

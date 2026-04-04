@@ -29,6 +29,7 @@ export default {
 │  • time
 │  • uptime
 │  • define
+│  • remind
 │  • news
 │  • covid
 │  • weather

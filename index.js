@@ -244,6 +244,7 @@ import { isChannelModeEnabled, getChannelInfo } from './lib/channelMode.js';
 import { isMusicModeEnabled, sendMusicClip } from './lib/musicMode.js';
 import { setActiveCommand, clearActiveCommand, getActiveCommand, buildCommandButtons } from './lib/commandButtons.js';
 import { startScheduler, updateSchedulerSock } from './lib/scheduler.js';
+import { startReminderScheduler, updateReminderSock } from './commands/utility/remind.js';
 import { resumeQueueIfPending } from './commands/group/creategroup.js';
 import { resumeExportQueueIfPending } from './commands/group/export.js';
 import { migrateSudoToSupabase, initSudo, setBotId } from './lib/sudo-store.js';
@@ -5553,9 +5554,11 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     });
                     initStatusReplyListener(sock, OWNER_CLEAN_JID);
                     startScheduler(sock);
+                    startReminderScheduler(sock);
                 } else {
                     updateStatusAntideleteSock(sock);
                     updateSchedulerSock(sock);
+                    updateReminderSock(sock);
                 }
 
                 if (!antieditInitDone) {
