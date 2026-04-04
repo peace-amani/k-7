@@ -89,7 +89,7 @@ export default {
             await sock.sendMessage(chatId, {
                 document: pdfBuffer,
                 mimetype: 'application/pdf',
-                fileName: `wolfbot_${Date.now()}.pdf`,
+                fileName: `${getBotName()}_${Date.now()}.pdf`,
                 caption: `╭⊷『 📄 PDF READY 』\n│\n` +
                          `├⊷ *Words:* ${wordCount}\n` +
                          `├⊷ *Chars:* ${charCount}\n` +

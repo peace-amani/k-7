@@ -85,7 +85,7 @@ export default {
             await sock.sendMessage(chatId, {
                 document: buffer,
                 mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                fileName: `wolfbot_${Date.now()}.docx`,
+                fileName: `${getBotName()}_${Date.now()}.docx`,
                 caption: `╭⊷『 📝 WORD DOC READY 』\n│\n` +
                          `├⊷ *Words:* ${wordCount}\n` +
                          `├⊷ *Chars:* ${charCount}\n` +
