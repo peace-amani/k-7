@@ -279,6 +279,9 @@ export const getBoxStyleCommands = () => {
 │  • technews
 │  • prefixinfo
 │  • qrencode
+│  • qrdecode
+│  • topdf
+│  • extractpdf
 │  • resetwarn
 │  • save
 │  • screenshot
@@ -627,6 +630,9 @@ export const getTextOnlyCommands = (botMode) => {
 > • technews — latest tech news
 > • prefixinfo — prefix info
 > • qrencode — QR encode
+> • qrdecode — QR decode from image
+> • topdf — convert text to PDF
+> • extractpdf — extract text from PDF
 > • resetwarn — reset warnings
 > • save — save content
 > • screenshot — screenshot website
@@ -1016,6 +1022,9 @@ export const getQuotedBoxCommands = () => {
 > │ • news
 > │ • prefixinfo
 > │ • qrencode
+> │ • qrdecode
+> │ • topdf
+> │ • extractpdf
 > │ • resetwarn
 > │ • save
 > │ • screenshot
@@ -1433,6 +1442,9 @@ export const getPlainBoxCommands = () => {
 │ technews
 │ prefixinfo
 │ qrencode
+│ qrdecode
+│ topdf
+│ extractpdf
 │ resetwarn
 │ save
 │ screenshot

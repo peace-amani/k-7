@@ -51,6 +51,9 @@ export default {
 │  • url
 │  • fetch
 │  • qrencode
+│  • qrdecode
+│  • topdf
+│  • extractpdf
 │  • take
 │  • imgbb
 │  • save

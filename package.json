@@ -85,6 +85,8 @@
     "node-schedule": "^2.1.1",
     "node-webpmux": "^3.2.1",
     "openai": "^6.33.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.18.0",
     "pg": "^8.20.0",
     "pino": "^8.21.0",
     "qrcode-terminal": "^0.12.0",
