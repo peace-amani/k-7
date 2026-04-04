@@ -34,60 +34,84 @@ function wallClockToUtcMs(hh, mm, utcOffset, addDays = 0) {
     return Date.UTC(y, mo, d + addDays, hh - utcOffset, mm);
 }
 
+// ── Time parser helpers ───────────────────────────────────────────────────────
+function _relative(raw, fullMatch, ms) {
+    const fireAt  = Date.now() + ms;
+    const totalM  = Math.round(ms / 60000);
+    const h = Math.floor(totalM / 60), m = totalM % 60;
+    const label   = h > 0 ? `${h}h${m ? ' ' + m + 'm' : ''}` : `${totalM} min`;
+    return { fireAt, label, remainder: raw.slice(fullMatch.length).trim() };
+}
+
+function _absolute(raw, fullMatch, hh, mm, utcOffset) {
+    let fireAt = wallClockToUtcMs(hh, mm, utcOffset, 0);
+    if (fireAt <= Date.now() + 30000) fireAt = wallClockToUtcMs(hh, mm, utcOffset, 1);
+    const wall = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    return { fireAt, label: `at ${wall}`, remainder: raw.slice(fullMatch.length).trim() };
+}
+
 // ── Natural language time parser ─────────────────────────────────────────────
-// Returns { fireAt: <ms>, label: <string>, remainder: <remaining text> } or null
+// Supports:
+//   in 30 minutes / in 30 mins / in 30m
+//   in 2 hours / in 2 hrs / in 2h
+//   in 2 hours 30 minutes / in 2h 30m
+//   tomorrow at 8am / tomorrow at 08:30
+//   at 10pm / at 10:00 pm / at 10:00pm
+//   10pm / 10:30pm / 10:30 pm
+//   at 22:00 / at 9:30 / at 9          ← 24h with "at"
+//   22:00 / 09:30                       ← bare 24h HH:MM
 function parseTime(text, utcOffset) {
     const raw = text.trim();
+    let m;
 
-    // "in X minutes" / "in X hours" / "in X hours Y minutes"
-    const inMatch = raw.match(/^in\s+(\d+)\s*(hour|hr|h)s?\s*(?:and\s+)?(?:(\d+)\s*(minute|min|m)s?)?\b/i)
-                 || raw.match(/^in\s+(\d+)\s*(minute|min|m)s?\b/i);
-    if (inMatch) {
-        let ms = 0;
-        const full = inMatch[0];
-        const n1 = parseInt(inMatch[1]);
-        const unit1 = inMatch[2].toLowerCase();
-        if (/^h/.test(unit1)) {
-            ms += n1 * 3600000;
-            if (inMatch[3]) ms += parseInt(inMatch[3]) * 60000;
-        } else {
-            ms += n1 * 60000;
-        }
-        const fireAt = Date.now() + ms;
-        const mins   = Math.round(ms / 60000);
-        const label  = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60 ? (mins % 60) + 'm' : ''}`.trim() : `${mins} min`;
-        const remainder = raw.slice(full.length).trim();
-        return { fireAt, label, remainder };
+    // "in X hours and Y minutes" / "in 2h 30m"
+    m = raw.match(/^in\s+(\d+)\s*(?:hours?|hrs?|h)\s*(?:and\s+)?(\d+)\s*(?:minutes?|mins?|m)\b/i);
+    if (m) return _relative(raw, m[0], parseInt(m[1]) * 3600000 + parseInt(m[2]) * 60000);
+
+    // "in X hours"
+    m = raw.match(/^in\s+(\d+)\s*(?:hours?|hrs?|h)\b/i);
+    if (m) return _relative(raw, m[0], parseInt(m[1]) * 3600000);
+
+    // "in X minutes"
+    m = raw.match(/^in\s+(\d+)\s*(?:minutes?|mins?|m)\b/i);
+    if (m) return _relative(raw, m[0], parseInt(m[1]) * 60000);
+
+    // "tomorrow at HH:MM [am/pm]" / "tomorrow at 8am"
+    m = raw.match(/^tomorrow\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    if (m) {
+        let hh = parseInt(m[1]), mm = parseInt(m[2] || '0');
+        const ap = (m[3] || '').toLowerCase();
+        if (ap === 'pm' && hh < 12) hh += 12;
+        if (ap === 'am' && hh === 12) hh = 0;
+        const fireAt = wallClockToUtcMs(hh, mm, utcOffset, 1);
+        const wall   = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+        return { fireAt, label: `tomorrow at ${wall}`, remainder: raw.slice(m[0].length).trim() };
     }
 
-    // "tomorrow at HH:MM [am/pm]"
-    const tmrMatch = raw.match(/^tomorrow\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
-    if (tmrMatch) {
-        let hh = parseInt(tmrMatch[1]), mm = parseInt(tmrMatch[2] || '0');
-        const ampm = (tmrMatch[3] || '').toLowerCase();
-        if (ampm === 'pm' && hh < 12) hh += 12;
-        if (ampm === 'am' && hh === 12) hh = 0;
-        const fireAt   = wallClockToUtcMs(hh, mm, utcOffset, 1);
-        const label    = `tomorrow at ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-        const remainder = raw.slice(tmrMatch[0].length).trim();
-        return { fireAt, label, remainder };
+    // 12-hour clock (with optional "at"): "at 10:30 pm", "10pm", "10:30pm", "10:30 pm"
+    m = raw.match(/^(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+    if (m) {
+        let hh = parseInt(m[1]), mm = parseInt(m[2] || '0');
+        const ap = m[3].toLowerCase();
+        if (ap === 'pm' && hh < 12) hh += 12;
+        if (ap === 'am' && hh === 12) hh = 0;
+        return _absolute(raw, m[0], hh, mm, utcOffset);
     }
 
-    // "at HH:MM [am/pm]" or "at HH [am/pm]"
-    const atMatch = raw.match(/^(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
-                 || raw.match(/^at\s+(\d{1,2})(?::(\d{2}))?\b/i);
-    if (atMatch) {
-        let hh = parseInt(atMatch[1]), mm = parseInt(atMatch[2] || '0');
-        const ampm = (atMatch[3] || '').toLowerCase();
-        if (ampm === 'pm' && hh < 12) hh += 12;
-        if (ampm === 'am' && hh === 12) hh = 0;
-        let fireAt = wallClockToUtcMs(hh, mm, utcOffset, 0);
-        // If the time is in the past today, schedule for tomorrow
-        if (fireAt <= Date.now() + 30000) fireAt = wallClockToUtcMs(hh, mm, utcOffset, 1);
-        const wallLabel = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-        const label     = `at ${wallLabel}`;
-        const remainder = raw.slice(atMatch[0].length).trim();
-        return { fireAt, label, remainder };
+    // 24-hour clock with "at": "at 22:00", "at 9:30", "at 9"
+    m = raw.match(/^at\s+(\d{1,2})(?::(\d{2}))?\b/i);
+    if (m) {
+        const hh = parseInt(m[1]), mm = parseInt(m[2] || '0');
+        if (hh > 23 || mm > 59) return null;
+        return _absolute(raw, m[0], hh, mm, utcOffset);
+    }
+
+    // Bare 24-hour clock: "22:00 Message", "09:30 Call boss"
+    m = raw.match(/^(\d{1,2}):(\d{2})\b/);
+    if (m) {
+        const hh = parseInt(m[1]), mm = parseInt(m[2]);
+        if (hh > 23 || mm > 59) return null;
+        return _absolute(raw, m[0], hh, mm, utcOffset);
     }
 
     return null;
