@@ -62,13 +62,7 @@ export default {
         const reply  = (text, opts = {}) => sock.sendMessage(chatId, { text }, { quoted: msg, ...opts });
 
         if (!args.length) {
-            const cols    = 3;
-            const padded  = TONE_KEYS.map(k => k.padEnd(14));
-            const rows    = [];
-            for (let i = 0; i < padded.length; i += cols) {
-                rows.push('│  ' + padded.slice(i, i + cols).join(''));
-            }
-            rows.push('│  ' + 'random'.padEnd(14));
+            const rows = [...TONE_KEYS, 'random'].map(k => `│  • ${k}`);
             return reply(
                 `╭─⌈ *GENLYRICS* ⌋\n` +
                 `│\n` +
