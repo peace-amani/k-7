@@ -272,10 +272,14 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         if (!effectiveConf.enabled) return null;
         
         const msgKey = message.key;
-        if (!msgKey || !msgKey.id || msgKey.fromMe) return null;
-        
-        const msgId = msgKey.id;
-        const chatJid = msgKey.remoteJid;
+        if (!msgKey || !msgKey.id) return null;
+
+        // Skip protocol messages (revoke/delete, ephemeral, etc.) — not real edits
+        const msgContent = message.message;
+        if (msgContent?.protocolMessage) return null;
+
+        const msgId    = message.key.id;
+        const chatJid  = msgKey.remoteJid;
         const senderJid = msgKey.participant || chatJid;
         const pushName = message.pushName || 'Unknown';
         const timestamp = message.messageTimestamp ? message.messageTimestamp * 1000 : Date.now();
@@ -394,7 +398,7 @@ async function handleMessageUpdates(updates) {
 
         for (const update of updates) {
             const msgKey = update.key;
-            if (!msgKey?.id || msgKey.fromMe) continue;
+            if (!msgKey?.id) continue;
 
             const msgId   = msgKey.id;
             const chatJid = msgKey.remoteJid;
@@ -403,11 +407,16 @@ async function handleMessageUpdates(updates) {
             const updMsg = update.update?.message;
             if (!updMsg) continue;
 
+            // Skip delete/revoke protocol messages — they are NOT edits
+            // type 0 = REVOKE, type 14 = MESSAGE_EDIT
+            if (updMsg.protocolMessage) {
+                if (updMsg.protocolMessage.type !== 14) continue;
+            }
+
             // Try every known WhatsApp edit envelope structure
             let editedContent =
                 updMsg.editedMessage?.message ||
                 updMsg.protocolMessage?.editedMessage?.message ||
-                (updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage?.editedMessage?.message : null) ||
                 (updMsg.editedMessage && !updMsg.editedMessage.message ? updMsg.editedMessage : null) ||
                 null;
 
@@ -426,7 +435,7 @@ async function handleMessageUpdates(updates) {
                 editedContent.extendedTextMessage?.text ||
                 editedContent.imageMessage?.caption ||
                 editedContent.videoMessage?.caption || '';
-            // Don't skip empty text — original may have had content; still alert
+            if (!editedText.trim()) continue; // No text content at all → skip
 
             // Look up original message — memory first, then DB
             let existingMessage = antieditState.currentMessages.get(msgId);
@@ -642,8 +651,7 @@ function setupListeners(sock) {
     
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         try {
-            // Accept both 'notify' (new) and 'append' (sometimes used for edits)
-            if (type !== 'notify' && type !== 'append') return;
+            if (type !== 'notify') return;
 
             for (const message of messages) {
                 await storeIncomingMessage(message, false);
