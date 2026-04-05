@@ -187,6 +187,7 @@ export const getBoxStyleCommands = () => {
 │  • flux
 │  • removebg
 │  • enlarger
+│  • erase
 │  • aimenu
 │
 ├─⊷ *🖼️ IMAGE GEN*
@@ -575,6 +576,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • flux — Flux AI
 > • removebg — remove background
 > • enlarger — AI upscale & enhance image
+> • erase — AI object eraser
 > • aimenu — AI menu
 > • imagine — imagine image
 > • imagegen — AI image gen
@@ -949,6 +951,7 @@ export const getQuotedBoxCommands = () => {
 > │ • flux
 > │ • removebg
 > │ • enlarger
+> │ • erase
 > │ • aimenu
 > ├───────────────
 > │ 🖼️ *IMAGE GEN*
@@ -1376,6 +1379,7 @@ export const getPlainBoxCommands = () => {
 │ flux
 │ removebg
 │ enlarger
+│ erase
 │ aimenu
 ├───────────────
 │ 🖼️ IMAGE GEN

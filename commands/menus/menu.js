@@ -1835,6 +1835,7 @@ case 1: {
 │  • totext
 │  • removebg
 │  • enlarger
+│  • erase
 │  • vision
 │
 ├─⊷ *🎬 AI TOOLS*
@@ -3184,6 +3185,7 @@ case 3: {
 │ totext
 │ removebg
 │ enlarger
+│ erase
 │ vision
 └───────────────`,
 `┌──⌈ \`AI TOOLS\` ⌋
@@ -5996,6 +5998,7 @@ case 5: {
 │  • totext
 │  • removebg
 │  • enlarger
+│  • erase
 │  • vision
 │
 ├─⊷ *🎬 AI TOOLS*
@@ -7023,6 +7026,7 @@ case 6: {
 > │ totext
 > │ removebg
 > │ enlarger
+> │ erase
 > │ vision
 > └───────────────`,
 `> ┌──⌈ \`AI TOOLS\` ⌋
@@ -8856,6 +8860,7 @@ case 7: {
 │ totext
 │ removebg
 │ enlarger
+│ erase
 │ vision
 └───────────────`,
 `┌──⌈ \`AI TOOLS\` ⌋
@@ -9633,6 +9638,7 @@ case 9: {
 │  • totext
 │  • removebg
 │  • enlarger
+│  • erase
 │  • vision
 │
 ├─⊷ *🎬 AI TOOLS*
