@@ -5695,24 +5695,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const successMessage = `╭⊷『 🐺 ${getCurrentBotName()} 』\n│\n├⊷ *Name:* ${getCurrentBotName()}\n├⊷ *Prefix:* ${getCurrentPrefix() || 'none (prefixless)'}\n├⊷ *Owner:* (${displayOwnerNumber})\n├⊷ *Platform:* ${detectPlatform()}\n├⊷ *Mode:* ${BOT_MODE}\n└⊷ *Status:* ✅ Connected\n\n╰⊷ *Silent Wolf Online* 🐾\n\n─────────────────────\n⭐ Follow me on GitHub: https://github.com/sil3nt-wolf`;
                         
                         const targetJid = (ownerInfo && ownerInfo.ownerJid) ? ownerInfo.ownerJid : sock.user.id;
-                        const _gb = globalThis._giftedBtns;
-                        let sendPromise;
-                        if (_gb && typeof _gb.sendInteractiveMessage === 'function') {
-                            sendPromise = _gb.sendInteractiveMessage(sock, targetJid, {
-                                text:   successMessage,
-                                footer: `🐺 ${getCurrentBotName()}`,
-                                interactiveButtons: [{
-                                    name: 'cta_url',
-                                    buttonParamsJson: JSON.stringify({
-                                        display_text: '🔗 Open Link',
-                                        url:          'https://github.com/sil3nt-wolf/silentwolf',
-                                        merchant_url: 'https://github.com/sil3nt-wolf/silentwolf'
-                                    })
-                                }]
-                            });
-                        } else {
-                            sendPromise = sock.sendMessage(targetJid, { text: successMessage });
-                        }
+                        const sendPromise = sock.sendMessage(targetJid, { text: successMessage });
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
                         await Promise.race([sendPromise, timeoutPromise]);
                         _lastConnectionMsgTime = Date.now();
