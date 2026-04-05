@@ -29,7 +29,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "postinstall": "node scripts/patch-modules.cjs 2>/dev/null || true",
+    "postinstall": "node -e \"try{require('./scripts/patch-modules.cjs')}catch(e){}\"",
     "start": "node --no-warnings --expose-gc --max-old-space-size=1024 --max-semi-space-size=64 --experimental-global-webcrypto index.js",
     "deploy": "node restart.js",
     "auto": "node auto_restart.js",
