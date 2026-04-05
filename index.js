@@ -5270,11 +5270,13 @@ async function startBot(loginMode = 'auto', loginData = null) {
         ]);
         sock.sendMessage = async (jid, content, options, ...rest) => {
             // ─── Status broadcast bypass ─────────────────────────────────────
-            // status@broadcast must go straight to Baileys — font transforms
-            // change the message text and button-mode wrapping silently converts
-            // it to an interactive message that never appears as a WA status.
             if (jid === 'status@broadcast') {
                 return originalSendMessage(jid, content, options, ...rest);
+            }
+            // ─── Caller-requested skip (e.g. connection success message) ─────
+            if (content && content._skipButtonWrap) {
+                const { _skipButtonWrap: _sbw, ...cleanContent } = content;
+                return originalSendMessage(jid, cleanContent, options, ...rest);
             }
             // ─── Font transformation ────────────────────────────────────────
             const _activeFont = (globalThis._fontConfig && globalThis._fontConfig.font) || 'default';
@@ -5692,10 +5694,22 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const ownerInfo = jidManager.getOwnerInfo();
                         const displayOwnerNumber = ownerInfo?.ownerNumber ? ownerInfo.ownerNumber.split(':')[0] : 'Not set';
                         
-                        const successMessage = `╭⊷『 🐺 ${getCurrentBotName()} 』\n│\n├⊷ *Name:* ${getCurrentBotName()}\n├⊷ *Prefix:* ${getCurrentPrefix() || 'none (prefixless)'}\n├⊷ *Owner:* (${displayOwnerNumber})\n├⊷ *Platform:* ${detectPlatform()}\n├⊷ *Mode:* ${BOT_MODE}\n└⊷ *Status:* ✅ Connected\n\n╰⊷ *Silent Wolf Online* 🐾\n\n─────────────────────\n⭐ Follow me on GitHub: https://github.com/sil3nt-wolf`;
+                        const successMessage = `╭⊷『 🐺 ${getCurrentBotName()} 』\n│\n├⊷ *Name:* ${getCurrentBotName()}\n├⊷ *Prefix:* ${getCurrentPrefix() || 'none (prefixless)'}\n├⊷ *Owner:* (${displayOwnerNumber})\n├⊷ *Platform:* ${detectPlatform()}\n├⊷ *Mode:* ${BOT_MODE}\n└⊷ *Status:* ✅ Connected\n\n╰⊷ *${getCurrentBotName()}*`;
                         
                         const targetJid = (ownerInfo && ownerInfo.ownerJid) ? ownerInfo.ownerJid : sock.user.id;
-                        const sendPromise = sock.sendMessage(targetJid, { text: successMessage });
+                        const sendPromise = sock.sendMessage(targetJid, {
+                            text: successMessage,
+                            _skipButtonWrap: true,
+                            contextInfo: {
+                                externalAdReply: {
+                                    title:     `🐺 ${getCurrentBotName()} is Online`,
+                                    body:      'Tap to open the bot repository',
+                                    sourceUrl: 'https://github.com/sil3nt-wolf/silentwolf',
+                                    mediaType: 1,
+                                    renderLargerThumbnail: false
+                                }
+                            }
+                        });
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
                         await Promise.race([sendPromise, timeoutPromise]);
                         _lastConnectionMsgTime = Date.now();
