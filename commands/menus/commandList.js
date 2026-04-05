@@ -91,6 +91,7 @@ export const getBoxStyleCommands = () => {
 │  • platform
 │  • disp
 │  • shutdown
+│  • broadcast
 │
 ├─⊷ *🔄 SYSTEM & MAINTENANCE*
 │  • restart
@@ -493,6 +494,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • platform — deployment platform
 > • disp — display stats
 > • shutdown — shutdown bot
+> • broadcast — send message to groups or chats
 
 > 🔄 *SYSTEM & MAINTENANCE* — bot maintenance
 > • restart — restart bot
@@ -849,6 +851,7 @@ export const getQuotedBoxCommands = () => {
 > │ • platform
 > │ • disp
 > │ • shutdown
+> │ • broadcast
 > ├────────────────
 > │ 🔄 *SYSTEM & MAINTENANCE* 🛠️ 
 > ├────────────────
@@ -1275,6 +1278,7 @@ export const getPlainBoxCommands = () => {
 │ platform
 │ disp
 │ shutdown
+│ broadcast
 ├────────────────
 │ 🔄 SYSTEM & MAINTENANCE 🛠️ 
 ├────────────────

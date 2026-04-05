@@ -1614,6 +1614,7 @@ case 1: {
 │  • antiedit
 │  • chatbot
 │  • shutdown
+│  • broadcast
 │
 ├─⊷ *📡 CHANNEL MODE*
 │  • setchannel
@@ -2979,6 +2980,7 @@ case 3: {
 │ antiedit
 │ chatbot
 │ shutdown
+│ broadcast
 └───────────────`,
 `┌──⌈ \`CHANNEL MODE\` ⌋
 │ setchannel
@@ -5773,6 +5775,7 @@ case 5: {
 │  • antiedit
 │  • chatbot
 │  • shutdown
+│  • broadcast
 │
 ├─⊷ *📡 CHANNEL MODE*
 │  • setchannel
@@ -6851,6 +6854,7 @@ case 6: {
 > │ antiedit
 > │ chatbot
 > │ shutdown
+> │ broadcast
 > └───────────────`,
 `> ┌──⌈ \`CHANNEL MODE\` ⌋
 > │ setchannel
@@ -8648,6 +8652,7 @@ case 7: {
 │ antiedit
 │ chatbot
 │ shutdown
+│ broadcast
 └───────────────`,
 `┌──⌈ \`CHANNEL MODE\` ⌋
 │ setchannel
@@ -9407,6 +9412,7 @@ case 9: {
 │  • antiedit
 │  • chatbot
 │  • shutdown
+│  • broadcast
 │
 ├─⊷ *📡 CHANNEL MODE*
 │  • setchannel
