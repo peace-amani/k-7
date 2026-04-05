@@ -298,14 +298,13 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
             }
         }
 
-        // Antiedit is text-only — for edits, treat caption as the text and ignore media
         if (isEdit) {
-            if (!text) return null;   // no text content → nothing to report
-            hasMedia = false;         // never attempt media download for edits
+            // For edits we track text/caption only — skip pure media-only edits
+            hasMedia = false;
             mimetype = '';
+            // Allow empty text through — we still need to fire the notification
+            // (original message might have had text even if new version is blank)
         } else {
-            // For new incoming messages, only store if there's text (or it's a media msg
-            // with caption that could later be edited — store caption as text)
             if (!text && !hasMedia) return null;
         }
         
@@ -404,19 +403,30 @@ async function handleMessageUpdates(updates) {
             const updMsg = update.update?.message;
             if (!updMsg) continue;
 
-            // Parse both known WhatsApp edit structures
-            const editedWrapper = updMsg.editedMessage || updMsg.protocolMessage?.editedMessage;
-            const protoEdit     = updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage : null;
-            const editedContent = editedWrapper?.message || protoEdit?.editedMessage?.message;
+            // Try every known WhatsApp edit envelope structure
+            let editedContent =
+                updMsg.editedMessage?.message ||
+                updMsg.protocolMessage?.editedMessage?.message ||
+                (updMsg.protocolMessage?.type === 14 ? updMsg.protocolMessage?.editedMessage?.message : null) ||
+                (updMsg.editedMessage && !updMsg.editedMessage.message ? updMsg.editedMessage : null) ||
+                null;
+
+            // Some clients send the content directly in updMsg without a wrapper
+            if (!editedContent) {
+                if (updMsg.conversation || updMsg.extendedTextMessage ||
+                    updMsg.imageMessage || updMsg.videoMessage) {
+                    editedContent = updMsg;
+                }
+            }
+
             if (!editedContent) continue;
 
-            // Antiedit is text-only — skip media edits that have no text/caption
             const editedText =
                 editedContent.conversation ||
                 editedContent.extendedTextMessage?.text ||
                 editedContent.imageMessage?.caption ||
                 editedContent.videoMessage?.caption || '';
-            if (!editedText.trim()) continue;
+            // Don't skip empty text — original may have had content; still alert
 
             // Look up original message — memory first, then DB
             let existingMessage = antieditState.currentMessages.get(msgId);
@@ -479,105 +489,56 @@ async function getMediaBuffer(mediaKey) {
     return null;
 }
 
+function cleanJid(jid) {
+    if (!jid) return jid;
+    // Strip device suffix (:12) so DM delivery works
+    return jid.replace(/:\d+@/, '@');
+}
+
+function buildAlertText(originalMsg, editedMsg, forChat = false) {
+    const orig = originalMsg.text?.trim()
+        ? originalMsg.text.substring(0, forChat ? 200 : 400) + (originalMsg.text.length > (forChat ? 200 : 400) ? '…' : '')
+        : originalMsg.hasMedia ? `[${originalMsg.type.toUpperCase()}]` : '[empty]';
+
+    const edited = editedMsg.text?.trim()
+        ? editedMsg.text.substring(0, forChat ? 200 : 400) + (editedMsg.text.length > (forChat ? 200 : 400) ? '…' : '')
+        : editedMsg.hasMedia ? `[${editedMsg.type.toUpperCase()}]` : '[empty]';
+
+    return (
+        `✏️ *MESSAGE EDITED*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📜 *Original:*\n${orig}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `✏️ *Edited to:*\n${edited}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━`
+    );
+}
+
 async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
     try {
         if (!antieditState.sock || !antieditState.ownerJid) {
             console.error('❌ Antiedit: Socket or owner JID not set');
             return false;
         }
-        
-        const ownerJid = antieditState.ownerJid;
-        const time = new Date(originalMsg.timestamp).toLocaleString();
-        const editTime = new Date(editedMsg.editTime).toLocaleString();
+
+        const ownerJid     = cleanJid(antieditState.ownerJid);
         const senderNumber = await resolveNumberWithGroup(originalMsg.senderJid, originalMsg.chatJid);
-        const chatNumber = originalMsg.chatJid.includes('@g.us') 
-            ? 'Group Chat' 
-            : await resolveNumberWithGroup(originalMsg.chatJid, null);
-        
-        let alertText = `✏️ *MESSAGE EDITED*\n\n`;
-        alertText += `👤 From: +${senderNumber} (${originalMsg.pushName})\n`;
-        alertText += `💬 Chat: ${chatNumber}\n`;
-        alertText += `🕒 Original: ${time}\n`;
-        alertText += `✏️ Edited: ${editTime}\n`;
-        alertText += `📝 Type: ${originalMsg.type.toUpperCase()}\n`;
-        alertText += `🔄 Version: v${originalMsg.version} → v${editedMsg.version}\n`;
-        alertText += `📊 Total edits: ${history ? history.length - 1 : 0}\n`;
-        
-        alertText += `\n─────────────────\n`;
-        alertText += `📜 *ORIGINAL MESSAGE*\n`;
-        if (originalMsg.text) {
-            alertText += `${originalMsg.text.substring(0, 300)}`;
-            if (originalMsg.text.length > 300) alertText += '...';
-        } else if (originalMsg.hasMedia) {
-            alertText += `[${originalMsg.type.toUpperCase()} MEDIA]`;
-        } else {
-            alertText += `[Empty message]`;
-        }
-        
-        alertText += `\n\n─────────────────\n`;
-        alertText += `✏️ *EDITED VERSION*\n`;
-        if (editedMsg.text) {
-            alertText += `${editedMsg.text.substring(0, 300)}`;
-            if (editedMsg.text.length > 300) alertText += '...';
-        } else if (editedMsg.hasMedia) {
-            alertText += `[${editedMsg.type.toUpperCase()} MEDIA]`;
-        } else {
-            alertText += `[Empty message]`;
-        }
-        
-        alertText += `\n\n────────────\n`;
-        alertText += `🔍 *Captured by antiedit*`;
-        
-        const originalMediaKey = `${originalMsg.id}_v${originalMsg.version}`;
-        const editedMediaKey = `${editedMsg.id}_v${editedMsg.version}`;
-        const editedMediaMeta = antieditState.mediaCache.get(editedMediaKey);
-        
-        let mediaSent = false;
-        
-        if (editedMsg.hasMedia && editedMediaMeta) {
-            try {
-                const buffer = await getMediaBuffer(editedMediaKey);
-                
-                if (buffer && buffer.length > 0) {
-                    if (editedMsg.type === 'sticker') {
-                        await antieditState.sock.sendMessage(ownerJid, {
-                            sticker: buffer,
-                            mimetype: editedMediaMeta.mimetype
-                        });
-                    } else if (editedMsg.type === 'image') {
-                        await antieditState.sock.sendMessage(ownerJid, {
-                            image: buffer,
-                            caption: alertText,
-                            mimetype: editedMediaMeta.mimetype
-                        });
-                        mediaSent = true;
-                    } else if (editedMsg.type === 'video') {
-                        await antieditState.sock.sendMessage(ownerJid, {
-                            video: buffer,
-                            caption: alertText,
-                            mimetype: editedMediaMeta.mimetype
-                        });
-                        mediaSent = true;
-                    } else if (editedMsg.type === 'audio' || editedMsg.type === 'voice') {
-                        await antieditState.sock.sendMessage(ownerJid, {
-                            audio: buffer,
-                            mimetype: editedMediaMeta.mimetype,
-                            ptt: editedMsg.type === 'voice'
-                        });
-                    }
-                }
-            } catch (mediaError) {
-                console.error('❌ Antiedit: Media send error:', mediaError.message);
-            }
-        }
-        
-        if (!mediaSent) {
-            await antieditState.sock.sendMessage(ownerJid, { text: alertText });
-        }
-        
-        console.log(`📤 Antiedit: Edit alert sent to owner DM: +${senderNumber} → ${chatNumber}`);
+        const chatLabel    = originalMsg.chatJid?.includes('@g.us')
+            ? 'Group'
+            : `+${await resolveNumberWithGroup(originalMsg.chatJid, null)}`;
+        const editTime     = new Date(editedMsg.editTime || Date.now()).toLocaleTimeString();
+
+        const header =
+            `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})\n` +
+            `💬 ${chatLabel}  •  🕒 ${editTime}  •  v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
+
+        const body = buildAlertText(originalMsg, editedMsg, false);
+
+        await antieditState.sock.sendMessage(ownerJid, { text: `${header}\n${body}` });
+
+        console.log(`📤 Antiedit: DM alert sent to owner (${ownerJid})`);
         return true;
-        
+
     } catch (error) {
         console.error('❌ Antiedit: Error sending edit alert to owner DM:', error.message);
         return false;
@@ -587,48 +548,20 @@ async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
 async function sendEditAlertToChat(originalMsg, editedMsg, history, chatJid) {
     try {
         if (!antieditState.sock) return false;
-        
-        const time = new Date(originalMsg.timestamp).toLocaleString();
-        const editTime = new Date(editedMsg.editTime).toLocaleString();
+
         const senderNumber = await resolveNumberWithGroup(originalMsg.senderJid, chatJid);
-        
-        let alertText = `✏️ *MESSAGE WAS EDITED*\n\n`;
-        alertText += `👤 From: +${senderNumber} (${originalMsg.pushName})\n`;
-        alertText += `🕒 Original: ${time}\n`;
-        alertText += `✏️ Edited: ${editTime}\n`;
-        alertText += `📝 Type: ${originalMsg.type.toUpperCase()}\n`;
-        alertText += `🔄 Version: v${originalMsg.version} → v${editedMsg.version}\n`;
-        
-        alertText += `\n─────────────────\n`;
-        alertText += `📜 *ORIGINAL MESSAGE*\n`;
-        if (originalMsg.text) {
-            alertText += `${originalMsg.text.substring(0, 200)}`;
-            if (originalMsg.text.length > 200) alertText += '...';
-        } else if (originalMsg.hasMedia) {
-            alertText += `[${originalMsg.type.toUpperCase()} MEDIA]`;
-        } else {
-            alertText += `[Empty message]`;
-        }
-        
-        alertText += `\n\n─────────────────\n`;
-        alertText += `✏️ *EDITED VERSION*\n`;
-        if (editedMsg.text) {
-            alertText += `${editedMsg.text.substring(0, 200)}`;
-            if (editedMsg.text.length > 200) alertText += '...';
-        } else if (editedMsg.hasMedia) {
-            alertText += `[${editedMsg.type.toUpperCase()} MEDIA]`;
-        } else {
-            alertText += `[Empty message]`;
-        }
-        
-        alertText += `\n\n────────────\n`;
-        alertText += `🔍 *Detected by antiedit*`;
-        
-        await antieditState.sock.sendMessage(chatJid, { text: alertText });
-        
-        console.log(`📤 Antiedit: Edit alert sent to chat ${chatJid}`);
+        const editTime     = new Date(editedMsg.editTime || Date.now()).toLocaleTimeString();
+
+        const header =
+            `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})  •  🕒 ${editTime}\n`;
+
+        const body = buildAlertText(originalMsg, editedMsg, true);
+
+        await antieditState.sock.sendMessage(chatJid, { text: `${header}\n${body}` });
+
+        console.log(`📤 Antiedit: Chat alert sent to ${chatJid}`);
         return true;
-        
+
     } catch (error) {
         console.error('❌ Antiedit: Error sending edit alert to chat:', error.message);
         return false;
@@ -709,8 +642,9 @@ function setupListeners(sock) {
     
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         try {
-            if (type !== 'notify') return;
-            
+            // Accept both 'notify' (new) and 'append' (sometimes used for edits)
+            if (type !== 'notify' && type !== 'append') return;
+
             for (const message of messages) {
                 await storeIncomingMessage(message, false);
             }
