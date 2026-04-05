@@ -66,7 +66,7 @@ async function eraseObject(imageUrl, prompt) {
 
 export default {
     name:        'erase',
-    alias:       ['nanobanana', 'eraseobj', 'removobj', 'objecterase', 'airemove'],
+    alias:       ['eraseobj', 'removobj', 'objecterase', 'airemove'],
     category:    'ai',
     description: 'AI object eraser — removes objects from an image',
 

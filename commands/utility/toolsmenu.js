@@ -85,6 +85,19 @@ export default {
 │  • vv
 │  • vv2
 │
+╰─⊷
+
+╭─⊷ *👑 OWNER TOOLS*
+│
+│  • broadcast
+│  • shutdown
+│  • restart
+│  • mode
+│  • setprefix
+│  • setowner
+│  • addsudo
+│  • clearsudo
+│
 ╰─⊷`;
 
     await sendSubMenu(sock, jid, '✨ Tools & Utility Menu', commandsText, m, PREFIX);
