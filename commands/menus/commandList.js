@@ -266,6 +266,7 @@ export const getBoxStyleCommands = () => {
 │  • covid
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • define
 │  • fetch
 │  • getpp
@@ -625,6 +626,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • covid — covid stats
 > • remind — set a reminder
 > • sessioninfo — view session details
+> • genmusic — generate an AI song
 > • define — word definition
 > • fetch — fetch URL
 > • getpp — get profile pic
@@ -1030,6 +1032,7 @@ export const getQuotedBoxCommands = () => {
 > │ • covid
 > │ • remind
 > │ • sessioninfo
+> │ • genmusic
 > │ • define
 > │ • fetch
 > │ • getpp
@@ -1453,6 +1456,7 @@ export const getPlainBoxCommands = () => {
 │ covid
 │ remind
 │ sessioninfo
+│ genmusic
 │ define
 │ fetch
 │ getpp

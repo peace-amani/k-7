@@ -1699,6 +1699,7 @@ case 1: {
 │  • define
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • news
 │  • covid
 │  • weather
@@ -2318,6 +2319,7 @@ case 2: {
 > • define — word definition
 > • remind — set a reminder
 > • sessioninfo — view session details
+> • genmusic — generate an AI song
 > • news — latest news
 > • weather — weather info
 > • covid — covid stats
@@ -3045,6 +3047,7 @@ case 3: {
 │ define
 │ remind
 │ sessioninfo
+│ genmusic
 │ news
 │ covid
 │ weather
@@ -4018,6 +4021,7 @@ case 4: {
 │  • define
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • news
 │  • covid
 │  • iplookup
@@ -5848,6 +5852,7 @@ case 5: {
 │  • define
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • news
 │  • covid
 │  • weather
@@ -8705,6 +8710,7 @@ case 7: {
 │ define
 │ remind
 │ sessioninfo
+│ genmusic
 │ news
 │ covid
 │ weather
@@ -9475,6 +9481,7 @@ case 9: {
 │  • define
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • news
 │  • covid
 │  • weather

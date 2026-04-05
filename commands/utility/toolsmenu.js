@@ -31,6 +31,7 @@ export default {
 │  • define
 │  • remind
 │  • sessioninfo
+│  • genmusic
 │  • news
 │  • covid
 │  • weather
