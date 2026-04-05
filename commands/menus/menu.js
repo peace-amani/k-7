@@ -1700,6 +1700,7 @@ case 1: {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • news
 │  • covid
 │  • weather
@@ -2320,6 +2321,7 @@ case 2: {
 > • remind — set a reminder
 > • sessioninfo — view session details
 > • genmusic — generate an AI song
+> • genlyrics — generate AI song lyrics by mood/tone
 > • news — latest news
 > • weather — weather info
 > • covid — covid stats
@@ -3048,6 +3050,7 @@ case 3: {
 │ remind
 │ sessioninfo
 │ genmusic
+│ genlyrics
 │ news
 │ covid
 │ weather
@@ -4022,6 +4025,7 @@ case 4: {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • news
 │  • covid
 │  • iplookup
@@ -5853,6 +5857,7 @@ case 5: {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • news
 │  • covid
 │  • weather
@@ -8711,6 +8716,7 @@ case 7: {
 │ remind
 │ sessioninfo
 │ genmusic
+│ genlyrics
 │ news
 │ covid
 │ weather
@@ -9482,6 +9488,7 @@ case 9: {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • news
 │  • covid
 │  • weather

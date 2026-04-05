@@ -32,6 +32,7 @@ export default {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • news
 │  • covid
 │  • weather

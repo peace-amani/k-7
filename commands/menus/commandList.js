@@ -267,6 +267,7 @@ export const getBoxStyleCommands = () => {
 │  • remind
 │  • sessioninfo
 │  • genmusic
+│  • genlyrics
 │  • define
 │  • fetch
 │  • getpp
@@ -627,6 +628,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • remind — set a reminder
 > • sessioninfo — view session details
 > • genmusic — generate an AI song
+> • genlyrics — generate AI song lyrics by mood/tone
 > • define — word definition
 > • fetch — fetch URL
 > • getpp — get profile pic
@@ -1033,6 +1035,7 @@ export const getQuotedBoxCommands = () => {
 > │ • remind
 > │ • sessioninfo
 > │ • genmusic
+> │ • genlyrics
 > │ • define
 > │ • fetch
 > │ • getpp
@@ -1457,6 +1460,7 @@ export const getPlainBoxCommands = () => {
 │ remind
 │ sessioninfo
 │ genmusic
+│ genlyrics
 │ define
 │ fetch
 │ getpp
