@@ -755,39 +755,58 @@ export default {
         const ownerName = getOwnerName().toUpperCase();
 
         const modeLabel = () => {
-            if (!antieditState.gc.enabled && !antieditState.pm.enabled) return '❌ OFF';
-            const m = antieditState.gc.mode;
-            if (m === 'private') return '🔒 PRIVATE (→ DM)';
-            if (m === 'chat')    return '📢 PUBLIC (→ Chat)';
-            return '❓ Unknown';
+            const gcOn = antieditState.gc.enabled;
+            const pmOn = antieditState.pm.enabled;
+            if (!gcOn && !pmOn) return '❌ OFF';
+            const mode = gcOn ? antieditState.gc.mode : antieditState.pm.mode;
+            const modeStr = mode === 'private' ? '🔒 → DM' : '📢 → Chat';
+            if (gcOn && pmOn)  return `✅ ALL  ${modeStr}`;
+            if (gcOn && !pmOn) return `✅ GROUPS only  ${modeStr}`;
+            if (!gcOn && pmOn) return `✅ DMs only  ${modeStr}`;
         };
 
-        const setMode = (enabled, mode) => {
-            antieditState.gc.enabled = enabled;
+        const setMode = (gcEnabled, pmEnabled, mode) => {
+            antieditState.gc.enabled = gcEnabled;
             antieditState.gc.mode    = mode;
-            antieditState.pm.enabled = enabled;
+            antieditState.pm.enabled = pmEnabled;
             antieditState.pm.mode    = mode;
         };
 
         if (scope === 'off' || scope === 'disable') {
-            setMode(false, 'private');
+            setMode(false, false, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
                 text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ❌ *OFF*\n│\n╰⊷ _Powered by ${ownerName} TECH_`
             }, { quoted: msg });
 
-        } else if (['private', 'priv', 'dm'].includes(scope)) {
-            setMode(true, 'private');
+        } else if (['private', 'priv'].includes(scope)) {
+            setMode(true, true, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Mode: 🔒 *PRIVATE*\n├─⊷ Edited messages sent to your DM\n│\n╰⊷ _Powered by ${ownerName} TECH_`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 🔒 *PRIVATE* (→ your DM)\n│\n╰⊷ _Powered by ${ownerName} TECH_`
             }, { quoted: msg });
 
         } else if (['public', 'chat', 'pub'].includes(scope)) {
-            setMode(true, 'chat');
+            setMode(true, true, 'chat');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Mode: 📢 *PUBLIC*\n├─⊷ Edited messages shown in the chat\n│\n╰⊷ _Powered by ${ownerName} TECH_`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 📢 *PUBLIC* (shown in chat)\n│\n╰⊷ _Powered by ${ownerName} TECH_`
+            }, { quoted: msg });
+
+        } else if (['gc', 'groups', 'group'].includes(scope)) {
+            // Groups only — alerts go to owner DM
+            setMode(true, false, 'private');
+            await saveData();
+            await sock.sendMessage(chatId, {
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 👥 *GROUPS only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ _Powered by ${ownerName} TECH_`
+            }, { quoted: msg });
+
+        } else if (['dms', 'dm', 'pm', 'pms'].includes(scope)) {
+            // DMs only — alerts go to owner DM
+            setMode(false, true, 'private');
+            await saveData();
+            await sock.sendMessage(chatId, {
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 💬 *DMs only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ _Powered by ${ownerName} TECH_`
             }, { quoted: msg });
 
         } else if (scope === 'status' || scope === 'stats' || scope === '') {
@@ -824,9 +843,13 @@ export default {
                     `├─⊷ *${prefix}antiedit off*\n` +
                     `│  └ Disable antiedit\n` +
                     `├─⊷ *${prefix}antiedit private*\n` +
-                    `│  └ Send edited msgs to your DM\n` +
+                    `│  └ Groups + DMs → alert to your DM\n` +
                     `├─⊷ *${prefix}antiedit public*\n` +
-                    `│  └ Show edited msgs in the chat\n` +
+                    `│  └ Groups + DMs → alert shown in chat\n` +
+                    `├─⊷ *${prefix}antiedit gc*\n` +
+                    `│  └ Groups only → alert to your DM\n` +
+                    `├─⊷ *${prefix}antiedit dms*\n` +
+                    `│  └ DMs only → alert to your DM\n` +
                     `├─⊷ *${prefix}antiedit status*\n` +
                     `│  └ Current mode & stats\n│\n` +
                     `╰⊷ _Powered by ${ownerName} TECH_`
