@@ -90,8 +90,7 @@ export default {
         const toneInfo = TONES[toneKey];
         const prompt   = buildPrompt(toneKey, toneInfo);
 
-        await sock.sendMessage(chatId, { react: { text: '🎤', key: msg.key } });
-        await reply(`🎤 *Generating ${toneInfo.label} lyrics…*\n\n⏳ Give me a moment!`);
+        await sock.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
         let lyrics;
         try {
@@ -106,17 +105,34 @@ export default {
             return reply(`❌ The AI returned an empty response. Try again.`);
         }
 
-        const trimmed = lyrics.length > 3500 ? lyrics.slice(0, 3500) + '\n…' : lyrics;
-
-        await reply(
+        const trimmed   = lyrics.length > 3500 ? lyrics.slice(0, 3500) + '\n…' : lyrics;
+        const msgText   =
             `🎤 *AI GENERATED LYRICS*\n` +
             `━━━━━━━━━━━━━━━━━━━━━\n` +
             `${toneInfo.label} Tone\n` +
             `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `${trimmed}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━\n` +
-            `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`
-        );
+            `${trimmed}`;
+
+        const _gb = globalThis._giftedBtns;
+        if (_gb && typeof _gb.sendInteractiveMessage === 'function') {
+            try {
+                await _gb.sendInteractiveMessage(sock, chatId, {
+                    text:   msgText,
+                    footer: `🐺 ${getOwnerName().toUpperCase()} TECH`,
+                    interactiveButtons: [{
+                        name: 'cta_copy',
+                        buttonParamsJson: JSON.stringify({
+                            display_text: '📋 Copy Lyrics',
+                            copy_code:    trimmed
+                        })
+                    }]
+                });
+            } catch {
+                await reply(msgText + `\n\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`);
+            }
+        } else {
+            await reply(msgText + `\n\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`);
+        }
 
         await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
     }
