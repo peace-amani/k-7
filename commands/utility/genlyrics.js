@@ -61,19 +61,22 @@ export default {
         const chatId = msg.key.remoteJid;
         const reply  = (text, opts = {}) => sock.sendMessage(chatId, { text }, { quoted: msg, ...opts });
 
-        const toneKeys = TONE_KEYS;
-
         if (!args.length) {
-            const toneList = Object.entries(TONES)
-                .map(([k, v]) => `  ${v.label}  →  *${PREFIX}genlyrics ${k}*`)
-                .join('\n');
+            const cols    = 3;
+            const padded  = TONE_KEYS.map(k => k.padEnd(14));
+            const rows    = [];
+            for (let i = 0; i < padded.length; i += cols) {
+                rows.push('│  ' + padded.slice(i, i + cols).join(''));
+            }
+            rows.push('│  ' + 'random'.padEnd(14));
             return reply(
-                `╭─⌈ 🎤 *AI LYRICS GENERATOR* ⌋\n` +
+                `╭─⌈ *GENLYRICS* ⌋\n` +
+                `│\n` +
                 `├─⊷ *Usage:* ${PREFIX}genlyrics <tone>\n` +
-                `├─⊷ *Random:* ${PREFIX}genlyrics random\n` +
                 `│\n` +
                 `├─⊷ *Available Tones:*\n` +
-                `${toneList}\n` +
+                `│\n` +
+                rows.join('\n') + '\n' +
                 `│\n` +
                 `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             );
