@@ -124,13 +124,7 @@ export default {
 
         if (!query) {
             return sock.sendMessage(jid, {
-                text:
-                    `╭─⌈ 📸 *IMAGE SEARCH* ⌋\n│\n` +
-                    `├─⊷ *${PREFIX}image <query>*\n│  └⊷ Search and send images\n│\n` +
-                    `├─⊷ *${PREFIX}image <query> -limit <n>*\n│  └⊷ Set number of results (max 10)\n│\n` +
-                    `├─⊷ *Examples:*\n│  └⊷ ${PREFIX}image beautiful sunset\n│  └⊷ ${PREFIX}pic cute animals -limit 3\n│\n` +
-                    `├─⊷ *Aliases:* img, pic, photo\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `📸 *Image Search*\nUsage: *${PREFIX}image <query>*\nExample: ${PREFIX}image superman`
             }, { quoted: m });
         }
 
