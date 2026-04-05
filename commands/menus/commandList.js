@@ -185,6 +185,7 @@ export const getBoxStyleCommands = () => {
 │  • suno
 │  • flux
 │  • removebg
+│  • enlarger
 │  • aimenu
 │
 ├─⊷ *🖼️ IMAGE GEN*
@@ -571,6 +572,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • suno — Suno AI music
 > • flux — Flux AI
 > • removebg — remove background
+> • enlarger — AI upscale & enhance image
 > • aimenu — AI menu
 > • imagine — imagine image
 > • imagegen — AI image gen
@@ -943,6 +945,7 @@ export const getQuotedBoxCommands = () => {
 > │ • suno
 > │ • flux
 > │ • removebg
+> │ • enlarger
 > │ • aimenu
 > ├───────────────
 > │ 🖼️ *IMAGE GEN*
@@ -1368,6 +1371,7 @@ export const getPlainBoxCommands = () => {
 │ suno
 │ flux
 │ removebg
+│ enlarger
 │ aimenu
 ├───────────────
 │ 🖼️ IMAGE GEN
