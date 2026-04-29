@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "_B7urb-NS7N00TKkEwoZd"
+uri = "file://README.md"
+type = "text"
+title = "WOLFBOT README.md (SEO Optimized)"
+
+[[outputs]]
+id = "PhsGcEe4-QZPNT6wPlADh"
+uri = "file://tostatus.txt"
+type = "text"
+title = "tostatus — Full Code & Documentation"
+
+[[outputs]]
+id = "aeNoAN-97L1lLoVfcVsoO"
+uri = "file://egg-nodejs-wolfbot.json"
+type = "unspecified"
+title = "Node.js Generic Bot Egg (Auto npm install on startup)"
+
+[[outputs]]
+id = "UwdMbjTJCkJ7LL-ZTWpCM"
+uri = "file://genmusic_fix_notes.txt"
+type = "text"
+title = "genmusic Fix Notes"
+
+[[outputs]]
+id = "q8KZswppCoqPPsNP778eM"
+uri = "file://README_1.1.6.md"
+type = "text"
+title = "README for silentwolf-1.1.6"
+
+[[outputs]]
+id = "4fi9KAad8yS58k1A9VxSZ"
+uri = "file://attached_assets/wolfbot_db_health_report.txt"
+type = "text"
+title = "WolfBot Database Health Report"
+
+[[outputs]]
+id = "UZRZmoHRetc4IPgAN1uHI"
+uri = "file://attached_assets/build_your_own_baileys_guide.txt"
+type = "text"
+title = "Build Your Own Baileys — Complete Technical Guide"

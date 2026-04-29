@@ -1,0 +1,127 @@
+GENMUSIC COMMAND — HOW IT WAS FIXED
+=====================================
+Date: April 11, 2026
+
+
+PROBLEM
+-------
+The command was throwing "Request failed with status code 502" every time.
+
+
+ROOT CAUSE INVESTIGATION
+------------------------
+Step 1: Checked the logs — saw the bot was hitting the API and getting 502.
+
+Step 2: Manually curled the API base URL:
+
+    curl -s "https://apis.xcasper.space/api/tools/text-to-music?prompt=test"
+
+Result: 502 in 0.5 seconds. Not a timeout — an immediate failure.
+This meant the base endpoint simply does not exist as a callable URL.
+
+Step 3: Guessed that maybe a /start sub-endpoint exists (like an older version
+of the command suggested). Tested it:
+
+    curl -s "https://apis.xcasper.space/api/tools/text-to-music/start?prompt=test+song"
+
+Result:
+    {
+      "success": true,
+      "job_id": "d348bfcd-98dd-4e9f-8daf-d50753424a26",
+      "message": "Generation started. Poll /api/tools/text-to-music/poll?job_id=... for status."
+    }
+
+SUCCESS. The message itself told us: there's a /poll endpoint.
+
+Step 4: Polled the job:
+
+    curl -s "https://apis.xcasper.space/api/tools/text-to-music/poll?job_id=d348bfcd-..."
+
+Result while processing:
+    { "success": true, "status": "composing", "step": "Composing music...", "elapsed_ms": 46204 }
+
+Result when complete:
+    {
+      "success": true,
+      "status": "done",
+      "step": "Done",
+      "elapsed_ms": 166723,
+      "result": {
+        "title": "Sunkissed Hearts and Sky Blue Dreams",
+        "music_url": "https://cdn.ng-resource.com/...mp3",
+        "cover_url": "https://cdn.notegpt.io/...jpeg",
+        "lyrics_url": "https://cdn.ng-resource.com/...txt",
+        "lyrics": "[Intro]\n...",
+        "duration": 169,
+        "genre": "Pop",
+        "mood": "Happy",
+        "vocal": "Female",
+        "instrumental": false
+      }
+    }
+
+Step 5: Also discovered that a job with just "test song" as the prompt timed out
+after 3 minutes (server-side limit). Descriptive prompts succeed reliably.
+
+
+THE CORRECT API FLOW
+--------------------
+
+1. START — kick off generation:
+   GET https://apis.xcasper.space/api/tools/text-to-music/start
+   Params: prompt, genre, mood, vocal, title (opt), lyrics (opt), instrumental (opt)
+   Returns: { success: true, job_id: "uuid" }
+
+2. POLL — check status every ~12 seconds:
+   GET https://apis.xcasper.space/api/tools/text-to-music/poll?job_id=<uuid>
+   Returns one of:
+     status: "lyrics"    — writing lyrics
+     status: "composing" — generating the music
+     status: "done"      — finished, result object is populated
+     status: "failed"    — server timed out or errored
+
+3. DONE — result object fields:
+     result.title        — AI-generated song title
+     result.music_url    — direct MP3 download link (cdn.ng-resource.com)
+     result.cover_url    — JPEG cover art (cdn.notegpt.io)
+     result.lyrics       — full lyrics text with section tags ([Verse 1], [Chorus], etc.)
+     result.lyrics_url   — separate TXT file URL for the lyrics
+     result.duration     — song length in seconds
+     result.genre, .mood, .vocal, .instrumental — echoes of what was requested
+
+4. FAILURE — check for:
+     success: false
+     status: "failed"
+     error: "Timed out waiting for music (exceeded 3 minutes)"
+
+
+WHAT THE OLD BROKEN VERSION DID
+--------------------------------
+The previous rewrite called the BASE URL directly as a single blocking GET with a
+4-minute timeout. This never worked because:
+
+a) The base URL /api/tools/text-to-music returns 502 immediately (it is not a
+   valid endpoint).
+
+b) Even if it were valid, Cloudflare (which fronts the server) enforces a ~30s
+   proxy timeout — a 3-minute blocking request would always get a 502 from CF.
+
+The /start and /poll sub-endpoints work because each individual HTTP request
+completes in milliseconds. The long processing happens server-side between polls.
+
+
+COMMAND BEHAVIOUR (genmusic.js as shipped)
+------------------------------------------
+- Calls /start → gets job_id
+- Edits a live status message every time the step text changes
+- Polls every 12 seconds, max 5 minutes
+- On done: sends cover image, then MP3, then lyrics (unless instrumental flag set)
+- On failure: sends a helpful error with retry tips
+
+USAGE:
+  ?genmusic <prompt>
+  ?genmusic <prompt> | genre=Afrobeat | mood=Sad | vocal=Female
+  ?genmusic <prompt> | instrumental
+
+TIP: Use descriptive prompts. "test song" timed out; "a happy love song about
+sunny days" completed in 2m45s.

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>WOLFBOT | Deploy Options</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-green: #00ff00;
+            --dark-green: #00cc00;
+            --light-green: #33ff33;
+            --black: #000000;
+            --dark-gray: #111111;
+            --gray: #222222;
+            --light-gray: #333333;
+            --white: #ffffff;
+            
+            /* Platform Colors */
+            --heroku-purple: #6762a6;
+            --heroku-light: #9b4dff;
+            --railway-purple: #7C3AED;
+            --render-blue: #46E3B7;
+            --replit-blue: #808bed;
+            --replit-dark: #0E1525;
+            --wolfhost-green: #00ff00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--black);
+            color: var(--white);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            line-height: 1.4;
+            padding: 10px;
+        }
+        
+        #particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            background-color: var(--primary-green);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 20s infinite linear;
+        }
+        
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, 50px) rotate(90deg); }
+            50% { transform: translate(50px, 100px) rotate(180deg); }
+            75% { transform: translate(-50px, 50px) rotate(270deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 550px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px 10px;
+            background: rgba(0, 255, 0, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 0, 0.1);
+        }
+
+        .wolf-icon {
+            font-size: 28px;
+            color: var(--primary-green);
+            margin-bottom: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(45deg, var(--primary-green), var(--dark-green));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 3px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .subtitle {
+            color: var(--light-gray);
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .deploy-card {
+            background: rgba(17, 17, 17, 0.95);
+            border-radius: 16px;
+            padding: 20px 18px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 255, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-header h2 {
+            font-size: 1.6rem;
+            color: var(--primary-green);
+            margin-bottom: 3px;
+        }
+        
+        .card-header p {
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: var(--primary-green);
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            background: var(--dark-gray);
+            border: 1.5px solid var(--primary-green);
+            border-radius: 10px;
+            color: var(--white);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: var(--light-green);
+            box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
+        }
+        
+        .github-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-green);
+            font-size: 1.3rem;
+        }
+        
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 15px 0 5px;
+        }
+        
+        .platform-button {
+            padding: 12px 6px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: white;
+            min-width: 0;
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+        
+        .platform-button i {
+            font-size: 1rem;
+        }
+        
+        .heroku-btn {
+            background: linear-gradient(135deg, #6762a6, #9b4dff);
+        }
+        .heroku-btn:hover {
+            background: linear-gradient(135deg, #9b4dff, #b87cff);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(103, 98, 166, 0.4);
+        }
+        
+        .wolfhost-btn {
+            background: linear-gradient(135deg, #00aa00, #00ff00);
+        }
+        .wolfhost-btn:hover {
+            background: linear-gradient(135deg, #00ff00, #88ff88);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(0, 255, 0, 0.4);
+        }
+        
+        .railway-btn {
+            background: linear-gradient(135deg, #0B1120, #7C3AED);
+        }
+        .railway-btn:hover {
+            background: linear-gradient(135deg, #7C3AED, #9F67FF);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(124, 58, 237, 0.4);
+        }
+        
+        .render-btn {
+            background: linear-gradient(135deg, #1F2937, #46E3B7);
+        }
+        .render-btn:hover {
+            background: linear-gradient(135deg, #46E3B7, #7AFFD9);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(70, 227, 183, 0.4);
+        }
+        
+        .replit-btn {
+            background: linear-gradient(135deg, #0E1525, #808bed);
+            grid-column: span 2;
+        }
+        .replit-btn:hover {
+            background: linear-gradient(135deg, #808bed, #a0b0ff);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(128, 139, 237, 0.4);
+        }
+        
+        .platform-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .fa-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info-text {
+            margin-top: 18px;
+            padding: 12px;
+            background: rgba(0, 255, 0, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-green);
+            color: var(--light-gray);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        
+        .info-text i {
+            color: var(--primary-green);
+            margin-right: 4px;
+        }
+        
+        @media (max-width: 480px) {
+            body { padding: 8px; align-items: flex-start; }
+            .container { max-width: 100%; }
+            .header { padding: 10px 8px; margin-bottom: 12px; }
+            .header h1 { font-size: 1.8rem; }
+            .wolf-icon { font-size: 24px; }
+            .deploy-card { padding: 15px 12px; }
+            .card-header h2 { font-size: 1.4rem; }
+            .card-header p { font-size: 0.8rem; }
+            .form-group label { font-size: 0.85rem; margin-bottom: 4px; }
+            .input-wrapper input { padding: 10px 12px 10px 40px; font-size: 0.9rem; }
+            .github-icon { left: 10px; font-size: 1.2rem; }
+            .platform-grid { gap: 6px; margin: 12px 0 3px; }
+            .platform-button { padding: 10px 4px; font-size: 0.8rem; gap: 4px; }
+            .platform-button i { font-size: 0.9rem; }
+            .info-text { margin-top: 15px; padding: 10px; font-size: 0.75rem; }
+        }
+        
+        @media (max-width: 360px) {
+            .header h1 { font-size: 1.6rem; }
+            .platform-button { font-size: 0.75rem; }
+            .platform-button i { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="particles"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="wolf-icon">
+                <i class="fas fa-paw"></i>
+            </div>
+            <h1>WOLFBOT</h1>
+            <div class="subtitle">
+                Advanced WhatsApp Bot by Silent Wolf
+            </div>
+        </div>
+        
+        <div class="deploy-card">
+            <div class="card-header">
+                <h2>Deploy</h2>
+                <p>Choose your platform</p>
+            </div>
+            
+            <form id="deployForm">
+                <div class="form-group">
+                    <label for="githubUsername">
+                        <i class="fas fa-user"></i> GitHub Username
+                    </label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="githubUsername" 
+                            placeholder="Enter your username..."
+                            required
+                        />
+                        <div class="github-icon">
+                            <i class="fab fa-github"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="platform-grid">
+                    <button type="submit" class="platform-button heroku-btn" id="deployHerokuBtn" data-platform="heroku">
+                        <i class="fab fa-heroku"></i>
+                        <span>Heroku</span>
+                    </button>
+                    
+                    <button type="submit" class="platform-button wolfhost-btn" id="deployWolfHostBtn" data-platform="wolfhost">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>WolfHost</span>
+                    </button>
+                    
+                    <button type="submit" class="platform-button railway-btn" id="deployRailwayBtn" data-platform="railway">
+                        <i class="fas fa-train"></i>
+                        <span>Railway</span>
+                    </button>
+                    
+                    <button type="submit" class="platform-button render-btn" id="deployRenderBtn" data-platform="render">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span>Render</span>
+                    </button>
+                    
+                    <button type="submit" class="platform-button replit-btn" id="deployReplitBtn" data-platform="replit">
+                        <i class="fas fa-code"></i>
+                        <span>Replit</span>
+                    </button>
+                </div>
+            </form>
+            
+            <div class="info-text">
+                <i class="fas fa-info-circle"></i> Set <strong>SESSION_ID</strong> in environment variables after redirect.
+                <br>
+                <i class="fas fa-clock"></i> Deployment takes 2-3 minutes.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = Math.min(20, Math.floor(window.innerWidth / 30));
+            particlesContainer.innerHTML = '';
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                const size = 2 + Math.random() * 4;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.opacity = 0.1 + Math.random() * 0.3;
+                particle.style.animationDelay = `${Math.random() * 20}s`;
+                particle.style.animationDuration = `${15 + Math.random() * 20}s`;
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        const form = document.getElementById('deployForm');
+        const usernameInput = document.getElementById('githubUsername');
+        const herokuBtn = document.getElementById('deployHerokuBtn');
+        const wolfhostBtn = document.getElementById('deployWolfHostBtn');
+        const railwayBtn = document.getElementById('deployRailwayBtn');
+        const renderBtn = document.getElementById('deployRenderBtn');
+        const replitBtn = document.getElementById('deployReplitBtn');
+        const allButtons = [herokuBtn, wolfhostBtn, railwayBtn, renderBtn, replitBtn];
+
+        const savedUsername = localStorage.getItem('wolfbot_github_username');
+        if (savedUsername) usernameInput.value = savedUsername;
+
+        usernameInput.addEventListener('input', function() {
+            localStorage.setItem('wolfbot_github_username', this.value.trim());
+        });
+
+        const platformUrls = {
+            heroku:   'https://heroku.com/deploy?template=https://github.com/WOLFTECH-254/silentwolf',
+            wolfhost: 'https://host.xwolf.space',
+            railway:  'https://railway.app/new/template?template=https://github.com/WOLFTECH-254/silentwolf',
+            render:   'https://render.com/deploy?repo=https://github.com/WOLFTECH-254/silentwolf',
+            replit:   'https://replit.com/github/WOLFTECH-254/silentwolf'
+        };
+
+        function handleDeploy(platform, event) {
+            event.preventDefault();
+            const username = usernameInput.value.trim();
+            if (!username) { alert('Please enter your GitHub username'); return; }
+            allButtons.forEach(btn => btn.disabled = true);
+            const clickedButton = event.target.closest('button');
+            clickedButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Redirecting...`;
+            setTimeout(() => { window.location.href = platformUrls[platform]; }, 800);
+        }
+
+        herokuBtn.addEventListener('click',   (e) => handleDeploy('heroku', e));
+        wolfhostBtn.addEventListener('click', (e) => handleDeploy('wolfhost', e));
+        railwayBtn.addEventListener('click',  (e) => handleDeploy('railway', e));
+        renderBtn.addEventListener('click',   (e) => handleDeploy('render', e));
+        replitBtn.addEventListener('click',   (e) => handleDeploy('replit', e));
+
+        form.addEventListener('submit', (e) => e.preventDefault());
+
+        createParticles();
+        window.addEventListener('resize', createParticles);
+    </script>
+</body>
+</html>
