@@ -2155,6 +2155,7 @@ let isWaitingForPairingCode = false;
 let RESTART_AUTO_FIX_ENABLED = true;
 let hasAutoConnectedOnStart = false;
 let hasSentWelcomeMessage = false;
+let _isAutoRestart = false;
 let initialCommandsLoaded = false;
 let commandsLoaded = false;
 const _MSG_COOLDOWN_MS = 5 * 60 * 1000;
@@ -6389,7 +6390,9 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 
                 // ====== THE ONLY SUCCESS MESSAGE ======
                 setTimeout(async () => {
-                    if (!isConnected || isConflictRecovery || Date.now() - _lastConnectionMsgTime < _MSG_COOLDOWN_MS) return;
+                    const _wasAutoRestart = _isAutoRestart;
+                    _isAutoRestart = false;
+                    if (!isConnected || isConflictRecovery || _wasAutoRestart || Date.now() - _lastConnectionMsgTime < _MSG_COOLDOWN_MS) return;
                     try {
                         const ownerInfo = jidManager.getOwnerInfo();
                         const displayOwnerNumber = ownerInfo?.ownerNumber ? ownerInfo.ownerNumber.split(':')[0] : 'Not set';
@@ -6559,6 +6562,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                 UltraCleanLogger.error(`Pairing code error: ${error.message}`);
                                 
                                 setTimeout(async () => {
+                                    _isAutoRestart = true;
                                     await startBot(loginMode, loginData);
                                 }, 8000);
                             }
@@ -7841,6 +7845,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
         
         setTimeout(async () => {
             UltraCleanLogger.info('🔄 Retrying connection...');
+            _isAutoRestart = true;
             await startBot(loginMode, loginData);
         }, 8000);
     }
@@ -8092,6 +8097,7 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
             UltraCleanLogger.warning(`⚠️ Persistent conflict (attempt ${conflictCount}) - another WhatsApp Web/device session may be open. Close other sessions to fix.`);
         }
         setTimeout(async () => {
+            _isAutoRestart = true;
             await startBot(loginMode, phoneNumber);
         }, conflictDelay);
         return;
@@ -8134,6 +8140,7 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
             UltraCleanLogger.warning(`Signal key cleanup error: ${cleanErr.message}`);
         }
         setTimeout(async () => {
+            _isAutoRestart = true;
             await startBot(loginMode, phoneNumber);
         }, 3000);
         return;
@@ -8151,6 +8158,7 @@ async function handleConnectionCloseSilently(lastDisconnect, loginMode, phoneNum
             UltraCleanLogger.critical('Max retry attempts reached. Restarting from scratch...');
             await main();
         } else {
+            _isAutoRestart = true;
             await startBot(loginMode, phoneNumber);
         }
     }, delayTime);
