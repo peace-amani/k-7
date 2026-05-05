@@ -277,37 +277,44 @@ function getChatbotState() {
 function getDispState() {
     const data = safeReadJSON(path.join(__dirname, '../../disp_settings.json'));
     if (!data) return 'OFF';
-    const groups = Object.keys(data).filter(k => data[k]?.enabled);
-    if (groups.length === 0) return 'OFF';
-    return `${groups.length} group(s)`;
+    const groups = Object.keys(data).filter(k => k.endsWith('@g.us') && data[k]?.enabled);
+    const dms    = Object.keys(data).filter(k => !k.endsWith('@g.us') && data[k]?.enabled);
+    const parts  = [];
+    if (groups.length) parts.push(`${groups.length} group(s)`);
+    if (dms.length)    parts.push(`${dms.length} DM(s)`);
+    return parts.length ? parts.join(' + ') : 'OFF';
 }
 
 async function getWelcomeStatus() {
     try {
         const data = await db.getConfig('welcome_data', {});
-        const count = data && typeof data === 'object' ? Object.keys(data).length : 0;
-        return count ? `${count} group(s)` : 'No groups';
+        // data is { groups: {...}, version, created, updated } — must look inside data.groups
+        const groups = data?.groups || {};
+        const count = Object.values(groups).filter(g => g?.enabled === true).length;
+        return count ? `${count} group(s)` : 'OFF';
     } catch {}
-    return 'No groups';
+    return 'OFF';
 }
 
 async function getGoodbyeStatus() {
     try {
         const data = await db.getConfig('goodbye_data', {});
-        const count = data && typeof data === 'object' ? Object.keys(data).length : 0;
-        return count ? `${count} group(s)` : 'No groups';
+        // data is { groups: {...}, version, created, updated } — must look inside data.groups
+        const groups = data?.groups || {};
+        const count = Object.values(groups).filter(g => g?.enabled === true).length;
+        return count ? `${count} group(s)` : 'OFF';
     } catch {}
-    return 'No groups';
+    return 'OFF';
 }
 
 async function getJoinApprovalState() {
     try {
         const data = await db.getConfig('joinapproval_data', {});
-        if (!data || !data.groups) return 'No groups';
+        if (!data || !data.groups) return 'OFF';
         const enabled = Object.values(data.groups).filter(g => g?.enabled === true);
-        return enabled.length ? `${enabled.length} group(s)` : 'No groups';
+        return enabled.length ? `${enabled.length} group(s)` : 'OFF';
     } catch {}
-    return 'No groups';
+    return 'OFF';
 }
 
 function formatUptime(seconds) {

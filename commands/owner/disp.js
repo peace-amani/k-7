@@ -1,6 +1,26 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DISP_FILE = path.join(__dirname, '../../disp_settings.json');
 const BRAND = () => getOwnerName().toUpperCase();
+
+function _loadDispSettings() {
+  try {
+    if (fs.existsSync(DISP_FILE)) return JSON.parse(fs.readFileSync(DISP_FILE, 'utf8'));
+  } catch {}
+  return {};
+}
+
+function _saveDispState(jid, seconds) {
+  try {
+    const data = _loadDispSettings();
+    data[jid] = { enabled: seconds > 0, duration: seconds, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(DISP_FILE, JSON.stringify(data, null, 2));
+  } catch {}
+}
 
 // WhatsApp's only valid ephemeral durations (seconds)
 const DURATIONS = {
@@ -84,9 +104,12 @@ export default {
       if (isGroup) {
         // Groups use groupToggleEphemeral — 0 means off, any positive value enables it
         await sock.groupToggleEphemeral(chatId, seconds);
+        _saveDispState(chatId, seconds);
       } else {
         // DMs use disappearingMessagesInChat inside sendMessage
         await sock.sendMessage(chatId, { disappearingMessagesInChat: seconds || false });
+        // Save DM state so settings menu can reflect it correctly
+        _saveDispState(chatId, seconds);
       }
 
       const stateText = seconds === 0
