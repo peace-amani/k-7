@@ -918,13 +918,11 @@ _loadConfigCache('antidisp_config', { enabled: false }).then(config => {
 }).catch(() => { globalThis._antidispConfig = { enabled: false }; });
 
 // ── Persistent settings safety net ──────────────────────────────────────────
-// Restores any JSON config files that were wiped (e.g. Pterodactyl reinstall,
-// container restart on Heroku/Koyeb) from the persistent DB. Then starts a
-// 30-second mirror loop that pushes any new JSON edits back to the DB.
-// See lib/persistentConfig.js for the registry of mirrored files.
-persistentConfig.hydrateAll().catch(() => {}).finally(() => {
-    persistentConfig.startMirror(30_000);
-});
+// hydrateAll() is intentionally deferred until AFTER the DB is initialised.
+// Running it at module-load time (before initTables()) caused it to fail
+// silently, then push stale default file values to the DB on later calls.
+// startMirror() is also started here so the 30-second push loop begins once
+// the DB is ready. See lib/persistentConfig.js for the registry.
 globalThis._antibugConfig = null;
 globalThis._saveAntibugConfig = function(data) {
     _saveConfigCache('antibug_config', data);
@@ -1207,6 +1205,11 @@ globalThis.preExitSave = async function preExitSave() {
     try {
         const _savePrefix = isPrefixless ? '' : (prefixCache || DEFAULT_PREFIX);
         const _saveMode   = BOT_MODE || 'public';
+
+        // 0. Force a full mysettings.json snapshot NOW — this is the primary
+        //    restore source on next boot. Must run before any process.exit()
+        //    or pm2 restart so every in-memory setting is captured.
+        try { await mySettings.snapshotNow(); } catch {}
 
         // 1. Write the current live values directly into the SQLite DB so
         //    that forceBackup() picks up the very latest state.
@@ -5512,6 +5515,13 @@ const _dbInitPromise = initDatabase().then(() => {
     global.prefix = prefixCache;
     global.CURRENT_PREFIX = prefixCache;
     process.env.PREFIX = prefixCache;
+
+    // ── Persistent settings safety net (runs AFTER DB tables exist) ─────────
+    // hydrateAll() restores missing JSON config files from DB.
+    // startMirror() keeps DB in sync with any file changes every 30 s.
+    persistentConfig.hydrateAll().catch(() => {}).finally(() => {
+        persistentConfig.startMirror(30_000);
+    });
 }).catch((err) => {
     console.error(`\n❌ FATAL: SQLite failed to initialize — ${err.message}\n`);
     process.exit(1);

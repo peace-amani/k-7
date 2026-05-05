@@ -2023,6 +2023,10 @@ async function preserveEssentialFiles() {
     'package.json',
     'bot_name.json',
     'bot_settings.json',
+    // mysettings.json — canonical settings snapshot used to restore ALL
+    // settings on boot. Must be preserved so mySettings.init() on the
+    // next startup can restore the full configuration.
+    'mysettings.json',
     // User settings — must survive updates
     'prefix_config.json',
     'bot_mode.json',
@@ -2045,6 +2049,28 @@ async function preserveEssentialFiles() {
     'collected_stickers.json',
     'lid_mappings.json',
     'last_bot_id.json',
+    // data/ subfolder settings — these are NOT in the root so they are NOT
+    // covered by the root-level preserve list above. Without this they can
+    // be silently reset to defaults if the ZIP extractor ever touches data/.
+    'data/footer.json',
+    'data/menuimage.json',
+    'data/menu_image.json',
+    'data/autoViewConfig.json',
+    'data/autoReactConfig.json',
+    'data/autoDownloadStatusConfig.json',
+    'data/channelReactConfig.json',
+    'data/musicmode.json',
+    'data/member_detection.json',
+    'data/anticall.json',
+    'data/antigroupcall.json',
+    'data/antigroupstatus.json',
+    'data/welcome_data.json',
+    'data/goodbye_data.json',
+    'data/presence/config.json',
+    'data/autotyping/config.json',
+    'data/autorecording/config.json',
+    'data/antipromote/config.json',
+    'data/antistatusmention/config.json',
   ];
   
   const essentialDirs = [
@@ -2293,6 +2319,8 @@ async function copyEssentialFiles(src, dest) {
     /^baileys_store\.json$/,
     /^bot_name\.json$/,
     /^bot_settings\.json$/,
+    // mysettings.json — canonical restore source; never overwrite with ZIP defaults
+    /^mysettings\.json$/,
     // User settings — never overwrite with ZIP defaults
     /^prefix_config\.json$/,
     /^bot_mode\.json$/,
