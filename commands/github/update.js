@@ -1318,7 +1318,6 @@ import { createRequire } from 'module';
 import { createWriteStream } from "fs";
 import AdmZip from "adm-zip";
 import { REPO_URL as _CFG_REPO_URL } from '../../lib/repoConfig.js';
-import { restartBot } from '../../lib/pteroRestart.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -2731,7 +2730,14 @@ export default {
             text: '🔄 **Restarting Now...**\nBot will be back in a moment!'
           }, { quoted: m });
           
-          await restartBot();
+          if (typeof globalThis.preExitSave === 'function') {
+            try { await globalThis.preExitSave(); } catch {}
+          }
+          try {
+            await run('pm2 restart all', 10000);
+          } catch {
+            process.exit(0);
+          }
         }
       } else {
         // Normal restart
@@ -2743,7 +2749,14 @@ export default {
           text: '🔄 **Restarting Now...**\nBot will be back in a moment!'
         }, { quoted: m });
 
-        await restartBot();
+        if (typeof globalThis.preExitSave === 'function') {
+          try { await globalThis.preExitSave(); } catch {}
+        }
+        try {
+          await run('pm2 restart all', 10000);
+        } catch {
+          process.exit(0);
+        }
       }
       
     } catch (err) {

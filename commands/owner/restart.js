@@ -6,7 +6,6 @@ import fsPromises from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import os from "os";
-import { restartBot } from '../../lib/pteroRestart.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -144,7 +143,14 @@ export default {
         text: '🔄 **Restarting Now...**\nBot will be back in a moment!'
       }, { quoted: m });
 
-      await restartBot();
+      if (typeof globalThis.preExitSave === 'function') {
+        try { await globalThis.preExitSave(); } catch {}
+      }
+      try {
+        await run('pm2 restart all', 10000);
+      } catch {
+        process.exit(0);
+      }
 
     } catch (err) {
       let errorText = `❌ **Restart Failed**\nError: ${sanitizeGitErr(err.message || '')}\n\n`;
