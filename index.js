@@ -1,6 +1,3 @@
-
-
-
 //INNER-PEACE - SILENT WOLF
 
 // ── Silence Node.js process warnings before ANY imports run ──────────────────
@@ -5890,7 +5887,13 @@ async function startBot(loginMode = 'auto', loginData = null) {
             let lastErr;
             for (let attempt = 0; attempt <= delays.length; attempt++) {
                 try {
-                    return await originalSendMessage(j, c, o, ...r);
+                    const _result = await originalSendMessage(j, c, o, ...r);
+                    // DM debug: log every outgoing DM so we can trace delivery issues
+                    if (j && !j.includes('@g.us') && j !== 'status@broadcast' && !j.endsWith('@newsletter')) {
+                        const _preview = typeof c?.text === 'string' ? c.text.substring(0, 40) : (c?.caption?.substring(0, 40) || Object.keys(c||{}).join(','));
+                        UltraCleanLogger.info(`[DM-SEND] ✅ jid=${j.split('@')[0].slice(-6)}@${j.split('@')[1]} | ${_preview}`);
+                    }
+                    return _result;
                 } catch (err) {
                     const msg = (err?.message || '').toLowerCase();
                     const isRateLimit = msg.includes('rate') || msg.includes('overlimit') ||
@@ -5933,10 +5936,23 @@ async function startBot(loginMode = 'auto', loginData = null) {
             if (jid && jid.endsWith('@s.whatsapp.net') && jid !== 'status@broadcast') {
                 try {
                     const _phoneNum = jid.split('@')[0].split(':')[0];
+                    // Only swap to @lid if we received this mapping via contacts.upsert
+                    // (i.e. WhatsApp explicitly told us their LID). Never guess or derive
+                    // it — a wrong swap silently drops the message with no error.
                     const _knownLid = phoneLidCache.get(_phoneNum);
-                    if (_knownLid && _knownLid !== _phoneNum) {
+                    const _isUpsertedLid = _knownLid && _knownLid !== _phoneNum
+                        && !_knownLid.startsWith('+')       // not a phone number
+                        && /^[0-9]+$/.test(_knownLid);      // pure numeric LID
+                    if (_isUpsertedLid) {
+                        UltraCleanLogger.info(`[DM-JID] swapped ${_phoneNum.slice(-6)}@s → ${_knownLid.slice(-6)}@lid`);
                         jid = `${_knownLid}@lid`;
+                    } else {
+                        UltraCleanLogger.info(`[DM-JID] no LID cached for ${_phoneNum.slice(-6)} — sending to @s.whatsapp.net`);
                     }
+                    // No cache hit → send to phone@s.whatsapp.net as-is.
+                    // Baileys v7 will route it correctly for non-LID accounts.
+                    // For LID-only accounts, contacts.upsert will fire soon and
+                    // populate the cache — subsequent replies will use @lid.
                 } catch {}
             }
             // @lid JIDs — keep as-is for sending. Baileys v7 natively supports
@@ -6209,6 +6225,20 @@ async function startBot(loginMode = 'auto', loginData = null) {
                 setTimeout(() => {
                     if (isConnected) discoverNewsletters(sock).catch(() => {});
                 }, 10000);
+
+                // Sync LID↔phone cache 5s after connect, then every 30 min.
+                // Fixes "bot replies to @lid but message never shows" caused by
+                // stale or missing phoneLidCache entries after a restart.
+                setTimeout(() => {
+                    if (isConnected && typeof syncAllLids === 'function') {
+                        syncAllLids().catch(() => {});
+                    }
+                }, 5000);
+                setInterval(() => {
+                    if (isConnected && typeof syncAllLids === 'function') {
+                        syncAllLids().catch(() => {});
+                    }
+                }, 30 * 60 * 1000); // every 30 minutes
 
                 if (sock.user?.id) {
                     setBotId(sock.user.id);
@@ -6755,6 +6785,74 @@ async function startBot(loginMode = 'auto', loginData = null) {
         process.on('SIGTERM', flushCreds);
         sock.ev.on('creds.update', debouncedSaveCreds);
 
+
+        // ── LID Sync Utility ─────────────────────────────────────────────────
+        // Walks all cached contacts and populates BOTH directions of the LID
+        // cache: lidPhoneCache (LID→phone) and phoneLidCache (phone→LID).
+        // This ensures sendMessage can always find the right @lid endpoint for
+        // any user who has ever messaged the bot, even after a restart.
+        async function syncAllLids() {
+            try {
+                let synced = 0;
+                // Source 1: signalRepository lidMapping — most complete source
+                if (sock?.signalRepository?.lidMapping?.getPNForLID) {
+                    try {
+                        const _mapping = sock.signalRepository.lidMapping;
+                        const _allLids = typeof _mapping.getAllLIDs === 'function'
+                            ? await _mapping.getAllLIDs()
+                            : (typeof _mapping.getAll === 'function' ? await _mapping.getAll() : null);
+                        if (_allLids) {
+                            for (const [lid, pn] of Object.entries(_allLids)) {
+                                const lidNum = String(lid).split('@')[0].split(':')[0];
+                                const phone  = String(pn).replace(/[^0-9]/g, '');
+                                if (lidNum && phone && lidNum !== phone) {
+                                    cacheLidPhone(lidNum, phone);
+                                    phoneLidCache.set(phone, lidNum);
+                                    synced++;
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+
+                // Source 2: global.contactNames — has LID keys from contacts.upsert
+                if (global.contactNames) {
+                    for (const [key] of global.contactNames) {
+                        if (key.endsWith('@lid') || /^[0-9]{10,}$/.test(key)) {
+                            const lidNum = key.split('@')[0].split(':')[0];
+                            try {
+                                const resolved = await resolvePhoneFromLidAsync(lidNum + '@lid');
+                                if (resolved) {
+                                    const phone = resolved.replace(/[^0-9]/g, '');
+                                    if (phone && lidNum !== phone) {
+                                        cacheLidPhone(lidNum, phone);
+                                        phoneLidCache.set(phone, lidNum);
+                                        synced++;
+                                    }
+                                }
+                            } catch {}
+                        }
+                    }
+                }
+
+                // Source 3: _lidDeviceHints — populated by sendMessage @lid echoes
+                if (globalThis._lidDeviceHints) {
+                    for (const [phone, lidJid] of Object.entries(globalThis._lidDeviceHints)) {
+                        const lidNum = lidJid.split('@')[0].split(':')[0];
+                        if (lidNum && phone && lidNum !== phone) {
+                            cacheLidPhone(lidNum, phone);
+                            phoneLidCache.set(phone, lidNum);
+                            synced++;
+                        }
+                    }
+                }
+
+                if (synced > 0) UltraCleanLogger.info(`[LID-SYNC] Synced ${synced} LID↔phone mappings`);
+            } catch (e) {
+                UltraCleanLogger.info(`[LID-SYNC] Error: ${e.message}`);
+            }
+        }
+
         sock.ev.on('contacts.upsert', (contacts) => {
             try {
                 global.contactNames = global.contactNames || new Map();
@@ -6764,7 +6862,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const lidNum = contact.lid.split('@')[0].split(':')[0];
                         const idIsLid = contact.id.includes('@lid');
                         if (!idIsLid && idNum !== lidNum) {
-                            cacheLidPhone(lidNum, idNum);
+                            cacheLidPhone(lidNum, idNum);           // LID → phone
+                            phoneLidCache.set(idNum, lidNum);       // phone → LID (reverse map for sendMessage)
                         }
                         // Debug: log any LID contact with no phone mapping
                         if (idIsLid) {
@@ -6799,7 +6898,8 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const lidNum = contact.lid.split('@')[0].split(':')[0];
                         const idIsLid = contact.id.includes('@lid');
                         if (!idIsLid && idNum !== lidNum) {
-                            cacheLidPhone(lidNum, idNum);
+                            cacheLidPhone(lidNum, idNum);           // LID → phone
+                            phoneLidCache.set(idNum, lidNum);       // phone → LID (reverse)
                         }
                     }
                     const displayName = contact.notify || contact.name || contact.vname || contact.short || contact.pushName || contact.verifiedName;
@@ -7027,8 +7127,18 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         );
                         const hasReaction = !!(c0?.reactionMessage || normC0?.reactionMessage);
                         const hasEdit = !!(normC0?.protocolMessage?.type === 14 || normC0?.editedMessage);
-                        if (!hasBtn && !hasReaction && !hasEdit) return;
-                        // fall through — let button responses, reactions, and edits be processed
+
+                        // Allow owner text commands typed in someone else's DM.
+                        // These arrive as fromMe=true + type='append'. Previously
+                        // they were dropped here causing "command executes but no
+                        // response ever shows" — the bot processed the echo from
+                        // the owner's linked device but never sent a reply.
+                        const _pfx = (typeof getCurrentPrefix === 'function' ? getCurrentPrefix() : null) || global.prefix || '.';
+                        const _msgTxt = normC0?.conversation || normC0?.extendedTextMessage?.text || '';
+                        const isCommand = _msgTxt.trim().startsWith(_pfx);
+
+                        if (!hasBtn && !hasReaction && !hasEdit && !isCommand) return;
+                        // fall through — button responses, reactions, edits, and owner DM commands
                     } else {
                         return;
                     }
@@ -8532,6 +8642,40 @@ async function handleIncomingMessage(sock, msg) {
         if (isGroup && senderJid.includes('@lid')) {
             resolvePhoneFromLid(senderJid);
         }
+
+        // ── DM LID pre-cache ─────────────────────────────────────────────────
+        // When ANY DM arrives (whether @lid or @s.whatsapp.net), ensure
+        // phoneLidCache has the mapping BEFORE the command runs.
+        // When a DM arrives with remoteJid as @lid (LID-only / LID-migrated
+        // accounts), eagerly resolve and cache the LID<>phone mapping NOW
+        // before any command runs. This ensures the sendMessage wrapper can
+        // find the @lid and route the reply correctly on the FIRST response,
+        // instead of silently dropping it to a dead phone@s.whatsapp.net.
+        // Without this, the bot logs sent but the user never sees the reply
+        // until enough messages populate the cache naturally.
+        if (!isGroup && chatId.endsWith('@lid')) {
+            try {
+                const _dmLidNum = chatId.split('@')[0].split(':')[0];
+                const _alreadyCached = lidPhoneCache.get(_dmLidNum) || getPhoneFromLid(_dmLidNum);
+                if (!_alreadyCached) {
+                    resolvePhoneFromLidAsync(chatId).then(_phone => {
+                        if (_phone) {
+                            const _pn = _phone.replace(/[^0-9]/g, '');
+                            cacheLidPhone(_dmLidNum, _pn);
+                        }
+                    }).catch(() => {});
+                }
+                // Ensure phoneLidCache has reverse mapping so sendMessage
+                // can swap phone->lid for replies going to this user's number
+                const _resolvedPhone = _alreadyCached || lidPhoneCache.get(_dmLidNum);
+                if (_resolvedPhone) {
+                    const _pn = String(_resolvedPhone).replace(/[^0-9]/g, '');
+                    if (!phoneLidCache.has(_pn)) {
+                        phoneLidCache.set(_pn, _dmLidNum);
+                    }
+                }
+            } catch {}
+        }
         
         if (isUserBlocked(senderJid)) {
             return;
@@ -8752,6 +8896,30 @@ async function handleIncomingMessage(sock, msg) {
             }
         }
         
+        // ── Internal button ID intercept ─────────────────────────────────────
+        // Button quick_reply IDs that start with __ are internal bot actions.
+        // They arrive without a prefix so we match them directly to commands.
+        if (!commandName && textMsg.trim().startsWith('__') && textMsg.trim().endsWith('__')) {
+            const _btnId = textMsg.trim().replace(/^__|__$/g, '').toLowerCase(); // e.g. repo_zip
+            const _btnCmd = _btnId.replace(/_/g, '');                            // e.g. repozip
+            if (commands.has(_btnId)) {
+                commandName = _btnId;
+                args = [];
+            } else if (commands.has(_btnCmd)) {
+                commandName = _btnCmd;
+                args = [];
+            } else {
+                // Try aliases — walk all commands to find one whose aliases include this id
+                for (const [, _cmd] of commands) {
+                    if (Array.isArray(_cmd.aliases) && (_cmd.aliases.includes(_btnId) || _cmd.aliases.includes(_btnCmd) || _cmd.aliases.includes(textMsg.trim()))) {
+                        commandName = _cmd.name;
+                        args = [];
+                        break;
+                    }
+                }
+            }
+        }
+
         // If the user replied to a mygroups list message with a plain number,
         // route it to the mygroups command even though it has no prefix
         if (!commandName && /^\d+$/.test(textMsg.trim())) {
@@ -9595,4 +9763,3 @@ main().catch((error) => {
     UltraCleanLogger.critical(`Fatal error: ${error.message}`);
     process.exit(1);
 });
-

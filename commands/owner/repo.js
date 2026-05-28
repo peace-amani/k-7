@@ -5,7 +5,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getOwnerName } from '../../lib/menuHelper.js';
-import { OWNER, REPO, REPO_URL } from '../../lib/repoConfig.js';
+import { OWNER, REPO, REPO_URL, REPO_ZIP } from '../../lib/repoConfig.js';
+import { isButtonModeEnabled } from '../../lib/buttonMode.js';
+import { createRequire } from 'module';
+
+const _req = createRequire(import.meta.url);
+let giftedBtns;
+try { giftedBtns = _req('gifted-btns'); } catch {}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,23 +21,55 @@ const DEFAULT_MENU_IMAGE_URL = "https://i.ibb.co/Gvkt4q9d/Chat-GPT-Image-Feb-21-
 function getRepoImage() {
   const menuMediaDir1 = path.join(__dirname, "../menus/media");
   const menuMediaDir2 = path.join(__dirname, "../media");
-
   const imgPaths = [
     path.join(menuMediaDir1, "wolfbot.jpg"),
     path.join(menuMediaDir2, "wolfbot.jpg"),
     path.join(menuMediaDir1, "wolfbot.png"),
     path.join(menuMediaDir2, "wolfbot.png"),
   ];
-
   for (const p of imgPaths) {
     if (fs.existsSync(p)) {
-      try {
-        return { type: 'buffer', data: fs.readFileSync(p) };
-      } catch {}
+      try { return { type: 'buffer', data: fs.readFileSync(p) }; } catch {}
     }
   }
-
   return { type: 'url', data: DEFAULT_MENU_IMAGE_URL };
+}
+
+
+async function sendRepoCard(sock, jid, caption, imagePayload, sender, fkontak) {
+  if (isButtonModeEnabled() && giftedBtns?.sendInteractiveMessage) {
+    try {
+      const btnPayload = {
+        text: caption,
+        footer: `🐺 ${getBotName()}`,
+        interactiveButtons: [
+          {
+            name: 'cta_url',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🌐 View Repo',
+              url: REPO_URL
+            })
+          },
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '📦 Download Zip',
+              id: `__repo_zip__`
+            })
+          }
+        ]
+      };
+      if (imagePayload.image) btnPayload.image = imagePayload.image;
+      await giftedBtns.sendInteractiveMessage(sock, jid, btnPayload, { quoted: fkontak });
+      return;
+    } catch {}
+  }
+  // Plain mode
+  await sock.sendMessage(jid, {
+    ...imagePayload,
+    caption,
+    mentions: [sender]
+  }, { quoted: fkontak });
 }
 
 export default {
@@ -63,68 +101,49 @@ export default {
       }
 
       const fkontak = createFakeContact(m);
-
-      const owner = OWNER;
-      const repo = REPO;
-      const repoUrl = REPO_URL;
-
       const img = getRepoImage();
       const imagePayload = img.type === 'buffer' ? { image: img.data } : { image: { url: img.data } };
 
       try {
         const { data } = await axios.get(
-          `https://api.github.com/repos/${owner}/${repo}`,
-          { 
+          `https://api.github.com/repos/${OWNER}/${REPO}`,
+          {
             timeout: 10000,
-            headers: { 
-              "User-Agent": "WolfBot",
-              "Accept": "application/vnd.github.v3+json"
-            } 
+            headers: { "User-Agent": "WolfBot", "Accept": "application/vnd.github.v3+json" }
           }
         );
 
         let sizeText;
         const sizeKB = data.size;
-        if (sizeKB > 1024) {
-          sizeText = `${(sizeKB / 1024).toFixed(2)} MB`;
-        } else {
-          sizeText = `${sizeKB} KB`;
-        }
+        sizeText = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB} KB`;
 
         let txt = `╭─⌈ \`WOLF REPO\` ⌋\n`;
         txt += `│\n`;
         txt += `│ ✧ *Name* : ${data.name || "Silent Wolf "}\n`;
-        txt += `│ ✧ *Owner* : ${owner}\n`;
+        txt += `│ ✧ *Owner* : ${OWNER}\n`;
         txt += `│ ✧ *Stars* : ${data.stargazers_count || 0} ⭐\n`;
         txt += `│ ✧ *Forks* : ${data.forks_count || 0} 🍴\n`;
         txt += `│ ✧ *Watchers* : ${data.watchers_count || 0} 👁️\n`;
         txt += `│ ✧ *Size* : ${sizeText}\n`;
         txt += `│ ✧ *Updated* : ${moment(data.updated_at).format('DD/MM/YYYY HH:mm:ss')}\n`;
-        txt += `│ ✧ *Repo* : ${repoUrl}\n`;
-        txt += `│ *Description* :${data.description || 'A powerful WhatsApp bot with 400+ commands'}\n`;
+        txt += `│ ✧ *Repo* : ${REPO_URL}\n`;
+        txt += `│ *Description* : ${data.description || 'A powerful WhatsApp bot with 400+ commands'}\n`;
         txt += `│ Hey ${mentionTag}! 👋\n`;
-        txt += `│ _*Don't forget*_ 🎉`;
+        txt += `│ _*Don't forget*_ 🎉\n`;
         txt += `│ *to fork and star the repo!* ⭐\n`;
         txt += `╰───`;
 
-        await sock.sendMessage(jid, {
-          ...imagePayload,
-          caption: txt,
-          mentions: [sender]
-        }, { quoted: fkontak });
-
-        await sock.sendMessage(jid, {
-          react: { text: '✅', key: m.key }
-        });
+        await sendRepoCard(sock, jid, txt, imagePayload, sender, fkontak);
+        await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
       } catch (apiError) {
         console.error("GitHub API Error:", apiError);
-        
+
         const fallbackText = `╭─⌈ *WOLF REPO* ⌋\n` +
           `│\n` +
           `│ ✧ *Name* : Silent Wolf Bot\n` +
           `│ ✧ *Owner* : ${OWNER}\n` +
-          `│ ✧ *Repository* : ${repoUrl}\n` +
+          `│ ✧ *Repository* : ${REPO_URL}\n` +
           `│ ✧ *Status* : ✅ NEW CLEAN REPOSITORY\n` +
           `│ ✧ *Size* : ~1.5 MB (Optimized)\n` +
           `│ ✧ *Last Updated* : ${moment().format('DD/MM/YYYY HH:mm:ss')}\n` +
@@ -140,35 +159,22 @@ export default {
           `│ *Be the first to star it!* ⭐\n` +
           `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
 
-        await sock.sendMessage(jid, {
-          ...imagePayload,
-          caption: fallbackText,
-          mentions: [sender]
-        }, { quoted: fkontak });
-
-        await sock.sendMessage(jid, {
-          react: { text: '⚠️', key: m.key }
-        });
+        await sendRepoCard(sock, jid, fallbackText, imagePayload, sender, fkontak);
+        await sock.sendMessage(jid, { react: { text: '⚠️', key: m.key } });
       }
 
     } catch (err) {
       console.error("General Error:", err);
-      
       const img = getRepoImage();
       const imagePayload = img.type === 'buffer' ? { image: img.data } : { image: { url: img.data } };
-
       const simpleText = `*WOLF REPO*\n\n` +
         `• *New Repository* : ✅ YES\n` +
         `• *URL* : ${REPO_URL}\n` +
         `• *Status* : Clean and optimized\n` +
         `• *Size* : ~1.5 MB\n\n` +
         `Hey @${(m.key.participant || m.key.remoteJid).split('@')[0]}! _Thank you for choosing Silent Wolf!_`;
-
-      await sock.sendMessage(m.key.remoteJid, {
-        ...imagePayload,
-        caption: simpleText,
-        mentions: [m.key.participant || m.key.remoteJid]
-      }, { quoted: m });
+      await sendRepoCard(sock, m.key.remoteJid, simpleText, imagePayload,
+        m.key.participant || m.key.remoteJid, m);
     }
   },
 };
