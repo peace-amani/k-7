@@ -5891,7 +5891,7 @@ async function startBot(loginMode = 'auto', loginData = null) {
                     // DM debug: log every outgoing DM so we can trace delivery issues
                     if (j && !j.includes('@g.us') && j !== 'status@broadcast' && !j.endsWith('@newsletter')) {
                         const _preview = typeof c?.text === 'string' ? c.text.substring(0, 40) : (c?.caption?.substring(0, 40) || Object.keys(c||{}).join(','));
-                        UltraCleanLogger.info(`[DM-SEND] ✅ jid=${j.split('@')[0].slice(-6)}@${j.split('@')[1]} | ${_preview}`);
+                       // UltraCleanLogger.info(`[DM-SEND] ✅ jid=${j.split('@')[0].slice(-6)}@${j.split('@')[1]} | ${_preview}`);
                     }
                     return _result;
                 } catch (err) {

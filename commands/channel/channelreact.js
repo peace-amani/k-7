@@ -530,6 +530,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getOwnerName } from '../../lib/menuHelper.js';
+import { REMOTE_URLS } from '../../lib/remoteUrls.js';
 
 const CONFIG_FILE = './data/channelReactConfig.json';
 
@@ -544,6 +545,70 @@ const EMOJI_POOL = [
     '💖', '💗', '💓', '💞', '💕', '😍', '🥰', '😘', '😊', '😄',
     '😁', '🥳', '🎉', '🎊', '👏', '🙌', '🔥', '✨', '💯', '🫶'
 ];
+
+// ── Channel React Whitelist ──────────────────────────────────────────────────
+// Fetched remotely from wolfreacts.json; only JIDs in this set will be reacted
+// to. The cache refreshes every WHITELIST_TTL ms so changes go live without a
+// bot restart.
+const WHITELIST_TTL = 5 * 60 * 1000; // refresh every 5 minutes
+let _whitelistCache = new Set();      // Set of allowed newsletter JIDs
+let _whitelistLastFetch = 0;          // timestamp of last successful fetch
+let _whitelistFetching = false;       // guard against concurrent fetches
+
+/**
+ * Fetch the wolfreacts.json whitelist from the remote URL.
+ * Tries primary first, then falls back to the fallback URL.
+ * Returns a Set on success, or null if all sources failed (keep existing cache).
+ */
+async function _fetchWhitelistRemote() {
+    const urls = [REMOTE_URLS.wolfReacts.primary, REMOTE_URLS.wolfReacts.fallback];
+    for (const url of urls) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) continue;
+            const json = await res.json();
+            // Support both { "allowedJids": [...] } and a bare array
+            const raw = Array.isArray(json) ? json : (json?.allowedJids ?? []);
+            const jids = raw.filter(j => typeof j === 'string' && j.endsWith('@newsletter'));
+            return new Set(jids);
+        } catch { /* try next URL */ }
+    }
+    return null; // all sources failed
+}
+
+/**
+ * Returns true if the given JID is in the remote whitelist.
+ * Triggers a background cache refresh when the TTL has expired.
+ * On the very first call it awaits the initial load synchronously.
+ */
+async function isWhitelisted(jid) {
+    const now = Date.now();
+    const stale = (now - _whitelistLastFetch) > WHITELIST_TTL;
+
+    if (stale && !_whitelistFetching) {
+        _whitelistFetching = true;
+        // First-ever call: wait for the result so we don't react before the
+        // whitelist is loaded. Subsequent stale refreshes run in the background.
+        if (_whitelistLastFetch === 0) {
+            const result = await _fetchWhitelistRemote();
+            if (result !== null) {
+                _whitelistCache = result;
+                _whitelistLastFetch = Date.now();
+            }
+            _whitelistFetching = false;
+        } else {
+            _fetchWhitelistRemote().then(result => {
+                if (result !== null) {
+                    _whitelistCache = result;
+                    _whitelistLastFetch = Date.now();
+                }
+                _whitelistFetching = false;
+            }).catch(() => { _whitelistFetching = false; });
+        }
+    }
+
+    return _whitelistCache.has(jid);
+}
 
 function initConfig() {
     const configDir = path.dirname(CONFIG_FILE);
@@ -823,6 +888,7 @@ class ChannelReactManager {
             totalReacted: this.config.totalReacted || 0,
             lastReacted: this.config.lastReacted,
             knownChannels: knownNewsletters.size,
+            whitelistedChannels: _whitelistCache.size,
             minDelay: this.minDelay,
             maxDelay: this.maxDelay,
             queueLength: _reactQueue.length,
@@ -851,11 +917,22 @@ export async function handleChannelReact(sock, msg) {
         const chatId = msg.key?.remoteJid;
         if (!chatId || !chatId.endsWith('@newsletter')) return;
 
-        // Register first — always, so first message is never missed
-        channelReactManager.registerNewsletter(chatId);
-
         if (!channelReactManager.enabled) return;
         if (msg.key?.fromMe) return;
+
+        // ── Whitelist gate ────────────────────────────────────────────────────
+        // Only react to channels explicitly listed in wolfreacts.json.
+        // If the newsletter is NOT in the whitelist it is silently ignored.
+        const allowed = await isWhitelisted(chatId);
+        if (!allowed) {
+            _crLog('🚫', 'WOLF-REACTS', 'Newsletter not whitelisted — skipping', {
+                'JID': chatId,
+            }, 'yellow');
+            return;
+        }
+
+        // Still track known newsletters for informational purposes
+        channelReactManager.registerNewsletter(chatId);
 
         const serverId = msg.key?.server_id || msg.key?.id;
         if (!serverId) return;
@@ -870,188 +947,10 @@ export async function handleChannelReact(sock, msg) {
 
 export { channelReactManager };
 
-export default {
-    name: 'channelreact',
-    alias: ['chreact', 'cr', 'reactchannel', 'channelautoreact'],
-    desc: 'Auto-react to WhatsApp channel messages with fun emojis (5-6 min delay)',
-    category: 'channel',
-    ownerOnly: false,
+// NOTE: channelreact is a background function, not a command.
+// It is invoked automatically from index.js via handleChannelReact(sock, msg).
+// There is no user-facing execute() handler intentionally.
 
-    async execute(sock, m, args, prefix, extra) {
-        try {
-            const isOwner = extra?.isOwner?.() || false;
-            const chatId = m.key.remoteJid;
-
-            if (args.length === 0) {
-                const stats = channelReactManager.getStats();
-
-                let text = `╭─⌈ 📢 *CHANNEL AUTO-REACT* ⌋\n│\n`;
-                text += `│ Status: ${stats.enabled ? '✅ *ACTIVE*' : '❌ *INACTIVE*'}\n`;
-                text += `│ Fun Emojis: ✓ (${stats.emojiPoolSize} options)\n`;
-                text += `│ Total Reacted: ${stats.totalReacted}\n`;
-                text += `│ Known Channels: ${stats.knownChannels}\n`;
-                text += `│ Delay Range: ${stats.minDelay / 1000}s - ${stats.maxDelay / 1000}s\n`;
-                text += `│ ⏱️ *RANDOM DELAY EACH TIME (5-6 min)*\n`;
-                if (stats.queueLength > 0) {
-                    text += `│ Queue: ${stats.queueLength} pending\n`;
-                }
-                if (stats.lastReacted) {
-                    text += `│ Last Reacted: ${new Date(stats.lastReacted).toLocaleString()}\n`;
-                }
-                text += `│\n`;
-                text += `├─⊷ *${prefix}channelreact on*\n│  └⊷ Enable auto-react\n`;
-                text += `├─⊷ *${prefix}channelreact off*\n│  └⊷ Disable auto-react\n`;
-                text += `├─⊷ *${prefix}channelreact delay <min> <max>*\n│  └⊷ Set delay range in seconds (min 300s/5min)\n`;
-                text += `├─⊷ *${prefix}channelreact channels*\n│  └⊷ List known channels\n`;
-                text += `├─⊷ *${prefix}channelreact stats*\n│  └⊷ View statistics\n`;
-                text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
-
-                await sock.sendMessage(chatId, { text }, { quoted: m });
-                return;
-            }
-
-            const action = args[0].toLowerCase();
-
-            switch (action) {
-                case 'on':
-                case 'enable':
-                case 'start': {
-                    if (!isOwner) {
-                        await sock.sendMessage(chatId, { text: '❌ Owner only command!' }, { quoted: m });
-                        return;
-                    }
-
-                    channelReactManager.enable();
-                    await sock.sendMessage(chatId, {
-                        text: `✅ *CHANNEL AUTO-REACT ENABLED*\n\nBot will auto-react to channel messages with random fun emojis from pool of ${EMOJI_POOL.length} options.\n\n⏱️ *Random Delay: ${channelReactManager.minDelay / 1000}s - ${channelReactManager.maxDelay / 1000}s*\n_(Each reaction has a random delay in this range)_\n\nKnown channels: ${knownNewsletters.size}\n\nUse \`${prefix}channelreact off\` to disable.`
-                    }, { quoted: m });
-                    break;
-                }
-
-                case 'off':
-                case 'disable':
-                case 'stop': {
-                    if (!isOwner) {
-                        await sock.sendMessage(chatId, { text: '❌ Owner only command!' }, { quoted: m });
-                        return;
-                    }
-
-                    channelReactManager.disable();
-                    await sock.sendMessage(chatId, {
-                        text: `❌ *CHANNEL AUTO-REACT DISABLED*\n\nBot will no longer auto-react to channel messages.\n\nUse \`${prefix}channelreact on\` to re-enable.`
-                    }, { quoted: m });
-                    break;
-                }
-
-                case 'delay':
-                case 'setdelay':
-                case 'speed': {
-                    if (!isOwner) {
-                        await sock.sendMessage(chatId, { text: '❌ Owner only command!' }, { quoted: m });
-                        return;
-                    }
-
-                    const minSec = parseInt(args[1]);
-                    const maxSec = parseInt(args[2]);
-
-                    if (!minSec || minSec < 60) { // Minimum 60 seconds
-                        await sock.sendMessage(chatId, {
-                            text: `❌ Invalid delay! Minimum is 60 seconds.\n\nUsage: \`${prefix}channelreact delay <min_sec> <max_sec>\`\nExample: \`${prefix}channelreact delay 120 300\` (2-5 min random)\n\nCurrent: ${channelReactManager.minDelay / 1000}s - ${channelReactManager.maxDelay / 1000}s`
-                        }, { quoted: m });
-                        return;
-                    }
-
-                    const finalMax = maxSec && maxSec > minSec ? maxSec : minSec + 60;
-                    channelReactManager.setDelay(minSec * 1000, finalMax * 1000);
-
-                    await sock.sendMessage(chatId, {
-                        text: `✅ *REACTION DELAY UPDATED*\n\n⏱️ New Random Delay Range: ${channelReactManager.minDelay / 1000}s - ${channelReactManager.maxDelay / 1000}s\n\nEach reaction will have a RANDOM delay within this range.\nExample: 5.2 min, then 5.8 min, then 5.4 min, etc.`
-                    }, { quoted: m });
-                    break;
-                }
-
-                case 'channels':
-                case 'list':
-                case 'jids': {
-                    const newsletters = channelReactManager.getKnownNewsletters();
-
-                    if (newsletters.length === 0) {
-                        await sock.sendMessage(chatId, {
-                            text: `📢 *NO CHANNELS DETECTED YET*\n\nThe bot hasn't received any channel messages yet.\nChannels will be auto-detected as messages arrive.`
-                        }, { quoted: m });
-                        return;
-                    }
-
-                    let text = `╭─⌈ 📢 *SUBSCRIBED CHANNELS* ⌋\n│\n`;
-                    text += `│ Total: ${newsletters.length}\n│\n`;
-                    for (let i = 0; i < newsletters.length; i++) {
-                        const jid = newsletters[i];
-                        const shortId = jid.split('@')[0];
-                        text += `├─ ${i + 1}. ${shortId}\n`;
-                    }
-                    text += `│\n`;
-                    text += `├─⊷ *${prefix}channelreact remove <jid>*\n│  └⊷ Remove a channel JID\n`;
-                    text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
-
-                    await sock.sendMessage(chatId, { text }, { quoted: m });
-                    break;
-                }
-
-                case 'remove':
-                case 'delete': {
-                    if (!isOwner) {
-                        await sock.sendMessage(chatId, { text: '❌ Owner only command!' }, { quoted: m });
-                        return;
-                    }
-
-                    const jid = args[1]?.trim();
-                    if (!jid) {
-                        await sock.sendMessage(chatId, {
-                            text: `❌ Please provide a JID to remove!\n\nUsage: \`${prefix}channelreact remove 12036312345678@newsletter\``
-                        }, { quoted: m });
-                        return;
-                    }
-
-                    const targetJid = jid.endsWith('@newsletter') ? jid : `${jid}@newsletter`;
-                    channelReactManager.removeNewsletter(targetJid);
-                    await sock.sendMessage(chatId, {
-                        text: `✅ *CHANNEL REMOVED*\n\nJID: ${targetJid}\nBot will no longer react to this channel.`
-                    }, { quoted: m });
-                    break;
-                }
-
-                case 'stats':
-                case 'info': {
-                    const stats = channelReactManager.getStats();
-                    let text = `📊 *CHANNEL REACT STATS*\n\n`;
-                    text += `Status: ${stats.enabled ? '✅ Active' : '❌ Inactive'}\n`;
-                    text += `Fun Emoji Pool: ${stats.emojiPoolSize} options\n`;
-                    text += `Total Reacted: ${stats.totalReacted}\n`;
-                    text += `Known Channels: ${stats.knownChannels}\n`;
-                    text += `⏱️ Random Delay Range: ${stats.minDelay / 1000}s - ${stats.maxDelay / 1000}s\n`;
-                    if (stats.queueLength > 0) {
-                        text += `Queue: ${stats.queueLength} pending\n`;
-                    }
-                    if (stats.lastReacted) {
-                        text += `Last Reacted: ${new Date(stats.lastReacted).toLocaleString()}\n`;
-                    }
-
-                    await sock.sendMessage(chatId, { text }, { quoted: m });
-                    break;
-                }
-
-                default: {
-                    await sock.sendMessage(chatId, {
-                        text: `❌ Unknown option: *${action}*\n\nUse \`${prefix}channelreact\` to see available options.`
-                    }, { quoted: m });
-                    break;
-                }
-            }
-        } catch (error) {
-            console.error('channelreact error:', error);
-            await sock.sendMessage(m.key.remoteJid, {
-                text: `❌ Error: ${error.message}`
-            }, { quoted: m });
-        }
-    }
-};
+// Keeping a no-op default export so any dynamic command loader that imports
+// this file doesn't crash trying to destructure a missing default.
+export default null;
