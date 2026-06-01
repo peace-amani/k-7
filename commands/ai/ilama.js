@@ -21,7 +21,9 @@ async function uploadImage(buffer) {
             headers: form.getHeaders(), timeout: 25000,
         });
         if (res.data?.includes('http')) return res.data.trim();
-    } catch {}
+    } catch (e) {
+        console.error('[ILAMA] catbox failed:', e.message);
+    }
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
@@ -31,7 +33,9 @@ async function uploadImage(buffer) {
             headers: form.getHeaders(), timeout: 25000,
         });
         if (res.data?.includes('http')) return res.data.trim();
-    } catch {}
+    } catch (e) {
+        console.error('[ILAMA] litterbox failed:', e.message);
+    }
     throw new Error('Image upload failed — try again or use a direct URL');
 }
 
@@ -39,33 +43,29 @@ async function getImageBuffer(m, sock, jid) {
     if (m.message?.imageMessage) {
         return streamToBuffer(await downloadContentFromMessage(m.message.imageMessage, 'image'));
     }
-    const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const ctx = m.message?.extendedTextMessage?.contextInfo;
+    const quoted = ctx?.quotedMessage;
     if (quoted?.imageMessage) {
         return streamToBuffer(await downloadContentFromMessage(quoted.imageMessage, 'image'));
     }
-    if (quoted) {
+    if (quoted && ctx?.stanzaId) {
         try {
             const buf = await downloadMediaMessage(
-                {
-                    key: {
-                        remoteJid: jid,
-                        id: m.message.extendedTextMessage.contextInfo.stanzaId,
-                        participant: m.message.extendedTextMessage.contextInfo.participant
-                    },
-                    message: quoted
-                },
+                { key: { remoteJid: jid, id: ctx.stanzaId, participant: ctx.participant }, message: quoted },
                 'buffer', {},
                 { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
             );
             if (buf && buf.length > 500) return buf;
-        } catch {}
+        } catch (e) {
+            console.error('[ILAMA] downloadMediaMessage failed:', e.message);
+        }
     }
     return null;
 }
 
 export default {
     name: 'ilama',
-    description: 'LLaMA AI — fast inference with optional image analysis',
+    description: 'LLaMA Fast AI — instant responses with optional image analysis',
     category: 'ai',
     aliases: ['llama', 'llamaai', 'llamafast', 'fastllama'],
     usage: 'ilama [question] — optionally reply to an image or include an image URL',
@@ -78,15 +78,14 @@ export default {
 
         let imageUrl    = urlArg || null;
         let imageBuffer = null;
-        let hasImage    = false;
 
-        // Check for image in message or quoted
         if (!imageUrl) {
-            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch {}
-            hasImage = !!(imageBuffer && imageBuffer.length > 500);
-        } else {
-            hasImage = true;
+            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch (e) {
+                console.error('[ILAMA] getImageBuffer error:', e.message);
+            }
         }
+
+        const hasImage = imageUrl || (imageBuffer && imageBuffer.length > 500);
 
         if (!query && !hasImage) {
             return sock.sendMessage(jid, {
@@ -100,27 +99,21 @@ export default {
 
         await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
-        let statusMsg = null;
-        if (hasImage) {
-            statusMsg = await sock.sendMessage(jid, {
-                text: `🦙 *LLaMA Fast*\n⏳ ${imageBuffer ? 'Uploading image...' : 'Processing...'}`
-            }, { quoted: m });
-        }
-
         try {
             const effectiveQuery = query || 'Analyze this image and describe what you see in detail';
 
             if (imageBuffer && !imageUrl) {
-                if (statusMsg) await sock.sendMessage(jid, { text: `🦙 *LLaMA Fast*\n📤 Uploading image...`, edit: statusMsg.key });
+                console.log('[ILAMA] Uploading image buffer...');
                 imageUrl = await uploadImage(imageBuffer);
+                console.log('[ILAMA] Uploaded to:', imageUrl);
             }
 
             const params = { key: API_KEY, q: effectiveQuery };
             if (imageUrl) params.image = imageUrl;
 
-            if (statusMsg) await sock.sendMessage(jid, { text: `🦙 *LLaMA Fast*\n🧠 Thinking...`, edit: statusMsg.key });
-
+            console.log('[ILAMA] Calling llama-fast API, query:', effectiveQuery, imageUrl ? 'with image' : 'text-only');
             const res = await axios.get(LLAMA_FAST, { params, timeout: 45000 });
+            console.log('[ILAMA] API response success:', res.data?.success, 'model:', res.data?.model);
 
             if (!res.data?.success || !res.data?.result) {
                 throw new Error(res.data?.error || 'No result returned from API');
@@ -131,24 +124,17 @@ export default {
 
             const model = res.data.model || 'llama-3.1-8b-instruct';
 
-            const replyText = `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${model}_\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`;
-
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-            if (statusMsg) {
-                await sock.sendMessage(jid, { text: replyText, edit: statusMsg.key });
-            } else {
-                await sock.sendMessage(jid, { text: replyText }, { quoted: m });
-            }
+            await sock.sendMessage(jid, {
+                text: `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${model}_\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`
+            }, { quoted: m });
 
         } catch (err) {
             console.error('[ILAMA] Error:', err.message);
             await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-            const errText = `❌ *LLaMA Fast Error*\n\n${err.message}\n\nPlease try again later.`;
-            if (statusMsg) {
-                await sock.sendMessage(jid, { text: errText, edit: statusMsg.key });
-            } else {
-                await sock.sendMessage(jid, { text: errText }, { quoted: m });
-            }
+            await sock.sendMessage(jid, {
+                text: `❌ *LLaMA Fast Error*\n\n${err.message}\n\nPlease try again later.`
+            }, { quoted: m });
         }
     }
 };

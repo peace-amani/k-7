@@ -13,7 +13,6 @@ async function streamToBuffer(stream) {
 
 async function uploadImage(buffer) {
     const FormData = (await import('form-data')).default;
-    // Try catbox first
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
@@ -22,8 +21,9 @@ async function uploadImage(buffer) {
             headers: form.getHeaders(), timeout: 25000,
         });
         if (res.data?.includes('http')) return res.data.trim();
-    } catch {}
-    // Fallback: litterbox (24h temp)
+    } catch (e) {
+        console.error('[VISION] catbox failed:', e.message);
+    }
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
@@ -33,7 +33,9 @@ async function uploadImage(buffer) {
             headers: form.getHeaders(), timeout: 25000,
         });
         if (res.data?.includes('http')) return res.data.trim();
-    } catch {}
+    } catch (e) {
+        console.error('[VISION] litterbox failed:', e.message);
+    }
     throw new Error('Image upload failed — try again or use a direct URL');
 }
 
@@ -41,26 +43,22 @@ async function getImageBuffer(m, sock, jid) {
     if (m.message?.imageMessage) {
         return streamToBuffer(await downloadContentFromMessage(m.message.imageMessage, 'image'));
     }
-    const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const ctx = m.message?.extendedTextMessage?.contextInfo;
+    const quoted = ctx?.quotedMessage;
     if (quoted?.imageMessage) {
         return streamToBuffer(await downloadContentFromMessage(quoted.imageMessage, 'image'));
     }
-    if (quoted) {
+    if (quoted && ctx?.stanzaId) {
         try {
             const buf = await downloadMediaMessage(
-                {
-                    key: {
-                        remoteJid: jid,
-                        id: m.message.extendedTextMessage.contextInfo.stanzaId,
-                        participant: m.message.extendedTextMessage.contextInfo.participant
-                    },
-                    message: quoted
-                },
+                { key: { remoteJid: jid, id: ctx.stanzaId, participant: ctx.participant }, message: quoted },
                 'buffer', {},
                 { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
             );
             if (buf && buf.length > 500) return buf;
-        } catch {}
+        } catch (e) {
+            console.error('[VISION] downloadMediaMessage failed:', e.message);
+        }
     }
     return null;
 }
@@ -83,7 +81,9 @@ export default {
         let imageBuffer = null;
 
         if (!imageUrl) {
-            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch {}
+            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch (e) {
+                console.error('[VISION] getImageBuffer error:', e.message);
+            }
         }
 
         if (!imageUrl && (!imageBuffer || imageBuffer.length < 500)) {
@@ -97,23 +97,21 @@ export default {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, { react: { text: '🔍', key: m.key } });
-        const status = await sock.sendMessage(jid, {
-            text: `👁️ *NVIDIA Vision AI*\n⏳ ${imageBuffer ? 'Uploading image...' : 'Analyzing image from URL...'}`
-        }, { quoted: m });
+        await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
         try {
             if (imageBuffer && !imageUrl) {
-                await sock.sendMessage(jid, { text: `👁️ *NVIDIA Vision AI*\n📤 Uploading image...`, edit: status.key });
+                console.log('[VISION] Uploading image buffer...');
                 imageUrl = await uploadImage(imageBuffer);
+                console.log('[VISION] Uploaded to:', imageUrl);
             }
 
-            await sock.sendMessage(jid, { text: `👁️ *NVIDIA Vision AI*\n🧠 Analyzing...`, edit: status.key });
-
+            console.log('[VISION] Calling NVIDIA vision API, query:', query, 'image:', imageUrl);
             const res = await axios.get(NVIDIA_VISION, {
                 params: { key: API_KEY, q: query, image: imageUrl },
                 timeout: 45000
             });
+            console.log('[VISION] API response success:', res.data?.success, 'model:', res.data?.model);
 
             if (!res.data?.success || !res.data?.result) {
                 throw new Error(res.data?.error || 'No result returned from API');
@@ -122,24 +120,22 @@ export default {
             const result = res.data.result.trim();
             const model  = res.data.model || 'llama-3.2-11b-vision-instruct';
 
+            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
                 text: `👁️ *NVIDIA VISION AI*\n━━━━━━━━━━━━━━━━━\n` +
                       `💭 *Query:* ${query}\n\n` +
                       `📋 *Analysis:*\n${result}\n` +
                       `━━━━━━━━━━━━━━━━━\n` +
                       `🤖 _${model}_\n` +
-                      `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`,
-                edit: status.key
-            });
-            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+                      `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`
+            }, { quoted: m });
 
         } catch (err) {
             console.error('[VISION] Error:', err.message);
-            await sock.sendMessage(jid, {
-                text: `❌ *Vision AI Error*\n\n${err.message}\n\n💡 Try a different image or URL.`,
-                edit: status.key
-            });
             await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+            await sock.sendMessage(jid, {
+                text: `❌ *Vision AI Error*\n\n${err.message}\n\n💡 Try a different image or URL.`
+            }, { quoted: m });
         }
     }
 };
