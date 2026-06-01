@@ -280,7 +280,11 @@ export default {
         return;
       }
 
-      const isAnimated = stickerMessage.isAnimated || false;
+      // isAnimated from the message is unreliable (iOS & 3rd-party apps leave it false)
+      // Check the actual file bytes: animated WebPs always contain ANIM / ANMF chunks
+      const isAnimated = !!(stickerMessage.isAnimated)
+        || stickerBuffer.includes(Buffer.from('ANIM'))
+        || stickerBuffer.includes(Buffer.from('ANMF'));
       const tmpDir = path.join(process.cwd(), 'tmp');
       if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
