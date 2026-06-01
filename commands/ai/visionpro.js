@@ -2,7 +2,7 @@ import axios from 'axios';
 import { downloadContentFromMessage, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const LLAMA_FAST = 'https://apis.xwolf.space/api/nvidia/llama-fast';
+const NVIDIA_VISION_PRO = 'https://apis.xwolf.space/api/nvidia/vision-pro';
 const API_KEY = process.env.XWOLF_NVIDIA_KEY || 'wxa_u_f5wfr2vez6';
 
 async function streamToBuffer(stream) {
@@ -13,6 +13,7 @@ async function streamToBuffer(stream) {
 
 async function uploadImage(buffer) {
     const FormData = (await import('form-data')).default;
+    // Try catbox first
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
@@ -22,6 +23,7 @@ async function uploadImage(buffer) {
         });
         if (res.data?.includes('http')) return res.data.trim();
     } catch {}
+    // Fallback: litterbox (24h temp)
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
@@ -64,91 +66,81 @@ async function getImageBuffer(m, sock, jid) {
 }
 
 export default {
-    name: 'ilama',
-    description: 'LLaMA AI — fast inference with optional image analysis',
+    name: 'visionpro',
+    description: 'Analyze images with NVIDIA Llama 3.2 Vision PRO (90B) — deeper, more detailed analysis',
     category: 'ai',
-    aliases: ['llama', 'llamaai', 'llamafast', 'fastllama'],
-    usage: 'ilama [question] — optionally reply to an image or include an image URL',
+    aliases: ['vpro', 'imgpro', 'nvisionpro', 'visualpro', 'analyzepro'],
+    usage: 'visionpro [question] — reply to image or pass URL as argument',
 
     async execute(sock, m, args, PREFIX) {
         const jid = m.key.remoteJid;
 
         const urlArg = args.find(a => /^https?:\/\//i.test(a));
-        const query  = args.filter(a => !/^https?:\/\//i.test(a)).join(' ').trim();
+        const query  = args.filter(a => !/^https?:\/\//i.test(a)).join(' ').trim()
+                    || 'Analyze this image and describe what you see in great detail';
 
         let imageUrl    = urlArg || null;
         let imageBuffer = null;
-        let hasImage    = false;
 
-        // Check for image in message or quoted
         if (!imageUrl) {
             try { imageBuffer = await getImageBuffer(m, sock, jid); } catch {}
-            hasImage = !!(imageBuffer && imageBuffer.length > 500);
-        } else {
-            hasImage = true;
         }
 
-        if (!query && !hasImage) {
+        if (!imageUrl && (!imageBuffer || imageBuffer.length < 500)) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🦙 *LLAMA FAST AI* ⌋\n│\n` +
-                      `├─⊷ *Text chat:*\n│  └⊷ \`${PREFIX}ilama <question>\`\n│\n` +
-                      `├─⊷ *Image analysis:*\n│  └⊷ Reply to image + \`${PREFIX}ilama [question]\`\n│  └⊷ \`${PREFIX}ilama https://image.url [question]\`\n│\n` +
-                      `├─⊷ *Model:* Llama 3.1 8B Instruct (Fast)\n│\n` +
+                text: `╭─⌈ 🔬 *NVIDIA VISION PRO* ⌋\n│\n` +
+                      `├─⊷ *Reply to image:*\n│  └⊷ \`${PREFIX}visionpro\`\n│\n` +
+                      `├─⊷ *Use a URL:*\n│  └⊷ \`${PREFIX}visionpro https://image.url\`\n│\n` +
+                      `├─⊷ *Ask a question:*\n│  └⊷ \`${PREFIX}visionpro read the text in this image\`\n│\n` +
+                      `├─⊷ *Model:* Llama 3.2 90B Vision Instruct\n` +
+                      `├─⊷ *vs vision:* 8× more parameters, deeper reasoning\n│\n` +
                       `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
-
-        let statusMsg = null;
-        if (hasImage) {
-            statusMsg = await sock.sendMessage(jid, {
-                text: `🦙 *LLaMA Fast*\n⏳ ${imageBuffer ? 'Uploading image...' : 'Processing...'}`
-            }, { quoted: m });
-        }
+        await sock.sendMessage(jid, { react: { text: '🔬', key: m.key } });
+        const status = await sock.sendMessage(jid, {
+            text: `🔬 *NVIDIA Vision PRO (90B)*\n⏳ ${imageBuffer ? 'Uploading image...' : 'Fetching image URL...'}`
+        }, { quoted: m });
 
         try {
-            const effectiveQuery = query || 'Analyze this image and describe what you see in detail';
-
             if (imageBuffer && !imageUrl) {
-                if (statusMsg) await sock.sendMessage(jid, { text: `🦙 *LLaMA Fast*\n📤 Uploading image...`, edit: statusMsg.key });
+                await sock.sendMessage(jid, { text: `🔬 *NVIDIA Vision PRO (90B)*\n📤 Uploading image...`, edit: status.key });
                 imageUrl = await uploadImage(imageBuffer);
             }
 
-            const params = { key: API_KEY, q: effectiveQuery };
-            if (imageUrl) params.image = imageUrl;
+            await sock.sendMessage(jid, { text: `🔬 *NVIDIA Vision PRO (90B)*\n🧠 Deep analysis running...`, edit: status.key });
 
-            if (statusMsg) await sock.sendMessage(jid, { text: `🦙 *LLaMA Fast*\n🧠 Thinking...`, edit: statusMsg.key });
-
-            const res = await axios.get(LLAMA_FAST, { params, timeout: 45000 });
+            const res = await axios.get(NVIDIA_VISION_PRO, {
+                params: { key: API_KEY, q: query, image: imageUrl },
+                timeout: 60000
+            });
 
             if (!res.data?.success || !res.data?.result) {
                 throw new Error(res.data?.error || 'No result returned from API');
             }
 
-            let reply = res.data.result.trim();
-            if (reply.length > 4000) reply = reply.substring(0, 4000) + '\n\n_...(truncated)_';
+            const result = res.data.result.trim();
+            const model  = res.data.model || 'llama-3.2-90b-vision-instruct';
 
-            const model = res.data.model || 'llama-3.1-8b-instruct';
-
-            const replyText = `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${model}_\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`;
-
+            await sock.sendMessage(jid, {
+                text: `🔬 *NVIDIA VISION PRO*\n━━━━━━━━━━━━━━━━━\n` +
+                      `💭 *Query:* ${query}\n\n` +
+                      `📋 *Analysis:*\n${result}\n` +
+                      `━━━━━━━━━━━━━━━━━\n` +
+                      `🤖 _${model}_\n` +
+                      `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`,
+                edit: status.key
+            });
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-            if (statusMsg) {
-                await sock.sendMessage(jid, { text: replyText, edit: statusMsg.key });
-            } else {
-                await sock.sendMessage(jid, { text: replyText }, { quoted: m });
-            }
 
         } catch (err) {
-            console.error('[ILAMA] Error:', err.message);
+            console.error('[VISIONPRO] Error:', err.message);
+            await sock.sendMessage(jid, {
+                text: `❌ *Vision PRO Error*\n\n${err.message}\n\n💡 Try a different image or URL.`,
+                edit: status.key
+            });
             await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-            const errText = `❌ *LLaMA Fast Error*\n\n${err.message}\n\nPlease try again later.`;
-            if (statusMsg) {
-                await sock.sendMessage(jid, { text: errText, edit: statusMsg.key });
-            } else {
-                await sock.sendMessage(jid, { text: errText }, { quoted: m });
-            }
         }
     }
 };

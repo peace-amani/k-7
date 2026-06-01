@@ -1,420 +1,145 @@
-// import axios from "axios";
-// import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import axios from 'axios';
+import { downloadContentFromMessage, downloadMediaMessage } from '@whiskeysockets/baileys';
+import { getOwnerName } from '../../lib/menuHelper.js';
 
-// export default {
-//   name: "vision",
-//   description: "Analyze image with AI vision",
-//   category: "ai",
-//   aliases: ["analyzeimage", "imgvision", "gemini", "imageai"],
-  
-//   async execute(sock, m, args, PREFIX, extra) {
-//     const jid = m.key.remoteJid;
-    
-//     try {
-//       // Check if message is a reply to an image
-//       const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-//       if (!quoted?.imageMessage) {
-//         return sock.sendMessage(
-//           jid,
-//           {
-//             text: `👁️ *AI Vision Analysis*\n\n` +
-//                   `Reply to an image with a query to analyze it.\n\n` +
-//                   `💡 *Examples:*\n` +
-//                   `• ${PREFIX}vision What is in this image?\n` +
-//                   `• ${PREFIX}vision Describe this photo\n` +
-//                   `• ${PREFIX}vision Read any text in this image\n` +
-//                   `• ${PREFIX}vision What objects can you see?`
-//           },
-//           { quoted: m }
-//         );
-//       }
+const NVIDIA_VISION = 'https://apis.xwolf.space/api/nvidia/vision';
+const API_KEY = process.env.XWOLF_NVIDIA_KEY || 'wxa_u_f5wfr2vez6';
 
-//       // Get query from args
-//       const query = args.join(" ");
-//       if (!query) {
-//         return sock.sendMessage(
-//           jid,
-//           {
-//             text: `❌ *Query Required*\n\n` +
-//                   `Please provide a question about the image.\n\n` +
-//                   `📝 *Examples:*\n` +
-//                   `• ${PREFIX}vision What is this?\n` +
-//                   `• ${PREFIX}vision Describe the scene\n` +
-//                   `• ${PREFIX}vision Identify objects\n\n` +
-//                   `💡 *Tip:* Be specific for better analysis`
-//           },
-//           { quoted: m }
-//         );
-//       }
+async function streamToBuffer(stream) {
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    return Buffer.concat(chunks);
+}
 
-//       // Send initial processing message
-//       const processingMsg = await sock.sendMessage(
-//         jid,
-//         { text: "⏳ *Downloading image from WhatsApp...*" },
-//         { quoted: m }
-//       );
+async function uploadImage(buffer) {
+    const FormData = (await import('form-data')).default;
+    // Try catbox first
+    try {
+        const form = new FormData();
+        form.append('reqtype', 'fileupload');
+        form.append('fileToUpload', buffer, { filename: `wolf_${Date.now()}.jpg`, contentType: 'image/jpeg' });
+        const res = await axios.post('https://catbox.moe/user/api.php', form, {
+            headers: form.getHeaders(), timeout: 25000,
+        });
+        if (res.data?.includes('http')) return res.data.trim();
+    } catch {}
+    // Fallback: litterbox (24h temp)
+    try {
+        const form = new FormData();
+        form.append('reqtype', 'fileupload');
+        form.append('time', '24h');
+        form.append('fileToUpload', buffer, { filename: `wolf_${Date.now()}.jpg`, contentType: 'image/jpeg' });
+        const res = await axios.post('https://litterbox.catbox.moe/resources/internals/api.php', form, {
+            headers: form.getHeaders(), timeout: 25000,
+        });
+        if (res.data?.includes('http')) return res.data.trim();
+    } catch {}
+    throw new Error('Image upload failed — try again or use a direct URL');
+}
 
-//       // Download image from WhatsApp
-//       let imageBuffer;
-//       try {
-//         console.log("📥 Downloading image for vision analysis...");
-        
-//         // Create message object for download
-//         const messageObj = {
-//           key: m.key,
-//           message: { ...quoted }
-//         };
-        
-//         imageBuffer = await downloadMediaMessage(
-//           messageObj,
-//           "buffer",
-//           {},
-//           { 
-//             reuploadRequest: sock.updateMediaMessage,
-//             logger: console
-//           }
-//         );
+async function getImageBuffer(m, sock, jid) {
+    if (m.message?.imageMessage) {
+        return streamToBuffer(await downloadContentFromMessage(m.message.imageMessage, 'image'));
+    }
+    const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (quoted?.imageMessage) {
+        return streamToBuffer(await downloadContentFromMessage(quoted.imageMessage, 'image'));
+    }
+    if (quoted) {
+        try {
+            const buf = await downloadMediaMessage(
+                {
+                    key: {
+                        remoteJid: jid,
+                        id: m.message.extendedTextMessage.contextInfo.stanzaId,
+                        participant: m.message.extendedTextMessage.contextInfo.participant
+                    },
+                    message: quoted
+                },
+                'buffer', {},
+                { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
+            );
+            if (buf && buf.length > 500) return buf;
+        } catch {}
+    }
+    return null;
+}
 
-//         if (!imageBuffer || imageBuffer.length === 0) {
-//           throw new Error("Received empty image buffer");
-//         }
+export default {
+    name: 'vision',
+    description: 'Analyze images with NVIDIA Llama 3.2 Vision (11B)',
+    category: 'ai',
+    aliases: ['imgai', 'describe', 'whatisthis', 'imageai', 'nvision', 'visualai'],
+    usage: 'vision [question] — reply to image or pass URL as argument',
 
-//         console.log(`✅ Downloaded ${imageBuffer.length} bytes for vision analysis`);
+    async execute(sock, m, args, PREFIX) {
+        const jid = m.key.remoteJid;
 
-//       } catch (err) {
-//         console.error("❌ Vision Download Error:", err.message);
-//         return sock.sendMessage(
-//           jid,
-//           { 
-//             text: "❌ *Failed to download image*\n\n" +
-//                   "Possible reasons:\n" +
-//                   "• Image might be too old\n" +
-//                   "• Media encryption issue\n" +
-//                   "• Try sending the image again\n\n" +
-//                   "💡 *Tip:* Send a fresh image for best results"
-//           },
-//           { quoted: m }
-//         );
-//       }
+        const urlArg = args.find(a => /^https?:\/\//i.test(a));
+        const query  = args.filter(a => !/^https?:\/\//i.test(a)).join(' ').trim()
+                    || 'Analyze this image and describe what you see in detail';
 
-//       // Check file size
-//       const fileSizeMB = imageBuffer.length / (1024 * 1024);
-//       if (fileSizeMB > 5) { // Lower limit for API compatibility
-//         return sock.sendMessage(
-//           jid,
-//           { 
-//             text: `❌ *File Too Large*\n\n` +
-//                   `Size: ${fileSizeMB.toFixed(2)} MB\n` +
-//                   `Limit: 5 MB\n\n` +
-//                   `💡 *Solution:*\n` +
-//                   `• Compress the image\n` +
-//                   `• Use smaller image\n` +
-//                   `• Crop if necessary`
-//           },
-//           { quoted: m }
-//         );
-//       }
+        let imageUrl    = urlArg || null;
+        let imageBuffer = null;
 
-//       // Convert to base64
-//       const base64Image = imageBuffer.toString('base64');
-//       console.log(`✅ Image converted to base64: ${base64Image.length} chars`);
+        if (!imageUrl) {
+            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch {}
+        }
 
-//       // Update status
-//       await sock.sendMessage(
-//         jid,
-//         {
-//           text: `🤖 *Processing with AI Vision...*\n` +
-//                 `Analyzing: "${query}"\n` +
-//                 `Please wait...`,
-//           edit: processingMsg.key
-//         }
-//       );
+        if (!imageUrl && (!imageBuffer || imageBuffer.length < 500)) {
+            return sock.sendMessage(jid, {
+                text: `╭─⌈ 👁️ *NVIDIA VISION AI* ⌋\n│\n` +
+                      `├─⊷ *Reply to image:*\n│  └⊷ \`${PREFIX}vision\`\n│\n` +
+                      `├─⊷ *Use a URL:*\n│  └⊷ \`${PREFIX}vision https://image.url\`\n│\n` +
+                      `├─⊷ *Ask a question:*\n│  └⊷ \`${PREFIX}vision what breed is this dog?\`\n│\n` +
+                      `├─⊷ *Model:* Llama 3.2 11B Vision Instruct\n│\n` +
+                      `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            }, { quoted: m });
+        }
 
-//       // Call Vision API - Try multiple endpoints
-//       console.log(`🔗 Calling Vision API for query: "${query}"`);
-      
-//       let analysisResult = '';
-//       let apiUsed = '';
-      
-//       // Try multiple API endpoints
-//       const apiEndpoints = [
-//         {
-//           name: 'Keith Vision API',
-//           method: 'GET',
-//           url: 'https://apiskeith.vercel.app/ai/geminivision',
-//           params: { q: query, image: base64Image }
-//         },
-//         {
-//           name: 'Keith Gemini Vision',
-//           method: 'GET',
-//           url: 'https://apiskeith.vercel.app/ai/gemini-vision',
-//           params: { q: query }
-//         },
-//         {
-//           name: 'Keith Vision 2',
-//           method: 'POST',
-//           url: 'https://apiskeith.vercel.app/ai/vision',
-//           data: { image: base64Image, query: query }
-//         },
-//         {
-//           name: 'Keith Image Analysis',
-//           method: 'GET',
-//           url: 'https://apiskeith.vercel.app/ai/analyze-image',
-//           params: { q: query }
-//         },
-//         {
-//           name: 'Gemini Proxy API',
-//           method: 'POST',
-//           url: 'https://gemini-proxy-production.up.railway.app/analyze',
-//           data: { image: base64Image, prompt: query }
-//         }
-//       ];
+        await sock.sendMessage(jid, { react: { text: '🔍', key: m.key } });
+        const status = await sock.sendMessage(jid, {
+            text: `👁️ *NVIDIA Vision AI*\n⏳ ${imageBuffer ? 'Uploading image...' : 'Analyzing image from URL...'}`
+        }, { quoted: m });
 
-//       // First, upload image to get URL for endpoints that need URL
-//       const uploadedUrl = await uploadImageForAnalysis(imageBuffer);
-      
-//       if (uploadedUrl) {
-//         // Add URL-based endpoints
-//         apiEndpoints.push(
-//           {
-//             name: 'Keith Vision URL',
-//             method: 'GET',
-//             url: 'https://apiskeith.vercel.app/ai/geminivision',
-//             params: { q: query, url: uploadedUrl }
-//           },
-//           {
-//             name: 'Keith Image URL',
-//             method: 'GET',
-//             url: 'https://apiskeith.vercel.app/ai/analyze-image',
-//             params: { url: uploadedUrl, query: query }
-//           }
-//         );
-//       }
+        try {
+            if (imageBuffer && !imageUrl) {
+                await sock.sendMessage(jid, { text: `👁️ *NVIDIA Vision AI*\n📤 Uploading image...`, edit: status.key });
+                imageUrl = await uploadImage(imageBuffer);
+            }
 
-//       for (const endpoint of apiEndpoints) {
-//         try {
-//           console.log(`Trying ${endpoint.name}...`);
-          
-//           let response;
-//           if (endpoint.method === 'GET') {
-//             response = await axios({
-//               method: 'GET',
-//               url: endpoint.url,
-//               params: endpoint.params,
-//               timeout: 30000,
-//               headers: {
-//                 'Accept': 'application/json',
-//                 'User-Agent': 'WhatsApp-Bot/1.0'
-//               }
-//             });
-//           } else {
-//             response = await axios({
-//               method: 'POST',
-//               url: endpoint.url,
-//               data: endpoint.data,
-//               timeout: 30000,
-//               headers: {
-//                 'Content-Type': 'application/json',
-//                 'Accept': 'application/json',
-//                 'User-Agent': 'WhatsApp-Bot/1.0'
-//               }
-//             });
-//           }
-          
-//           console.log(`${endpoint.name} response: ${response.status}`);
-          
-//           if (response.data) {
-//             const result = extractVisionResponse(response.data);
-//             if (result && result.trim() !== '') {
-//               analysisResult = result;
-//               apiUsed = endpoint.name;
-//               break;
-//             }
-//           }
-          
-//         } catch (apiErr) {
-//           console.log(`${endpoint.name} failed: ${apiErr.message}`);
-//           continue;
-//         }
-//       }
-      
-//       if (!analysisResult || analysisResult.trim() === '') {
-//         // Try a direct call to Keith's general AI with image context
-//         try {
-//           await sock.sendMessage(
-//             jid,
-//             {
-//               text: `🔄 *Using alternative method...*`,
-//               edit: processingMsg.key
-//             }
-//           );
-          
-//           // Create a prompt with image context
-//           const enhancedQuery = `Analyze this image and answer: ${query}. The image has been uploaded and is available for analysis.`;
-          
-//           const fallbackResponse = await axios.get(
-//             `https://apiskeith.vercel.app/ai/blackbox?q=${encodeURIComponent(enhancedQuery)}`,
-//             { timeout: 30000 }
-//           );
-          
-//           if (fallbackResponse.data?.status === true && fallbackResponse.data?.result) {
-//             analysisResult = fallbackResponse.data.result;
-//             apiUsed = 'Keith Blackbox (Fallback)';
-//           }
-//         } catch (fallbackErr) {
-//           throw new Error('All vision APIs failed');
-//         }
-//       }
-      
-//       if (!analysisResult || analysisResult.trim() === '') {
-//         throw new Error('No analysis received from AI');
-//       }
+            await sock.sendMessage(jid, { text: `👁️ *NVIDIA Vision AI*\n🧠 Analyzing...`, edit: status.key });
 
-//       console.log(`✅ Vision analysis completed via ${apiUsed}: ${analysisResult.length} chars`);
-      
-//       // Format the response
-//       analysisResult = analysisResult.trim();
-      
-//       // Truncate if too long for WhatsApp
-//       if (analysisResult.length > 2500) {
-//         analysisResult = analysisResult.substring(0, 2500) + '\n\n... (analysis truncated)';
-//       }
+            const res = await axios.get(NVIDIA_VISION, {
+                params: { key: API_KEY, q: query, image: imageUrl },
+                timeout: 45000
+            });
 
-//       // Update status
-//       await sock.sendMessage(
-//         jid,
-//         {
-//           text: `✅ *Analysis complete!*\n` +
-//                 `📤 *Sending results...*`,
-//           edit: processingMsg.key
-//         }
-//       );
+            if (!res.data?.success || !res.data?.result) {
+                throw new Error(res.data?.error || 'No result returned from API');
+            }
 
-//       // Format final message
-//       const resultText = `👁️ *AI VISION ANALYSIS*\n\n` +
-//                          `📷 *Image Analysis Request:*\n"${query}"\n\n` +
-//                          `🤖 *AI Analysis:*\n${analysisResult}\n\n` +
-//                          `🔧 *API Used:* ${apiUsed}\n` +
-//                          `⚡ *Powered by AI Vision*`;
+            const result = res.data.result.trim();
+            const model  = res.data.model || 'llama-3.2-11b-vision-instruct';
 
-//       // Send the analysis
-//       await sock.sendMessage(
-//         jid,
-//         { text: resultText },
-//         { quoted: m }
-//       );
+            await sock.sendMessage(jid, {
+                text: `👁️ *NVIDIA VISION AI*\n━━━━━━━━━━━━━━━━━\n` +
+                      `💭 *Query:* ${query}\n\n` +
+                      `📋 *Analysis:*\n${result}\n` +
+                      `━━━━━━━━━━━━━━━━━\n` +
+                      `🤖 _${model}_\n` +
+                      `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`,
+                edit: status.key
+            });
+            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
-//       // Final success message
-//       await sock.sendMessage(
-//         jid,
-//         {
-//           text: `🎉 *Vision analysis complete!*\n\n` +
-//                 `✅ Image analyzed successfully\n` +
-//                 `📊 Analysis sent above\n` +
-//                 `🔧 Method: ${apiUsed}`,
-//           edit: processingMsg.key
-//         }
-//       );
-
-//     } catch (error) {
-//       console.error('❌ [Vision] ERROR:', error);
-      
-//       let errorMessage = '❌ *Vision analysis failed*\n\n';
-      
-//       if (error.message?.includes('404')) {
-//         errorMessage += '• Vision API endpoint not found\n';
-//         errorMessage += '• Service may be temporarily down\n';
-//       } else if (error.message?.includes('All vision APIs')) {
-//         errorMessage += '• All vision services are unavailable\n';
-//         errorMessage += '• Try again later\n';
-//         errorMessage += '• Or use text-based AI instead\n';
-//       } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-//         errorMessage += '• API services are unavailable\n';
-//         errorMessage += '• Check your internet connection\n';
-//       } else if (error.code === 'ETIMEDOUT') {
-//         errorMessage += '• Request timed out (30s)\n';
-//         errorMessage += '• Try simpler query\n';
-//       } else if (error.message) {
-//         errorMessage += `• ${error.message}\n`;
-//       }
-      
-//       errorMessage += '\n💡 *Temporary workaround:*\n';
-//       errorMessage += `• Use ${PREFIX}blackbox for text analysis\n`;
-//       errorMessage += `• Use ${PREFIX}chatgpt for general questions\n`;
-//       errorMessage += `• Vision service may return soon\n\n`;
-//       errorMessage += `🔄 *Try vision again later:* Reply to image with ${PREFIX}vision your_question`;
-
-//       await sock.sendMessage(
-//         jid,
-//         { text: errorMessage },
-//         { quoted: m }
-//       );
-//     }
-//   }
-// };
-
-// // Helper function to extract vision response
-// function extractVisionResponse(obj) {
-//   if (!obj) return '';
-  
-//   // Prioritize common response fields
-//   const priorityFields = ['result', 'response', 'answer', 'text', 'analysis', 'description', 'message', 'content', 'output'];
-  
-//   for (const field of priorityFields) {
-//     if (obj[field] && typeof obj[field] === 'string') {
-//       return obj[field];
-//     }
-//   }
-  
-//   // Check for Keith API structure
-//   if (obj.status === true && obj.result) {
-//     return obj.result;
-//   }
-  
-//   // If no string field found, try to extract from nested objects
-//   if (obj.data) {
-//     return extractVisionResponse(obj.data);
-//   }
-  
-//   // If array with items, join them
-//   if (Array.isArray(obj) && obj.length > 0) {
-//     return obj.map(item => 
-//       typeof item === 'string' ? item : JSON.stringify(item)
-//     ).join('\n');
-//   }
-  
-//   // Last resort: stringify with limit
-//   return JSON.stringify(obj, null, 2).substring(0, 1500);
-// }
-
-// // Helper function to upload image for analysis
-// async function uploadImageForAnalysis(buffer) {
-//   try {
-//     // Use ptpimg.me (quick and easy)
-//     const base64 = buffer.toString('base64');
-//     const formData = new URLSearchParams();
-//     formData.append("file-upload[0]", base64);
-    
-//     const response = await axios.post(
-//       "https://ptpimg.me/upload.php",
-//       formData.toString(),
-//       {
-//         headers: { 
-//           "Content-Type": "application/x-www-form-urlencoded",
-//           "Accept": "application/json"
-//         },
-//         timeout: 15000
-//       }
-//     );
-    
-//     if (response.data && Array.isArray(response.data) && response.data[0]?.code) {
-//       return `https://ptpimg.me/${response.data[0].code}.${response.data[0].ext}`;
-//     }
-    
-//     return null;
-    
-//   } catch (error) {
-//     console.error("Image upload for analysis failed:", error.message);
-//     return null;
-//   }
-// }
+        } catch (err) {
+            console.error('[VISION] Error:', err.message);
+            await sock.sendMessage(jid, {
+                text: `❌ *Vision AI Error*\n\n${err.message}\n\n💡 Try a different image or URL.`,
+                edit: status.key
+            });
+            await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+        }
+    }
+};
