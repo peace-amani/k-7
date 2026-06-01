@@ -88,13 +88,7 @@ export default {
 
         if (!imageUrl && (!imageBuffer || imageBuffer.length < 500)) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🔬 *NVIDIA VISION PRO* ⌋\n│\n` +
-                      `├─⊷ *Reply to image:*\n│  └⊷ \`${PREFIX}visionpro\`\n│\n` +
-                      `├─⊷ *Use a URL:*\n│  └⊷ \`${PREFIX}visionpro https://image.url\`\n│\n` +
-                      `├─⊷ *Ask a question:*\n│  └⊷ \`${PREFIX}visionpro read the text in this image\`\n│\n` +
-                      `├─⊷ *Model:* Llama 3.2 90B Vision Instruct\n` +
-                      `├─⊷ *vs vision:* 8× more parameters, deeper reasoning\n│\n` +
-                      `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔬 *VISION PRO AI* ⌋\n├─⊷ *${PREFIX}visionpro <question>*\n│  └⊷ Reply to an image or add a URL\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
         }
 

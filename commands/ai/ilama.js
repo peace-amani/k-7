@@ -89,11 +89,7 @@ export default {
 
         if (!query && !hasImage) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🦙 *LLAMA FAST AI* ⌋\n│\n` +
-                      `├─⊷ *Text chat:*\n│  └⊷ \`${PREFIX}ilama <question>\`\n│\n` +
-                      `├─⊷ *Image analysis:*\n│  └⊷ Reply to image + \`${PREFIX}ilama [question]\`\n│  └⊷ \`${PREFIX}ilama https://image.url [question]\`\n│\n` +
-                      `├─⊷ *Model:* Llama 3.1 8B Instruct (Fast)\n│\n` +
-                      `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🦙 *LLAMA FAST AI* ⌋\n├─⊷ *${PREFIX}ilama <question>*\n│  └⊷ Fast LLaMA AI — reply to image or ask anything\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
             }, { quoted: m });
         }
 
