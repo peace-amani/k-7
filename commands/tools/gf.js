@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createCanvas, loadImage, Image } from 'canvas';
+import { createCanvas, loadImage, Image } from '../../lib/canvasWrapper.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
 export default {
