@@ -1,135 +1,62 @@
-import axios from 'axios';
-import { downloadContentFromMessage, downloadMediaMessage } from '@whiskeysockets/baileys';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import { vision } from '../../lib/nvidia.js';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-const NVIDIA_VISION_PRO = 'https://apis.xwolf.space/api/nvidia/vision-pro';
-const API_KEY = process.env.XWOLF_NVIDIA_KEY || 'wxa_u_f5wfr2vez6';
-
-async function streamToBuffer(stream) {
-    const chunks = [];
-    for await (const chunk of stream) chunks.push(chunk);
-    return Buffer.concat(chunks);
-}
-
-async function uploadImage(buffer) {
-    const FormData = (await import('form-data')).default;
-    try {
-        const form = new FormData();
-        form.append('reqtype', 'fileupload');
-        form.append('fileToUpload', buffer, { filename: `wolf_${Date.now()}.jpg`, contentType: 'image/jpeg' });
-        const res = await axios.post('https://catbox.moe/user/api.php', form, {
-            headers: form.getHeaders(), timeout: 25000,
-        });
-        if (res.data?.includes('http')) return res.data.trim();
-    } catch (e) {
-        console.error('[VISIONPRO] catbox failed:', e.message);
-    }
-    try {
-        const form = new FormData();
-        form.append('reqtype', 'fileupload');
-        form.append('time', '24h');
-        form.append('fileToUpload', buffer, { filename: `wolf_${Date.now()}.jpg`, contentType: 'image/jpeg' });
-        const res = await axios.post('https://litterbox.catbox.moe/resources/internals/api.php', form, {
-            headers: form.getHeaders(), timeout: 25000,
-        });
-        if (res.data?.includes('http')) return res.data.trim();
-    } catch (e) {
-        console.error('[VISIONPRO] litterbox failed:', e.message);
-    }
-    throw new Error('Image upload failed — try again or use a direct URL');
-}
-
-async function getImageBuffer(m, sock, jid) {
-    if (m.message?.imageMessage) {
-        return streamToBuffer(await downloadContentFromMessage(m.message.imageMessage, 'image'));
-    }
-    const ctx = m.message?.extendedTextMessage?.contextInfo;
-    const quoted = ctx?.quotedMessage;
-    if (quoted?.imageMessage) {
-        return streamToBuffer(await downloadContentFromMessage(quoted.imageMessage, 'image'));
-    }
-    if (quoted && ctx?.stanzaId) {
-        try {
-            const buf = await downloadMediaMessage(
-                { key: { remoteJid: jid, id: ctx.stanzaId, participant: ctx.participant }, message: quoted },
-                'buffer', {},
-                { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
-            );
-            if (buf && buf.length > 500) return buf;
-        } catch (e) {
-            console.error('[VISIONPRO] downloadMediaMessage failed:', e.message);
-        }
-    }
-    return null;
-}
+const MODEL = 'meta/llama-3.2-90b-vision-instruct';
 
 export default {
     name: 'visionpro',
     description: 'Analyze images with NVIDIA Llama 3.2 Vision PRO (90B)',
     category: 'ai',
     aliases: ['vpro', 'imgpro', 'nvisionpro', 'visualpro', 'analyzepro'],
-    usage: 'visionpro [question] — reply to image or pass URL as argument',
+    usage: 'visionpro [question] — reply to an image or add a URL',
 
     async execute(sock, m, args, PREFIX) {
-        const jid = m.key.remoteJid;
+        const jid    = m.key.remoteJid;
+        const owner  = getOwnerName().toUpperCase();
+        const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const quotedImg = quoted?.imageMessage;
 
-        const urlArg = args.find(a => /^https?:\/\//i.test(a));
-        const query  = args.filter(a => !/^https?:\/\//i.test(a)).join(' ').trim()
-                    || 'Analyze this image and describe what you see in great detail';
+        const urlInArgs = (args.join(' ').match(/\bhttps?:\/\/\S+/i) || [])[0];
+        const query     = args.join(' ').replace(urlInArgs || '', '').trim()
+                       || 'Analyze this image and describe what you see in great detail';
 
-        let imageUrl    = urlArg || null;
-        let imageBuffer = null;
-
-        if (!imageUrl) {
-            try { imageBuffer = await getImageBuffer(m, sock, jid); } catch (e) {
-                console.error('[VISIONPRO] getImageBuffer error:', e.message);
-            }
-        }
-
-        if (!imageUrl && (!imageBuffer || imageBuffer.length < 500)) {
+        if (!quotedImg && !urlInArgs) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🔬 *VISION PRO AI* ⌋\n├─⊷ *${PREFIX}visionpro <question>*\n│  └⊷ Reply to an image or add a URL\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔬 *VISION PRO AI* ⌋\n├─⊷ *${PREFIX}visionpro <question>*\n│  └⊷ Reply to an image or add a URL\n╰⊷ *Powered by ${owner} TECH*`
             }, { quoted: m });
         }
 
         await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
         try {
-            if (imageBuffer && !imageUrl) {
-                console.log('[VISIONPRO] Uploading image buffer...');
-                imageUrl = await uploadImage(imageBuffer);
-                console.log('[VISIONPRO] Uploaded to:', imageUrl);
+            let imageInput;
+            if (quotedImg) {
+                const buf = await downloadMediaMessage(
+                    { key: m.key, message: quoted },
+                    'buffer', {},
+                    { reuploadRequest: sock.updateMediaMessage, logger: console }
+                );
+                if (!buf || buf.length === 0) throw new Error('Could not download image from WhatsApp');
+                imageInput = buf;
+            } else {
+                imageInput = urlInArgs;
             }
 
-            console.log('[VISIONPRO] Calling NVIDIA vision-pro API, query:', query, 'image:', imageUrl);
-            const res = await axios.get(NVIDIA_VISION_PRO, {
-                params: { key: API_KEY, q: query, image: imageUrl },
-                timeout: 60000
+            const reply = await vision(query, imageInput, {
+                model: MODEL, maxTokens: 2048, timeoutMs: 90000
             });
-            console.log('[VISIONPRO] API response success:', res.data?.success, 'model:', res.data?.model);
-
-            if (!res.data?.success || !res.data?.result) {
-                throw new Error(res.data?.error || 'No result returned from API');
-            }
-
-            const result = res.data.result.trim();
-            const model  = res.data.model || 'llama-3.2-90b-vision-instruct';
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `🔬 *NVIDIA VISION PRO*\n━━━━━━━━━━━━━━━━━\n` +
-                      `💭 *Query:* ${query}\n\n` +
-                      `📋 *Analysis:*\n${result}\n` +
-                      `━━━━━━━━━━━━━━━━━\n` +
-                      `🤖 _${model}_\n` +
-                      `🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`
+                text: `🔬 *VISION PRO AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${MODEL}_\n🐺 _Powered by ${owner} TECH_`
             }, { quoted: m });
 
         } catch (err) {
             console.error('[VISIONPRO] Error:', err.message);
             await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `❌ *Vision PRO Error*\n\n${err.message}\n\n💡 Try a different image or URL.`
+                text: `❌ *Vision PRO Error*\n\n${err.message}\n\nPlease try again.`
             }, { quoted: m });
         }
     }
