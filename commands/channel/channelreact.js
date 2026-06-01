@@ -539,11 +539,15 @@ const knownNewsletters = new Set();
 let _reactQueue = [];
 let _processingQueue = false;
 
-// Love, smile and congrats emoji pool
+// Face, love, smile and congrats emoji pool
 const EMOJI_POOL = [
-    '❤️', '🧡', '💛', '💚', '💙', '💜', '🩷', '🩵', '🤍', '💝',
-    '💖', '💗', '💓', '💞', '💕', '😍', '🥰', '😘', '😊', '😄',
-    '😁', '🥳', '🎉', '🎊', '👏', '🙌', '🔥', '✨', '💯', '🫶'
+    '❤️', '💙', '💚', '💜', '🫶',
+    '😂', '🤣', '😆', '😹',
+    '😢', '😭', '🥹',
+    '😊', '😄', '😁', '🥳', '🤩', '😎', '😇', '🤗',
+    '😍', '🥰', '😘',
+    '😮', '😯', '🫢', '🤯',
+    '🎉', '🎊', '👏', '🙌', '🔥', '✨', '💯'
 ];
 
 // ── Channel React Whitelist ──────────────────────────────────────────────────

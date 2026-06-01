@@ -173,6 +173,7 @@ import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import webp from 'node-webpmux';
 import crypto from 'crypto';
 import { getBotName } from '../../lib/botname.js';
+import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
 export default {
   name: "take",
@@ -274,10 +275,14 @@ export default {
         // Send success message (optional)
         // await sendMessage(`✅ *Sticker Taken Successfully!*\n\n📦 Pack: WolfBot\n👤 By: ${pushname}\n🎭 Emoji: ${emoji}\n\n💡 The sticker now shows under "WolfBot" pack`);
         
-        // Log the action
+        // Log the action — resolve LID to real phone number if needed
         const senderJid = m.key.participant || chatId;
         const cleaned = jidManager.cleanJid(senderJid);
-        console.log(`✅ Sticker taken by owner: ${cleaned.cleanNumber || 'Unknown'} with emoji: ${emoji}`);
+        const rawNum = cleaned.cleanNumber || '';
+        const resolvedNum = rawNum.includes('@lid') || /^\d{10,}$/.test(rawNum)
+            ? (getPhoneFromLid(rawNum) || rawNum)
+            : rawNum;
+        console.log(`✅ Sticker taken by owner: ${resolvedNum || 'Unknown'} with emoji: ${emoji}`);
         
       } catch (error) {
         console.error('Sticker processing error:', error);
