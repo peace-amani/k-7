@@ -1857,6 +1857,7 @@ case 1: {
 │  • enlarger
 │  • erase
 │  • vision
+│  • visionpro
 │
 ├─⊷ *🎬 AI TOOLS*
 │  • videogen
@@ -1888,6 +1889,7 @@ case 1: {
 │  • real
 │  • remini
 │  • vision
+│  • visionpro
 │
 ╰─⊷
 
@@ -3237,6 +3239,7 @@ case 3: {
 │ enlarger
 │ erase
 │ vision
+│ visionpro
 └───────────────`,
 `┌──⌈ \`AI TOOLS\` ⌋
 │ videogen
@@ -3262,6 +3265,7 @@ case 3: {
 │ real
 │ remini
 │ vision
+│ visionpro
 └───────────────`,
 `┌──⌈ \`SPORTS\` ⌋
 │ football
@@ -6093,6 +6097,7 @@ case 5: {
 │  • enlarger
 │  • erase
 │  • vision
+│  • visionpro
 │
 ├─⊷ *🎬 AI TOOLS*
 │  • videogen
@@ -6124,6 +6129,7 @@ case 5: {
 │  • real
 │  • remini
 │  • vision
+│  • visionpro
 │
 ╰─⊷
 
@@ -7146,6 +7152,7 @@ case 6: {
 > │ enlarger
 > │ erase
 > │ vision
+> │ visionpro
 > └───────────────`,
 `> ┌──⌈ \`AI TOOLS\` ⌋
 > │ videogen
@@ -7171,6 +7178,7 @@ case 6: {
 > │ real
 > │ remini
 > │ vision
+> │ visionpro
 > └───────────────`,
 `> ┌──⌈ \`SPORTS\` ⌋
 > │ football
@@ -9006,6 +9014,7 @@ case 7: {
 │ enlarger
 │ erase
 │ vision
+│ visionpro
 └───────────────`,
 `┌──⌈ \`AI TOOLS\` ⌋
 │ videogen
@@ -9031,6 +9040,7 @@ case 7: {
 │ real
 │ remini
 │ vision
+│ visionpro
 └───────────────`,
 `┌──⌈ \`SPORTS\` ⌋
 │ football
@@ -9820,6 +9830,7 @@ case 9: {
 │  • enlarger
 │  • erase
 │  • vision
+│  • visionpro
 │
 ├─⊷ *🎬 AI TOOLS*
 │  • videogen
@@ -9851,6 +9862,7 @@ case 9: {
 │  • real
 │  • remini
 │  • vision
+│  • visionpro
 │
 ╰─⊷
 

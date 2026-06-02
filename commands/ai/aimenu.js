@@ -17,6 +17,7 @@ export default {
 │  • removebg
 │  • summarize
 │  • vision
+│  • visionpro
 │
 ╰─⊷
 

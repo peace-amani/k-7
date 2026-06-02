@@ -1,5 +1,5 @@
 import {
-    downloadContentFromMessage,
+    downloadMediaMessage,
     generateWAMessageContent,
     generateWAMessageFromContent
 } from '@whiskeysockets/baileys';
@@ -28,20 +28,15 @@ async function toVN(inputBuffer) {
     });
 }
 
-// ─── Media downloader ─────────────────────────────────────────────────────────
-async function downloadToBuffer(message, type) {
-    const stream = await downloadContentFromMessage(message, type);
-    const chunks = [];
-    for await (const chunk of stream) chunks.push(chunk);
-    const buf = Buffer.concat(chunks);
-    console.log(`[TogStatus] Downloaded ${type}: ${buf.length} bytes`);
-    return buf;
-}
+// ─── Quoted message → payload (uses downloadMediaMessage for reliable re-upload) ──
+async function buildPayloadFromQuoted(quotedMessage, sock, m) {
+    const dlOpts = { reuploadRequest: sock.updateMediaMessage, logger: console };
 
-// ─── Quoted message → payload ─────────────────────────────────────────────────
-async function buildPayloadFromQuoted(quotedMessage) {
     if (quotedMessage.videoMessage) {
-        const buf = await downloadToBuffer(quotedMessage.videoMessage, 'video');
+        const buf = await downloadMediaMessage(
+            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
+        );
+        console.log(`[TogStatus] Downloaded video: ${buf.length} bytes`);
         return {
             video:       buf,
             caption:     quotedMessage.videoMessage.caption || '',
@@ -50,7 +45,10 @@ async function buildPayloadFromQuoted(quotedMessage) {
         };
     }
     if (quotedMessage.imageMessage) {
-        const buf = await downloadToBuffer(quotedMessage.imageMessage, 'image');
+        const buf = await downloadMediaMessage(
+            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
+        );
+        console.log(`[TogStatus] Downloaded image: ${buf.length} bytes`);
         return {
             image:    buf,
             caption:  quotedMessage.imageMessage.caption || '',
@@ -58,7 +56,10 @@ async function buildPayloadFromQuoted(quotedMessage) {
         };
     }
     if (quotedMessage.audioMessage) {
-        const buf = await downloadToBuffer(quotedMessage.audioMessage, 'audio');
+        const buf = await downloadMediaMessage(
+            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
+        );
+        console.log(`[TogStatus] Downloaded audio: ${buf.length} bytes`);
         if (quotedMessage.audioMessage.ptt) {
             try {
                 const vn = await toVN(buf);
@@ -70,7 +71,10 @@ async function buildPayloadFromQuoted(quotedMessage) {
         return { audio: buf, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: false };
     }
     if (quotedMessage.stickerMessage) {
-        const buf = await downloadToBuffer(quotedMessage.stickerMessage, 'sticker');
+        const buf = await downloadMediaMessage(
+            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
+        );
+        console.log(`[TogStatus] Downloaded sticker: ${buf.length} bytes`);
         return { sticker: buf, mimetype: quotedMessage.stickerMessage.mimetype || 'image/webp' };
     }
     const text = quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || '';
@@ -100,13 +104,12 @@ async function sendGroupStatus(sock, groupJid, payload) {
     console.log('[TogStatus] generateWAMessageContent done — keys:', Object.keys(inside));
 
     // Step 2: Wrap in groupStatusMessageV2
+    // IMPORTANT: pass `inside` directly as `message` — do NOT spread it.
+    // Spreading destroys the proto structure and causes media to be silently dropped.
     const wrapped = generateWAMessageFromContent(groupJid, {
         messageContextInfo: { messageSecret },
         groupStatusMessageV2: {
-            message: {
-                ...inside,
-                messageContextInfo: { messageSecret }
-            }
+            message: inside
         }
     }, {});
 
@@ -232,23 +235,28 @@ export default {
             let payload   = null;
             let mediaType = 'Text';
 
+            const dlOpts = { reuploadRequest: sock.updateMediaMessage, logger: console };
+
             if (directImage && !quotedMessage) {
-                const buf = await downloadToBuffer(directImage, 'image');
+                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
+                console.log(`[TogStatus] Downloaded direct image: ${buf.length} bytes`);
                 const cap = textAfterCommand || directImage.caption?.replace(/^.*?(togroupstatus|togstatus|gstatus|gs)\b\s*/i, '').trim() || '';
                 payload   = { image: buf, caption: cap, mimetype: directImage.mimetype || 'image/jpeg' };
                 mediaType = 'Image';
             } else if (directVideo && !quotedMessage) {
-                const buf = await downloadToBuffer(directVideo, 'video');
+                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
+                console.log(`[TogStatus] Downloaded direct video: ${buf.length} bytes`);
                 const cap = textAfterCommand || directVideo.caption?.replace(/^.*?(togroupstatus|togstatus|gstatus|gs)\b\s*/i, '').trim() || '';
                 payload   = { video: buf, caption: cap, mimetype: directVideo.mimetype || 'video/mp4' };
                 mediaType = 'Video';
             } else if (directAudio && !quotedMessage) {
-                const buf = await downloadToBuffer(directAudio, 'audio');
+                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
+                console.log(`[TogStatus] Downloaded direct audio: ${buf.length} bytes`);
                 payload   = { audio: buf, mimetype: directAudio.mimetype || 'audio/mpeg', ptt: directAudio.ptt || false };
                 mediaType = 'Audio';
             } else if (quotedMessage) {
                 mediaType = detectMediaType(quotedMessage);
-                payload   = await buildPayloadFromQuoted(quotedMessage);
+                payload   = await buildPayloadFromQuoted(quotedMessage, sock, m);
                 if (payload && (payload.video || payload.image) && textAfterCommand) {
                     payload.caption = textAfterCommand;
                 }
