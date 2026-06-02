@@ -29,14 +29,22 @@ async function toVN(inputBuffer) {
 }
 
 // ─── Quoted message → payload (uses downloadMediaMessage for reliable re-upload) ──
+// The quoted message key must be reconstructed from contextInfo because m.key
+// points to the *current* message, not the quoted one.
 async function buildPayloadFromQuoted(quotedMessage, sock, m) {
-    const dlOpts = { reuploadRequest: sock.updateMediaMessage, logger: console };
+    const ctx = m.message?.extendedTextMessage?.contextInfo || {};
+    const quotedKey = {
+        remoteJid: m.key.remoteJid,
+        fromMe:    ctx.participant === sock.user?.id || ctx.participant === sock.user?.lid,
+        id:        ctx.stanzaId || '',
+        participant: ctx.participant || undefined
+    };
+    const fakeMsg = { key: quotedKey, message: quotedMessage };
+    const dlOpts  = { reuploadRequest: sock.updateMediaMessage, logger: console };
 
     if (quotedMessage.videoMessage) {
-        const buf = await downloadMediaMessage(
-            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
-        );
-        console.log(`[TogStatus] Downloaded video: ${buf.length} bytes`);
+        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
+        console.log(`[TogStatus] Downloaded quoted video: ${buf.length} bytes`);
         return {
             video:       buf,
             caption:     quotedMessage.videoMessage.caption || '',
@@ -45,10 +53,8 @@ async function buildPayloadFromQuoted(quotedMessage, sock, m) {
         };
     }
     if (quotedMessage.imageMessage) {
-        const buf = await downloadMediaMessage(
-            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
-        );
-        console.log(`[TogStatus] Downloaded image: ${buf.length} bytes`);
+        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
+        console.log(`[TogStatus] Downloaded quoted image: ${buf.length} bytes`);
         return {
             image:    buf,
             caption:  quotedMessage.imageMessage.caption || '',
@@ -56,10 +62,8 @@ async function buildPayloadFromQuoted(quotedMessage, sock, m) {
         };
     }
     if (quotedMessage.audioMessage) {
-        const buf = await downloadMediaMessage(
-            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
-        );
-        console.log(`[TogStatus] Downloaded audio: ${buf.length} bytes`);
+        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
+        console.log(`[TogStatus] Downloaded quoted audio: ${buf.length} bytes`);
         if (quotedMessage.audioMessage.ptt) {
             try {
                 const vn = await toVN(buf);
@@ -71,10 +75,8 @@ async function buildPayloadFromQuoted(quotedMessage, sock, m) {
         return { audio: buf, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: false };
     }
     if (quotedMessage.stickerMessage) {
-        const buf = await downloadMediaMessage(
-            { key: m.key, message: quotedMessage }, 'buffer', {}, dlOpts
-        );
-        console.log(`[TogStatus] Downloaded sticker: ${buf.length} bytes`);
+        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
+        console.log(`[TogStatus] Downloaded quoted sticker: ${buf.length} bytes`);
         return { sticker: buf, mimetype: quotedMessage.stickerMessage.mimetype || 'image/webp' };
     }
     const text = quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || '';
@@ -91,6 +93,15 @@ function detectMediaType(quotedMessage) {
     return 'Text';
 }
 
+// ─── Map payload → WA mediatype string ────────────────────────────────────────
+function payloadMediaType(payload) {
+    if (payload.image)   return 'image';
+    if (payload.video)   return payload.gifPlayback ? 'gif' : 'video';
+    if (payload.audio)   return payload.ptt ? 'ptt' : 'audio';
+    if (payload.sticker) return 'sticker';
+    return null; // text — no mediatype attribute needed
+}
+
 // ─── Core group status sender ─────────────────────────────────────────────────
 async function sendGroupStatus(sock, groupJid, payload) {
     console.log('[TogStatus] Sending to:', groupJid, '| keys:', Object.keys(payload));
@@ -105,7 +116,6 @@ async function sendGroupStatus(sock, groupJid, payload) {
 
     // Step 2: Wrap in groupStatusMessageV2
     // IMPORTANT: pass `inside` directly as `message` — do NOT spread it.
-    // Spreading destroys the proto structure and causes media to be silently dropped.
     const wrapped = generateWAMessageFromContent(groupJid, {
         messageContextInfo: { messageSecret },
         groupStatusMessageV2: {
@@ -114,8 +124,19 @@ async function sendGroupStatus(sock, groupJid, payload) {
     }, {});
 
     // Step 3: Relay
-    await sock.relayMessage(groupJid, wrapped.message, { messageId: wrapped.key.id });
-    console.log('[TogStatus] relayMessage done ✅ msgId:', wrapped.key.id);
+    // Baileys' getMediaType() only checks top-level message keys — it cannot see
+    // inside groupStatusMessageV2 so it returns '' and leaves extraAttrs empty,
+    // meaning the <enc skmsg> stanza gets no mediatype attribute.
+    // We fix this by passing additionalAttributes so the outer <message> stanza
+    // carries the correct mediatype for server-side routing.
+    const detectedMediaType = payloadMediaType(payload);
+    const additionalAttributes = detectedMediaType ? { mediatype: detectedMediaType } : undefined;
+
+    await sock.relayMessage(groupJid, wrapped.message, {
+        messageId:            wrapped.key.id,
+        additionalAttributes: additionalAttributes ?? {}
+    });
+    console.log('[TogStatus] relayMessage done ✅ msgId:', wrapped.key.id, '| mediatype:', detectedMediaType ?? 'text');
     return wrapped;
 }
 
