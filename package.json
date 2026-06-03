@@ -78,7 +78,7 @@
     "ws": "^8.20.0"
   },
   "optionalDependencies": {
-    "canvas": "^2.11.2",
+    "canvas": "^3.0.0",
     "sharp": "^0.33.5",
     "formdata-node": "^6.0.3",
     "qrcode": "^1.5.4",
