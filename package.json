@@ -1,7 +1,7 @@
 {
   "name": "silent-wolf-bot",
   "version": "2.1.0",
-  "description": "A WhatsApp bot using Baileys with auto-restart prefix system and heartbeat monitor",
+  "description": "Professional WhatsApp bot with autosession authentication.",
   "keywords": [
     "whatsapp",
     "bot",
