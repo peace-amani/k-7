@@ -739,6 +739,8 @@ export default {
 // │  • ping
 // │  • ping2
 // │  • time
+// │  • videocall
+// │  • voicecall
 // │  • connection
 // │  • define
 // │  • news
@@ -1701,6 +1703,8 @@ case 1: {
 │  • ping2
 │  • time
 │  • uptime
+│  • videocall
+│  • voicecall
 │  • define
 │  • remind
 │  • sessioninfo
@@ -2362,6 +2366,8 @@ case 2: {
 > • time — current time
 > • uptime — bot uptime
 > • alive — check if bot is alive
+> • videocall — generate video call invite link
+> • voicecall — generate voice call invite link
 > • define — word definition
 > • remind — set a reminder
 > • sessioninfo — view session details
@@ -3097,6 +3103,8 @@ case 3: {
 │ ping2
 │ time
 │ uptime
+│ videocall
+│ voicecall
 │ define
 │ remind
 │ sessioninfo
@@ -4100,6 +4108,8 @@ case 4: {
 │  • ping
 │  • ping2
 │  • time
+│  • videocall
+│  • voicecall
 │  • connection
 │  • define
 │  • remind
@@ -5070,6 +5080,8 @@ case 4: {
 // │  • ping
 // │  • ping2
 // │  • time
+// │  • videocall
+// │  • voicecall
 // │  • connection
 // │  • define
 // │  • news
@@ -5941,6 +5953,8 @@ case 5: {
 │  • ping2
 │  • time
 │  • uptime
+│  • videocall
+│  • voicecall
 │  • define
 │  • remind
 │  • sessioninfo
@@ -8047,6 +8061,8 @@ case 6: {
 // │ ping
 // │ ping2
 // │ time
+// │ videocall
+// │ voicecall
 // │ connection
 // │ define
 // │ news
@@ -8872,6 +8888,8 @@ case 7: {
 │ ping2
 │ time
 │ uptime
+│ videocall
+│ voicecall
 │ define
 │ remind
 │ sessioninfo
@@ -9674,6 +9692,8 @@ case 9: {
 │  • ping2
 │  • time
 │  • uptime
+│  • videocall
+│  • voicecall
 │  • define
 │  • remind
 │  • sessioninfo
