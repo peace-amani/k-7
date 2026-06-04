@@ -2,7 +2,7 @@ import axios from 'axios';
 import https from 'https';
 import FormData from 'form-data';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 // Resolution options
 const reso = {
@@ -29,7 +29,7 @@ export default {
     // Check if prompt is provided
     if (args.length === 0) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎨 *AI IMAGE GENERATOR* ⌋\n├─⊷ *${PREFIX}bing <prompt>*\n│  └⊷ Generate AI image\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Generate with resolution (landscape/portrait/ultra/hd)\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🎨 *AI IMAGE GENERATOR* ⌋\n├─⊷ *${PREFIX}bing <prompt>*\n│  └⊷ Generate AI image\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Generate with resolution (landscape/portrait/ultra/hd)\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -44,7 +44,7 @@ export default {
     if (!reso[resolution]) {
       const validResolutions = Object.keys(reso).join(', ');
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *INVALID RESOLUTION* ⌋\n│ "${resolution}" is not valid.\n│ ✅ Available: ${validResolutions}\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Use a valid resolution\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *INVALID RESOLUTION* ⌋\n│ "${resolution}" is not valid.\n│ ✅ Available: ${validResolutions}\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Use a valid resolution\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -143,7 +143,7 @@ export default {
       errorMessage += `• Specify colors, lighting, mood\n`;
       errorMessage += `• Keep prompts under 200 characters\n\n`;
       
-      errorMessage += `╭─⌈ 📌 *USAGE* ⌋\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Generate AI image\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      errorMessage += `╭─⌈ 📌 *USAGE* ⌋\n├─⊷ *${PREFIX}bing <prompt> | <resolution>*\n│  └⊷ Generate AI image\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       await sock.sendMessage(jid, {
         text: errorMessage

@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { createRequire } from 'module';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 
 const require = createRequire(import.meta.url);
@@ -20,7 +20,7 @@ export default {
     if (!args.length) {
       return sock.sendMessage(
         jid,
-        { text: `╭─⌈ 🔗 *URL SHORTENER* ⌋\n│\n├─⊷ *shorturl <URL>*\n│  └⊷ Shorten a long URL\n│\n├─⊷ *Example:*\n│  └⊷ \`.shorturl https://example.com\`\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` },
+        { text: `╭─⌈ 🔗 *URL SHORTENER* ⌋\n│\n├─⊷ *shorturl <URL>*\n│  └⊷ Shorten a long URL\n│\n├─⊷ *Example:*\n│  └⊷ \`.shorturl https://example.com\`\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` },
         { quoted: m }
       );
     }

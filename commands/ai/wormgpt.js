@@ -17,7 +17,7 @@ export default {
 
     if (!query) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ☠️ *WORMGPT AI* ⌋\n├─⊷ *${PREFIX}wormgpt <question>*\n│  └⊷ WormGPT AI assistant\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ☠️ *WORMGPT AI* ⌋\n├─⊷ *${PREFIX}wormgpt <question>*\n│  └⊷ WormGPT AI assistant\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -34,7 +34,7 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `☠️ *WORMGPT AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(jid)}`
+        text: `☠️ *WORMGPT AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

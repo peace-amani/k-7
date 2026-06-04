@@ -1012,7 +1012,7 @@ import axios from 'axios';
 import fs from 'fs';
 import { promisify } from 'util';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const writeFileAsync = promisify(fs.writeFile);
 const unlinkAsync = promisify(fs.unlink);
@@ -1030,7 +1030,7 @@ export default {
     // Help section
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔬 *AI SCANNER* ⌋\n├─⊷ *${PREFIX}aiscanner <text>*\n│  └⊷ Detect AI-generated text\n├─⊷ Reply to message with *${PREFIX}aiscanner*\n│  └⊷ Scan quoted text\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔬 *AI SCANNER* ⌋\n├─⊷ *${PREFIX}aiscanner <text>*\n│  └⊷ Detect AI-generated text\n├─⊷ Reply to message with *${PREFIX}aiscanner*\n│  └⊷ Scan quoted text\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -1049,7 +1049,7 @@ export default {
 
     if (!text || text.length < 20) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *TEXT TOO SHORT* ⌋\n├─⊷ Provide at least 20 characters\n├─⊷ 50+ recommended for accuracy\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *TEXT TOO SHORT* ⌋\n├─⊷ Provide at least 20 characters\n├─⊷ 50+ recommended for accuracy\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

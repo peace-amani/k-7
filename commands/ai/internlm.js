@@ -14,7 +14,7 @@ export default {
 
     if (!query) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔬 *INTERNLM AI* ⌋\n├─⊷ *${PREFIX}internlm <question>*\n│  └⊷ InternLM Shanghai AI\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔬 *INTERNLM AI* ⌋\n├─⊷ *${PREFIX}internlm <question>*\n│  └⊷ InternLM Shanghai AI\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -26,7 +26,7 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `🔬 *INTERNLM AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(jid)}`
+        text: `🔬 *INTERNLM AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

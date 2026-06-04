@@ -70,7 +70,7 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(jid)}`
+                text: `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
         } catch (err) {

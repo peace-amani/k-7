@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import FormData from 'form-data';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const XCASPER_ERASE = 'https://apis.xcasper.space/api/ai/nanobanana';
 const CATBOX_UPLOAD = 'https://catbox.moe/user/api.php';
@@ -91,7 +91,7 @@ export default {
                 `├─⊷ AI detects & erases the object\n` +
                 `│  then fills in the background\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 

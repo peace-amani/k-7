@@ -1,7 +1,7 @@
 // File: ./commands/owner/autobio.js
 import db from '../../lib/database.js';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 let configCache = null;
 let _activeSock = null;
@@ -375,7 +375,7 @@ export default {
                     `├─⊷ *${PREFIX}autobio interval <min>*\n│  └⊷ Set update interval\n` +
                     `├─⊷ *${PREFIX}autobio test*\n│  └⊷ Test bio update now\n` +
                     `├─⊷ *${PREFIX}autobio weather <city> <code>*\n│  └⊷ Enable weather in bio\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
         

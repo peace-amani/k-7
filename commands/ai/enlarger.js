@@ -71,7 +71,7 @@ export default {
                 `├─⊷ AI upscales & enhances the image\n` +
                 `│  resolution using xcasper AI\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 
@@ -104,7 +104,7 @@ export default {
         try {
             await sock.sendMessage(chatId, {
                 image:   enlargedBuffer,
-                caption: `✅ *Image Enlarged*\n${getFooter(jid)}`
+                caption: `✅ *Image Enlarged*\n${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         } catch (err) {
             await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });

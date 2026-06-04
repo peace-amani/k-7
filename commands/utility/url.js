@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -483,7 +483,7 @@ export default {
                       `├─⊷ *.url <image_url>*\n` +
                       `│  └⊷ Re-upload from URL\n` +
                       `├─⊷ *Supported:* Images, Videos, Docs, Audio\n` +
-                      `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                      `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
         

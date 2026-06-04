@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { toOggOpus } from '../../lib/audioConvert.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -89,7 +89,7 @@ export default {
     
     // Show help if no arguments
     if (args.length === 0) {
-      await sock.sendMessage(jid, { text: `╭─⌈ 🎯 *FETCH* ⌋\n├─⊷ *.fetch <url>*\n│  └⊷ Fetch data from URL\n├─⊷ *.fetch <url> -d*\n│  └⊷ Download media files\n├─⊷ *.fetch <url> -j*\n│  └⊷ Pretty JSON format\n├─⊷ *.fetch <url> -h*\n│  └⊷ Show response headers\n├─⊷ *.fetch <url> -r*\n│  └⊷ Raw response\n├─⊷ Reply to URL with *.fetch*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` }, { quoted: m });
+      await sock.sendMessage(jid, { text: `╭─⌈ 🎯 *FETCH* ⌋\n├─⊷ *.fetch <url>*\n│  └⊷ Fetch data from URL\n├─⊷ *.fetch <url> -d*\n│  └⊷ Download media files\n├─⊷ *.fetch <url> -j*\n│  └⊷ Pretty JSON format\n├─⊷ *.fetch <url> -h*\n│  └⊷ Show response headers\n├─⊷ *.fetch <url> -r*\n│  └⊷ Raw response\n├─⊷ Reply to URL with *.fetch*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` }, { quoted: m });
       return;
     }
     
@@ -246,7 +246,7 @@ export default {
           } else if (isImage) {
     await sock.sendMessage(jid, {
         image: fileBuffer,
-        caption: `╭─⌈ 🖼️ *FETCH RESULT* ⌋\n├─⊷ *File:* ${filename}\n├─⊷ *Size:* ${formatFileSize(stats.size)}\n├─⊷ *Status:* ${status} ${statusText}\n├─⊷ *Type:* ${contentType.split(';')[0]}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        caption: `╭─⌈ 🖼️ *FETCH RESULT* ⌋\n├─⊷ *File:* ${filename}\n├─⊷ *Size:* ${formatFileSize(stats.size)}\n├─⊷ *Status:* ${status} ${statusText}\n├─⊷ *Type:* ${contentType.split(';')[0]}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
     }, { quoted: m });
 } 
           
@@ -319,7 +319,7 @@ export default {
           const bufferSize = buffer.byteLength;
           
           await sock.sendMessage(jid, {
-            text: `╭─⌈ ⚠️ *BINARY RESPONSE* ⌋\n├─⊷ *Status:* ${status} ${statusText}\n├─⊷ *Type:* ${contentType || 'Unknown'}\n├─⊷ *Size:* ${formatFileSize(bufferSize)}\n├─⊷ Use *.fetch <url> -d* to download\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ ⚠️ *BINARY RESPONSE* ⌋\n├─⊷ *Status:* ${status} ${statusText}\n├─⊷ *Type:* ${contentType || 'Unknown'}\n├─⊷ *Size:* ${formatFileSize(bufferSize)}\n├─⊷ Use *.fetch <url> -d* to download\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
           }, { quoted: m });
         }
         
@@ -329,7 +329,7 @@ export default {
         if (fetchError.name === 'AbortError' || fetchError.message.includes('timeout')) {
           await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
           await sock.sendMessage(jid, {
-            text: `╭─⌈ ⏱️ *TIMEOUT* ⌋\n├─⊷ *URL:* ${url}\n├─⊷ Request timed out (30s)\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ ⏱️ *TIMEOUT* ⌋\n├─⊷ *URL:* ${url}\n├─⊷ Request timed out (30s)\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
           }, { quoted: m });
         } else {
           throw fetchError;
@@ -341,7 +341,7 @@ export default {
       
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *FETCH FAILED* ⌋\n├─⊷ *URL:* ${url || 'Unknown'}\n├─⊷ *Error:* ${error.message}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *FETCH FAILED* ⌋\n├─⊷ *URL:* ${url || 'Unknown'}\n├─⊷ *Error:* ${error.message}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

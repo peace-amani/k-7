@@ -1,5 +1,5 @@
 import { exec } from 'child_process';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const TIMEOUT_MS = 120000;
 const MAX_OUTPUT = 3000;
@@ -28,7 +28,7 @@ export default {
                 `├─⊷ *${PREFIX}npm update [pkg]*\n│  └⊷ Update package(s)\n` +
                 `├─⊷ *${PREFIX}npm list*\n│  └⊷ Show installed packages\n` +
                 `├─⊷ *${PREFIX}npm outdated*\n│  └⊷ Check for outdated\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 

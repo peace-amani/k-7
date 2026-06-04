@@ -1,6 +1,6 @@
 // commands/utility/remind.js
 import supabase from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const CONFIG_KEY = 'reminders_config';
 
@@ -268,7 +268,7 @@ export default {
                 `├─⊷ *${prefix}rem cancel 1*\n│  └⊷ Cancel reminder by number\n` +
                 `├─⊷ *${prefix}rem clear*\n│  └⊷ Clear all reminders\n` +
                 `├─⊷ *${prefix}rem timezone +1*\n│  └⊷ Set your UTC offset (current: UTC${data.utcOffset >= 0 ? '+' : ''}${data.utcOffset})\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 

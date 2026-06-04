@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 function getDevice(id) {
     if (!id) return 'unknown';
@@ -75,7 +75,7 @@ export default {
             `├─⊷ *Device:* ${info.emoji} ${info.label}\n` +
             `├─⊷ *Type:* ${info.desc}\n` +
             `│\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text }, { quoted: msg });
     }

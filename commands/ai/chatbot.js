@@ -30,7 +30,7 @@ import fs from 'fs';
 import path from 'path';
 import { normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
 import supabase from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
 // ── Data directory paths ───────────────────────────────────────────────────
@@ -1030,7 +1030,7 @@ export default {
         }
       }
 
-      statsText += `\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      statsText += `\n⚡ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       return sock.sendMessage(jid, { text: statsText }, { quoted: m });
     }
 
@@ -1071,7 +1071,7 @@ export default {
         whitelistSection + `\n` +
         `🤖 *Models (${Object.keys(AI_MODELS).length}):*\n` +
         Object.entries(AI_MODELS).map(([k, v]) => `  ${v.icon} ${v.name} (\`${k}\`)`).join('\n') +
-        `\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        `\n\n⚡ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       return sock.sendMessage(jid, { text: settingsText }, { quoted: m });
     }
 

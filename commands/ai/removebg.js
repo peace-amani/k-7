@@ -309,7 +309,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -330,7 +330,7 @@ export default {
         return sock.sendMessage(
           jid,
           {
-            text: `╭─⌈ 🎨 *REMOVE BG* ⌋\n├─⊷ Reply to image with *${PREFIX}removebg*\n│  └⊷ Remove image background\n├─⊷ *${PREFIX}rmbg*\n│  └⊷ Alias for removebg\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ 🎨 *REMOVE BG* ⌋\n├─⊷ Reply to image with *${PREFIX}removebg*\n│  └⊷ Remove image background\n├─⊷ *${PREFIX}rmbg*\n│  └⊷ Alias for removebg\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
           },
           { quoted: m }
         );

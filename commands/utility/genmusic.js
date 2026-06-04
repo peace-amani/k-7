@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const BASE          = 'https://apis.xcasper.space/api/tools/text-to-music';
 const START_URL     = `${BASE}/start`;
@@ -97,7 +97,7 @@ export default {
                 `├─⊷ *🎤 Vocal:* Male • Female  *(default: Male)*\n` +
                 `│\n` +
                 `│ ⏳ Generation takes 2–3 minutes.\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 

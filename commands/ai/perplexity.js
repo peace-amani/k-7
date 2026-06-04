@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
   name: "perplexity",
@@ -13,7 +13,7 @@ export default {
     // Check if query is provided
     if (args.length === 0) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🤖 *PERPLEXITY AI* ⌋\n├─⊷ *${PREFIX}perplexity <question>*\n│  └⊷ Ask Perplexity anything\n├─⊷ *${PREFIX}plex <question>*\n│  └⊷ Alias for perplexity\n├─⊷ *${PREFIX}searchai <question>*\n│  └⊷ Alias for perplexity\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🤖 *PERPLEXITY AI* ⌋\n├─⊷ *${PREFIX}perplexity <question>*\n│  └⊷ Ask Perplexity anything\n├─⊷ *${PREFIX}plex <question>*\n│  └⊷ Alias for perplexity\n├─⊷ *${PREFIX}searchai <question>*\n│  └⊷ Alias for perplexity\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

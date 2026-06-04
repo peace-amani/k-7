@@ -49,7 +49,7 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `👁️ *VISION AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${MODEL}_\n${getFooter(jid)}`
+                text: `👁️ *VISION AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${MODEL}_\n${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
         } catch (err) {

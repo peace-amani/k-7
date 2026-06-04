@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const activePairJobs = new Map();
 
@@ -22,7 +22,7 @@ export default {
                     `╭─⌈ ⚠️ *PAIR DEVICE* ⌋\n│\n` +
                     `├─⊷ *${prefix}pair <number>*\n` +
                     `│  └⊷ Full number, no +\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -130,7 +130,7 @@ export default {
                             `│  4️⃣  Tap *Link with Phone Number*\n` +
                             `│  5️⃣  Enter: *${formatted}*\n│\n` +
                             `├─⊷ ⚠️ Valid for *~3 minutes* only\n` +
-                            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+                            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
                         try {
                             const { createRequire } = await import('module');

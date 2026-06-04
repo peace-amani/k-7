@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
   name: 'summarize',
@@ -15,7 +15,7 @@ export default {
     
     // ====== HELP SECTION ======
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
-      const helpText = `╭─⌈ 📝 *SUMMARIZER* ⌋\n├─⊷ *${PREFIX}summarize <text>*\n│  └⊷ Summarize long text\n├─⊷ *${PREFIX}summary <text>*\n│  └⊷ Alias for summarize\n├─⊷ *${PREFIX}summarize brief: <text>*\n│  └⊷ Brief 1-2 sentence summary\n├─⊷ *${PREFIX}summarize bullets: <text>*\n│  └⊷ Summary in bullet points\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      const helpText = `╭─⌈ 📝 *SUMMARIZER* ⌋\n├─⊷ *${PREFIX}summarize <text>*\n│  └⊷ Summarize long text\n├─⊷ *${PREFIX}summary <text>*\n│  └⊷ Alias for summarize\n├─⊷ *${PREFIX}summarize brief: <text>*\n│  └⊷ Brief 1-2 sentence summary\n├─⊷ *${PREFIX}summarize bullets: <text>*\n│  └⊷ Summary in bullet points\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       return sock.sendMessage(jid, { text: helpText }, { quoted: m });
     }
@@ -38,7 +38,7 @@ export default {
     // Minimum text length check
     if (textToSummarize.length < 20) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *TEXT TOO SHORT* ⌋\n├─⊷ *${PREFIX}summarize <text>*\n│  └⊷ Provide at least 20 characters\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *TEXT TOO SHORT* ⌋\n├─⊷ *${PREFIX}summarize <text>*\n│  └⊷ Provide at least 20 characters\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

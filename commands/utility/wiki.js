@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { createRequire } from 'module';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 
 const _require = createRequire(import.meta.url);
@@ -30,7 +30,7 @@ export default {
 
       if (!searchTerm) {
         return await sock.sendMessage(chatId, {
-          text: `╭─⌈ 🌐 *WIKIPEDIA* ⌋\n│\n├─⊷ *wiki <search term>*\n│  └⊷ Search Wikipedia and get a summary\n│\n├─⊷ *Reply*\n│  └⊷ Reply to a message with .wiki\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+          text: `╭─⌈ 🌐 *WIKIPEDIA* ⌋\n│\n├─⊷ *wiki <search term>*\n│  └⊷ Search Wikipedia and get a summary\n│\n├─⊷ *Reply*\n│  └⊷ Reply to a message with .wiki\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
           quoted: msg
         });
       }

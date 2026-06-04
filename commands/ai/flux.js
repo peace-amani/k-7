@@ -2,7 +2,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { image as nvidiaImage } from '../../lib/nvidia.js';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const CASPER_URL      = 'https://ai-image-gen.xcasper.space/v1/image/prompt/generate';
 const CASPER_BING_URL = 'https://ai-image-gen.xcasper.space/v1/image/bing/generate';
@@ -68,7 +68,7 @@ export default {
           `│  └⊷ NVIDIA FLUX.1-dev (with auto-fallback)\n` +
           `├─⊷ *${PREFIX}flux magic <prompt>*\n` +
           `│  └⊷ Magic Studio (Bing) engine\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

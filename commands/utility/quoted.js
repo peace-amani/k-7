@@ -1,5 +1,5 @@
 import { normalizeMessageContent } from '@whiskeysockets/baileys';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 function formatBytes(bytes) {
     if (!bytes || bytes === 0) return '0 B';
@@ -257,7 +257,7 @@ export default {
 
         const chatType = chatId.endsWith('@g.us') ? 'Group' : chatId.endsWith('@newsletter') ? 'Channel' : 'Private';
         text += `│\n│ 📍 *Chat:* ${chatType}\n`;
-        text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         const mentionedJid = [participant, ...mentions].filter(Boolean);
 

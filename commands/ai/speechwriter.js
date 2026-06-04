@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
   name: "speechwriter",
@@ -19,7 +19,7 @@ export default {
       topic = quoted.text;
     } else {
       await sock.sendMessage(jid, { 
-        text: `╭─⌈ 🎤 *AI SPEECH WRITER* ⌋\n├─⊷ *${PREFIX}speechwriter <topic>*\n│  └⊷ Generate a speech\n├─⊷ *${PREFIX}speechwriter <topic> -long -formal*\n│  └⊷ With length/type/tone options\n├─⊷ *${PREFIX}speech <topic>*\n│  └⊷ Alias for speechwriter\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🎤 *AI SPEECH WRITER* ⌋\n├─⊷ *${PREFIX}speechwriter <topic>*\n│  └⊷ Generate a speech\n├─⊷ *${PREFIX}speechwriter <topic> -long -formal*\n│  └⊷ With length/type/tone options\n├─⊷ *${PREFIX}speech <topic>*\n│  └⊷ Alias for speechwriter\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
       return;
     }

@@ -1,6 +1,6 @@
 import { getWarnLimit, setWarnLimit } from '../../lib/warnings-store.js';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
     name: 'setwarn',
@@ -39,7 +39,7 @@ export default {
 
         if (args.length === 0) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 📊 *WARN LIMIT* ⌋\n├─⊷ *Current:* ${currentLimit} warnings\n├─⊷ *${PREFIX}setwarn <1-20>*\n│  └⊷ Set warning limit\n╰─── *${getBotName()}* ───\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📊 *WARN LIMIT* ⌋\n├─⊷ *Current:* ${currentLimit} warnings\n├─⊷ *${PREFIX}setwarn <1-20>*\n│  └⊷ Set warning limit\n╰─── *${getBotName()}* ───\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

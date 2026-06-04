@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
   name: 'bard',
@@ -14,7 +14,7 @@ export default {
     
     // ====== HELP SECTION ======
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
-      const helpText = `╭─⌈ 🤖 *GOOGLE BARD AI* ⌋\n├─⊷ *${PREFIX}bard <question>*\n│  └⊷ Ask Bard anything\n├─⊷ *${PREFIX}bardai <question>*\n│  └⊷ Alias for bard\n├─⊷ *${PREFIX}googlebard <question>*\n│  └⊷ Alias for bard\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      const helpText = `╭─⌈ 🤖 *GOOGLE BARD AI* ⌋\n├─⊷ *${PREFIX}bard <question>*\n│  └⊷ Ask Bard anything\n├─⊷ *${PREFIX}bardai <question>*\n│  └⊷ Alias for bard\n├─⊷ *${PREFIX}googlebard <question>*\n│  └⊷ Alias for bard\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       return sock.sendMessage(jid, { text: helpText }, { quoted: m });
     }

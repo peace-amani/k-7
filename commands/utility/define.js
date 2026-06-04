@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { createRequire } from 'module';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 
 const _require = createRequire(import.meta.url);
@@ -26,7 +26,7 @@ export default {
 
       if (!word) {
         await sock.sendMessage(m.key.remoteJid, {
-          text: `╭─⌈ 🐺💚 *DICTIONARY* ⌋\n│\n├─⊷ *define <word>*\n│  └⊷ Get the definition of a word\n│\n├─⊷ *Reply*\n│  └⊷ Reply to a word with .define\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ 🐺💚 *DICTIONARY* ⌋\n│\n├─⊷ *define <word>*\n│  └⊷ Get the definition of a word\n│\n├─⊷ *Reply*\n│  └⊷ Reply to a word with .define\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
         return;
       }

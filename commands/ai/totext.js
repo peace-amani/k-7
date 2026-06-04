@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import FormDataLib from 'form-data';
 
 const execAsync = promisify(exec);
@@ -173,7 +173,7 @@ export default {
                 `│  ${PREFIX}totext <video ID>\n` +
                 `│  ${PREFIX}totext <URL> fr  ← with language\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 
@@ -245,7 +245,7 @@ export default {
                     `│   3. Generate an API key\n` +
                     `│   4. Add it as *GROQ_API_KEY* in Secrets\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 );
             }
 
@@ -259,7 +259,7 @@ export default {
                 `│\n` +
                 `${transcription}\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 

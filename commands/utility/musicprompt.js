@@ -1,5 +1,5 @@
 import { callAI } from '../../lib/aiHelper.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const GENRES = ['Pop','Afrobeat','Hip-hop','R&B','Rock','Jazz','Reggae','Country',
                 'Electronic','Soul','Blues','Classical','Trap','Dancehall','Gospel',
@@ -94,7 +94,7 @@ export default {
                 `│\n` +
                 `│ Just copy and send it — done.\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 
@@ -141,7 +141,7 @@ export default {
             `│ 👆 Copy the command above and send it\n` +
             `│    to generate your song with *${PREFIX}genmusic*\n` +
             `│\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         const _gb = globalThis._giftedBtns;
         if (_gb && typeof _gb.sendInteractiveMessage === 'function') {

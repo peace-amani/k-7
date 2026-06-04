@@ -1,6 +1,6 @@
 // commands/logo/companylogo.js
 import fetch from "node-fetch";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
   name: "companylogo",
@@ -13,7 +13,7 @@ export default {
       const query = args.join(" ");
       if (!query) {
         return sock.sendMessage(m.key.remoteJid, {
-          text: `╭─⌈ 📊 *COMPANY LOGO* ⌋\n├─⊷ *.companylogo <domain>*\n│  └⊷ Get company logo & info\n├─⊷ *.companylogo <company name>*\n│  └⊷ Search by company name\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ 📊 *COMPANY LOGO* ⌋\n├─⊷ *.companylogo <domain>*\n│  └⊷ Get company logo & info\n├─⊷ *.companylogo <company name>*\n│  └⊷ Search by company name\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
       }
 
@@ -48,7 +48,7 @@ export default {
         
         if (response.status === 422) {
           return sock.sendMessage(m.key.remoteJid, {
-            text: `╭─⌈ ❌ *INVALID DOMAIN* ⌋\n├─⊷ *.companylogo <domain>*\n│  └⊷ Use company.com format\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ ❌ *INVALID DOMAIN* ⌋\n├─⊷ *.companylogo <domain>*\n│  └⊷ Use company.com format\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
           }, { quoted: m });
         }
         
