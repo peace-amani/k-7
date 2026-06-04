@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import FormData from 'form-data';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const XCASPER_ENLARGER = 'https://apis.xcasper.space/api/ai/enlarger';
 const CATBOX_UPLOAD    = 'https://catbox.moe/user/api.php';
@@ -104,7 +104,7 @@ export default {
         try {
             await sock.sendMessage(chatId, {
                 image:   enlargedBuffer,
-                caption: `✅ *Image Enlarged*\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`
+                caption: `✅ *Image Enlarged*\n${getFooter(jid)}`
             }, { quoted: msg });
         } catch (err) {
             await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });

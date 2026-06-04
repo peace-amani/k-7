@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { vision } from '../../lib/nvidia.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const LLAMA_FAST    = 'https://apis.xwolf.space/api/nvidia/llama-fast';
 const VISION_MODEL  = 'meta/llama-3.2-11b-vision-instruct';
@@ -70,7 +70,7 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🐺 _Powered by ${owner} TECH_`
+                text: `🦙 *LLAMA FAST AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n${getFooter(jid)}`
             }, { quoted: m });
 
         } catch (err) {

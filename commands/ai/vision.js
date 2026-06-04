@@ -1,6 +1,6 @@
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { vision } from '../../lib/nvidia.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const MODEL = 'meta/llama-3.2-11b-vision-instruct';
 
@@ -49,7 +49,7 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
             await sock.sendMessage(jid, {
-                text: `👁️ *VISION AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${MODEL}_\n🐺 _Powered by ${owner} TECH_`
+                text: `👁️ *VISION AI*\n━━━━━━━━━━━━━━━━━\n${reply}\n━━━━━━━━━━━━━━━━━\n🤖 _${MODEL}_\n${getFooter(jid)}`
             }, { quoted: m });
 
         } catch (err) {

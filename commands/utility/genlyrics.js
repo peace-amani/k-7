@@ -1,5 +1,5 @@
 import { callAI } from '../../lib/aiHelper.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 const TONES = {
     happy:       { label: '😊 Happy',        desc: 'upbeat, joyful, celebratory with a feel-good chorus' },
@@ -128,10 +128,10 @@ export default {
                     }]
                 });
             } catch {
-                await reply(msgText + `\n\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`);
+                await reply(msgText + `\n\n${getFooter(jid)}`);
             }
         } else {
-            await reply(msgText + `\n\n🐺 _Powered by ${getOwnerName().toUpperCase()} TECH_`);
+            await reply(msgText + `\n\n${getFooter(jid)}`);
         }
 
         await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
