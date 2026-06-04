@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🌙 *MOON LOGO* ⌋\n│\n├─⊷ *moonlogo*\n│  └⊷ moonlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ moonlogo LUNA\n│  └⊷ moonlogo MOON\n│  └⊷ moonlogo NIGHT\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ 🌙 *MOON LOGO* ⌋\n│\n├─⊷ *moonlogo*\n│  └⊷ moonlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ moonlogo LUNA\n│  └⊷ moonlogo MOON\n│  └⊷ moonlogo NIGHT\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

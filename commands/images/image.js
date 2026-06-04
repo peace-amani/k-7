@@ -124,7 +124,7 @@ export default {
 
         if (!query) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 📸 *IMAGE SEARCH* ⌋\n├─⊷ *${PREFIX}image <query>*\n│  └⊷ Search and send images from the web\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📸 *IMAGE SEARCH* ⌋\n├─⊷ *${PREFIX}image <query>*\n│  └⊷ Search and send images from the web\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

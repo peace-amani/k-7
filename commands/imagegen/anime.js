@@ -32,7 +32,7 @@ export default {
               `├─⊷ *anime <prompt>*\n│  └⊷ Generate anime-style AI images\n│\n` +
               `├─⊷ *Examples:*\n│  └⊷ anime cute cat girl with blue hair\n` +
               `│  └⊷ anime cyberpunk samurai in tokyo\n│\n` +
-              `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+              `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

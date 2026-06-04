@@ -95,7 +95,7 @@ export async function handleEphemeralChange(sock, chatJid, newDuration, changedB
                 `╭─⌈ 🛡️ *ANTI-DISAPPEARING* ⌋\n` +
                 `├─⊷ Disappearing messages were turned on.\n` +
                 `├─⊷ I have reverted the chat back to *OFF*.\n` +
-                `╰⊷ *Powered by ${BRAND()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         });
     } catch (err) {
         console.log(`[ANTIDISP] ❌ Reverse failed: ${err?.message || err}`);
@@ -125,7 +125,7 @@ export default {
                     `│\n` +
                     `├─⊷ *${PREFIX}antidisp on*  → enable\n` +
                     `├─⊷ *${PREFIX}antidisp off* → disable\n` +
-                    `╰⊷ *Powered by ${BRAND()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -137,7 +137,7 @@ export default {
                     `├─⊷ ✅ Enabled — disappearing-messages timers\n` +
                     `│   will be reverted to *OFF* automatically.\n` +
                     `├─⊷ Note: in groups the bot must be admin.\n` +
-                    `╰⊷ *Powered by ${BRAND()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -148,7 +148,7 @@ export default {
                     `╭─⌈ 🛡️ *ANTI-DISAPPEARING* ⌋\n` +
                     `├─⊷ ❌ Disabled — disappearing-messages timers\n` +
                     `│   set by other people will be left alone.\n` +
-                    `╰⊷ *Powered by ${BRAND()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

@@ -80,7 +80,7 @@ export default {
           text += `├─⊷ ${home} *${homeScore}* - *${awayScore}* ${away}\n`;
           text += `│  └⊷ ${status}${league ? ` │ ${league}` : ''}${matchId ? ` │ ID: ${matchId}` : ''}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
         console.log('⚽ [FOOTBALL] Scores fetched successfully');
 
@@ -106,7 +106,7 @@ export default {
           const goalStr = (gf !== '' && ga !== '') ? ` │ ${gf}:${ga}` : '';
           text += `├─⊷ *${rank}.* ${short} │ ${pts}pts │ ${w}W ${d}D ${l}L${goalStr}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
         console.log(`⚽ [FOOTBALL] Standings for ${leagueName} fetched`);
 
@@ -132,7 +132,7 @@ export default {
           text += `├─⊷ ${home} vs ${away}\n`;
           text += `│  └⊷ ${dateStr}${league ? ` │ ${league}` : ''}${venue ? ` │ ${venue}` : ''}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
         console.log('⚽ [FOOTBALL] Fixtures fetched successfully');
 
@@ -152,7 +152,7 @@ export default {
           const assists = player?.assists ?? player?.stats?.assists ?? '';
           text += `├─⊷ *${i + 1}.* ${name} │ ⚽ ${goals}${assists !== '' ? ` │ 🅰️ ${assists}` : ''}${team ? ` │ ${team}` : ''}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
         console.log(`⚽ [FOOTBALL] Top scorers for ${leagueName} fetched`);
 
@@ -182,7 +182,7 @@ export default {
             }
           });
         }
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
         console.log(`⚽ [FOOTBALL] Statistics for ${leagueName} fetched`);
 
@@ -202,7 +202,7 @@ export default {
             const pts = team?.points ?? team?.pts ?? '-';
             text += `├─⊷ *${rank}.* ${short} │ ${pts}pts\n`;
           });
-          text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+          text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
           await sock.sendMessage(jid, { text }, { quoted: m });
         } else {
           return sock.sendMessage(jid, {
@@ -219,7 +219,7 @@ export default {
       console.error('❌ [FOOTBALL]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *FOOTBALL ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *FOOTBALL ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

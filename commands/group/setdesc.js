@@ -12,7 +12,7 @@ export default {
     }
 
     if (!text) {
-      return sock.sendMessage(jid, { text: `╭─⌈ ✏️ *SETDESC* ⌋\n│\n├─⊷ *.setdesc Your new group description*\n│  └⊷ Set description\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` }, { quoted: msg });
+      return sock.sendMessage(jid, { text: `╭─⌈ ✏️ *SETDESC* ⌋\n│\n├─⊷ *.setdesc Your new group description*\n│  └⊷ Set description\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` }, { quoted: msg });
     }
 
     try {

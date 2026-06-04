@@ -188,7 +188,7 @@ export default {
                 };
 
                 return sock.sendMessage(targetJid, {
-                    text: `╭─⌈ 🎤 *AUTO-RECORDING* ⌋\n│\n│ Mode: ${modeLabels[autoRecordingConfig.mode] || autoRecordingConfig.mode}\n│ Duration: ${autoRecordingConfig.duration}s\n│ Active: ${autoRecordingConfig.activeRecorders.size}\n│\n├─⊷ *${PREFIX}autorecording <number>*\n│  └⊷ Record only in that person's DM\n│  └⊷ e.g. ${PREFIX}autorecording 254703397679\n├─⊷ *${PREFIX}autorecording dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autorecording groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autorecording both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autorecording off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autorecording <1-120>*\n│  └⊷ Set duration\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🎤 *AUTO-RECORDING* ⌋\n│\n│ Mode: ${modeLabels[autoRecordingConfig.mode] || autoRecordingConfig.mode}\n│ Duration: ${autoRecordingConfig.duration}s\n│ Active: ${autoRecordingConfig.activeRecorders.size}\n│\n├─⊷ *${PREFIX}autorecording <number>*\n│  └⊷ Record only in that person's DM\n│  └⊷ e.g. ${PREFIX}autorecording 254703397679\n├─⊷ *${PREFIX}autorecording dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autorecording groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autorecording both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autorecording off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autorecording <1-120>*\n│  └⊷ Set duration\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 
@@ -253,7 +253,7 @@ export default {
             }
 
             return sock.sendMessage(targetJid, {
-                text: `╭─⌈ 🎤 *AUTO-RECORDING* ⌋\n│\n├─⊷ *${PREFIX}autorecording <number>*\n│  └⊷ Target one specific chat\n│  └⊷ e.g. ${PREFIX}autorecording 254703397679\n├─⊷ *${PREFIX}autorecording dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autorecording groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autorecording both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autorecording off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autorecording <1-120>*\n│  └⊷ Set duration\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🎤 *AUTO-RECORDING* ⌋\n│\n├─⊷ *${PREFIX}autorecording <number>*\n│  └⊷ Target one specific chat\n│  └⊷ e.g. ${PREFIX}autorecording 254703397679\n├─⊷ *${PREFIX}autorecording dm*\n│  └⊷ All DMs\n├─⊷ *${PREFIX}autorecording groups*\n│  └⊷ All groups\n├─⊷ *${PREFIX}autorecording both*\n│  └⊷ DMs + Groups\n├─⊷ *${PREFIX}autorecording off*\n│  └⊷ Disable\n├─⊷ *${PREFIX}autorecording <1-120>*\n│  └⊷ Set duration\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
         } catch (err) {

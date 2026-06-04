@@ -48,7 +48,7 @@ export default {
         try {
             if (args.length === 0) {
                 return sock.sendMessage(jid, {
-                    text: `╭─⌈ ⚡ *LIGHTNING PUBG VIDEO* ⌋\n│\n├─⊷ *${prefix}lightningpubg <text>*\n│  └⊷ Create lightning PUBG video logo (max 25 chars)\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}lightningpubg WOLF\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ⚡ *LIGHTNING PUBG VIDEO* ⌋\n│\n├─⊷ *${prefix}lightningpubg <text>*\n│  └⊷ Create lightning PUBG video logo (max 25 chars)\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}lightningpubg WOLF\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 

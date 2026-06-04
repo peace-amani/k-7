@@ -67,7 +67,7 @@ export default {
             const status = config.enabled ? '✅ ON' : '❌ OFF';
             const emoji = config.emoji || '🐺';
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 🐺 *REACT OWNER* ⌋\n│\n│ Status: ${status}\n│ Emoji: ${emoji}\n│\n├─⊷ *reactowner on*\n│  └⊷ Enable auto-react\n├─⊷ *reactowner off*\n│  └⊷ Disable auto-react\n├─⊷ *reactowner emoji <emoji>*\n│  └⊷ Change emoji\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🐺 *REACT OWNER* ⌋\n│\n│ Status: ${status}\n│ Emoji: ${emoji}\n│\n├─⊷ *reactowner on*\n│  └⊷ Enable auto-react\n├─⊷ *reactowner off*\n│  └⊷ Disable auto-react\n├─⊷ *reactowner emoji <emoji>*\n│  └⊷ Change emoji\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             });
         }
 
@@ -93,7 +93,7 @@ export default {
             const newEmoji = args.slice(1).join(' ').trim();
             if (!newEmoji) {
                 return await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ⚠️ *REACT OWNER* ⌋\n│\n├─⊷ *reactowner emoji 🐺*\n│  └⊷ Provide an emoji\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ⚠️ *REACT OWNER* ⌋\n│\n├─⊷ *reactowner emoji 🐺*\n│  └⊷ Provide an emoji\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 });
             }
             config.emoji = newEmoji;
@@ -104,7 +104,7 @@ export default {
         }
 
         return await sock.sendMessage(chatId, {
-            text: `╭─⌈ ⚠️ *REACT OWNER* ⌋\n│\n├─⊷ *reactowner on*\n│  └⊷ Enable\n├─⊷ *reactowner off*\n│  └⊷ Disable\n├─⊷ *reactowner emoji <emoji>*\n│  └⊷ Change emoji\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ ⚠️ *REACT OWNER* ⌋\n│\n├─⊷ *reactowner on*\n│  └⊷ Enable\n├─⊷ *reactowner off*\n│  └⊷ Disable\n├─⊷ *reactowner emoji <emoji>*\n│  └⊷ Change emoji\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         });
     }
 };

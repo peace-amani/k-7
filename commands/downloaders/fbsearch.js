@@ -74,7 +74,7 @@ export default {
 
     if (!input) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 📘 *FBSEARCH* ⌋\n│\n├─⊷ *${p}fbsearch <Facebook URL>*\n│  └⊷ Get video info + download links\n├─⊷ *${p}fbsearch <keywords>*\n│  └⊷ Search for Facebook videos\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 📘 *FBSEARCH* ⌋\n│\n├─⊷ *${p}fbsearch <Facebook URL>*\n│  └⊷ Get video info + download links\n├─⊷ *${p}fbsearch <keywords>*\n│  └⊷ Search for Facebook videos\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

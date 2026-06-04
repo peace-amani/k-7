@@ -26,7 +26,7 @@ export default {
 
         if (!query && !hasImage) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🦙 *LLAMA FAST AI* ⌋\n├─⊷ *${PREFIX}ilama <question>*\n│  └⊷ Fast LLaMA AI — reply to image or ask anything\n╰⊷ *Powered by ${owner} TECH*`
+                text: `╭─⌈ 🦙 *LLAMA FAST AI* ⌋\n├─⊷ *${PREFIX}ilama <question>*\n│  └⊷ Fast LLaMA AI — reply to image or ask anything\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

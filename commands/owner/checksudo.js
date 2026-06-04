@@ -52,7 +52,7 @@ export default {
 
         if (!targetNumber || targetNumber.length < 7) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📋 *CHECK SUDO* ⌋\n│\n├─⊷ *${PREFIX}checksudo <number>*\n│  └⊷ Check by number\n├─⊷ *Reply + ${PREFIX}checksudo*\n│  └⊷ Check via reply\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📋 *CHECK SUDO* ⌋\n│\n├─⊷ *${PREFIX}checksudo <number>*\n│  └⊷ Check by number\n├─⊷ *Reply + ${PREFIX}checksudo*\n│  └⊷ Check via reply\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

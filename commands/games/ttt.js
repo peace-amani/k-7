@@ -595,7 +595,7 @@ async function showHelp(sock, m, chatId) {
 │
 ├─⊷ 📍 Positions: 1️⃣2️⃣3️⃣ / 4️⃣5️⃣6️⃣ / 7️⃣8️⃣9️⃣
 │
-╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
     
     await sock.sendMessage(chatId, { text: helpText }, { quoted: m });
 }

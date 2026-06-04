@@ -17,7 +17,7 @@ export default {
 
         if (!hasImage) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 💎 *BROOCHES* ⌋\n│\n│ Create a brooches effect\n│ with your image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}brooches\n│ _(reply to an image)_\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 💎 *BROOCHES* ⌋\n│\n│ Create a brooches effect\n│ with your image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}brooches\n│ _(reply to an image)_\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

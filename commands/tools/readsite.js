@@ -119,7 +119,7 @@ export default {
 
     if (!rawUrl) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🌐 *SITE READER* ⌋\n│\n├─⊷ *Usage:* readsite <url>\n│\n├─⊷ *Examples:*\n│  └⊷ readsite https://apiskeith.top/download\n│  └⊷ readsite https://example.com\n│\n├─⊷ *Extracts:*\n│  ├⊷ Page title & description\n│  ├⊷ Headings (H1–H3)\n│  ├⊷ Navigation links\n│  ├⊷ Visible body text\n│  └⊷ Data/API JSON URLs found in scripts\n│\n╰⊷ *Powered by ${(getOwnerName() || 'WOLF').toUpperCase()} TECH*`
+        text: `╭─⌈ 🌐 *SITE READER* ⌋\n│\n├─⊷ *Usage:* readsite <url>\n│\n├─⊷ *Examples:*\n│  └⊷ readsite https://apiskeith.top/download\n│  └⊷ readsite https://example.com\n│\n├─⊷ *Extracts:*\n│  ├⊷ Page title & description\n│  ├⊷ Headings (H1–H3)\n│  ├⊷ Navigation links\n│  ├⊷ Visible body text\n│  └⊷ Data/API JSON URLs found in scripts\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -193,7 +193,7 @@ export default {
       out += jsonPreview.slice(0, 1000) + '\n';
     }
 
-    out += `│\n╰⊷ *Powered by ${(getOwnerName() || 'WOLF').toUpperCase()} TECH*`;
+    out += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
     // WhatsApp max message length guard
     if (out.length > 4000) out = out.slice(0, 3990) + '...\n╰⊷ *(truncated)*';

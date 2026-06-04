@@ -360,7 +360,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 🎬 *ANTI-VIDEO* ⌋\n│\n├─⊷ *.antivideo on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antivideo off*\n│  └⊷ Disable protection\n├─⊷ *.antivideo types [add/remove/list]*\n│  └⊷ Manage video types\n├─⊷ *.antivideo exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antivideo status*\n│  └⊷ View current status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            const helpText = `╭─⌈ 🎬 *ANTI-VIDEO* ⌋\n│\n├─⊷ *.antivideo on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antivideo off*\n│  └⊷ Disable protection\n├─⊷ *.antivideo types [add/remove/list]*\n│  └⊷ Manage video types\n├─⊷ *.antivideo exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antivideo status*\n│  └⊷ View current status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
             
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

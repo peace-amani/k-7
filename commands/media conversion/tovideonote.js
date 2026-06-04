@@ -36,7 +36,7 @@ export default {
           `├─⊷ Reply to a *video* with *.videonote*\n` +
           `│  └⊷ Converts to a circular video note\n` +
           `├─⊷ Max duration: 60 s (auto-trimmed)\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
       return;
     }

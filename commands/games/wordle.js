@@ -85,7 +85,7 @@ export default {
                     `├─⊷ You have *${MAX_GUESSES}* tries\n` +
                     `├─⊷ Type *.wordle <word>* to guess\n` +
                     `│\n${renderBoard([])}\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

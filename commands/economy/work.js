@@ -57,7 +57,7 @@ export default {
                 text:
                     `╭─⌈ ⏳ *TOO TIRED* ⌋\n` +
                     `├─⊷ Rest for *${formatCooldown(WORK_COOLDOWN - elapsed)}*\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -82,7 +82,7 @@ export default {
                 `├─⊷ Result : ${flavour}\n` +
                 `├─⊷ Earned : ${COIN} ${fmt(earn)}\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

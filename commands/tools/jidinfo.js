@@ -121,7 +121,7 @@ export default {
       }
 
       lines.push(SEP);
-      lines.push(`🐺 *Powered by ${owner} TECH*`);
+      lines.push(`${getFooter(m.key.participant || m.key.remoteJid)}`);
 
       await sock.sendMessage(chatJid, { text: lines.join('\n') }, { quoted: m });
 

@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🔷 *PLATINUM LOGO* ⌋\n│\n├─⊷ *platinumlogo*\n│  └⊷ platinumlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ platinumlogo WOLF\n│  └⊷ platinumlogo PLATINUM\n│  └⊷ platinumlogo ELITE\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ 🔷 *PLATINUM LOGO* ⌋\n│\n├─⊷ *platinumlogo*\n│  └⊷ platinumlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ platinumlogo WOLF\n│  └⊷ platinumlogo PLATINUM\n│  └⊷ platinumlogo ELITE\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

@@ -30,7 +30,7 @@ export default {
                     `╭─⌈ 👑 *MAKE ADMIN* ⌋\n` +
                     `├─⊷ *${PREFIX}makeadmin <email or username>*\n` +
                     `│  └⊷ Grants root admin to a panel user\n` +
-                    `╰⊷ *Powered by ${owner} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

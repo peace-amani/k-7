@@ -34,7 +34,7 @@ export default {
           `╭⌈ ❌ *NO GROUP SPECIFIED* ⌋\n` +
           `├⊷ Run inside a group, or provide a JID:\n` +
           `├⊷ *${PREFIX}getgpp 1234567890-1234567890@g.us*\n` +
-          `╰⊷ *Powered by ${BRAND()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -69,7 +69,7 @@ export default {
           `╭⌈ 🖼️ *GROUP PROFILE PICTURE* ⌋\n` +
           `├⊷ Group : *${groupName}*\n` +
           (!usedJid ? `├⊷ 💡 Tip: Use *${PREFIX}getgpp <JID>* to fetch any group's pic from anywhere\n` : '') +
-          `╰⊷ *Powered by ${BRAND()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
       fs.unlinkSync(filePath);

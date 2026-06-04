@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ ☀️ *SUN LOGO* ⌋\n│\n├─⊷ *sunlogo*\n│  └⊷ sunlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ sunlogo SUN\n│  └⊷ sunlogo LIGHT\n│  └⊷ sunlogo SOLAR\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ ☀️ *SUN LOGO* ⌋\n│\n├─⊷ *sunlogo*\n│  └⊷ sunlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ sunlogo SUN\n│  └⊷ sunlogo LIGHT\n│  └⊷ sunlogo SOLAR\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

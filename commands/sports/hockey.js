@@ -16,7 +16,7 @@ export default {
 
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🏒 *NHL HOCKEY* ⌋\n├─⊷ *${PREFIX}hockey scores*\n│  └⊷ Today's NHL scores\n├─⊷ *${PREFIX}hockey standings*\n│  └⊷ NHL standings\n├─⊷ *${PREFIX}nhl scores*\n│  └⊷ Alias for hockey\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🏒 *NHL HOCKEY* ⌋\n├─⊷ *${PREFIX}hockey scores*\n│  └⊷ Today's NHL scores\n├─⊷ *${PREFIX}hockey standings*\n│  └⊷ NHL standings\n├─⊷ *${PREFIX}nhl scores*\n│  └⊷ Alias for hockey\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -46,7 +46,7 @@ export default {
             });
           }
         }
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
       } else {
         const res = await axios.get(`${ESPN_BASE}/hockey/nhl/scoreboard`, { timeout: 15000 });
@@ -63,7 +63,7 @@ export default {
           text += `├─⊷ ${away?.team?.abbreviation || '???'} *${away?.score || '0'}* @ ${home?.team?.abbreviation || '???'} *${home?.score || '0'}*\n`;
           text += `│  └⊷ ${status}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
       }
 
@@ -72,7 +72,7 @@ export default {
       console.error('❌ [HOCKEY]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *HOCKEY ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *HOCKEY ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

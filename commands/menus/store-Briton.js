@@ -420,7 +420,7 @@
 // │ • security-tips       
 // └────────────────
 
-// 🐺🌕*POWERED BY WOLF TECH*🌕🐺
+// ${getFooter(m.key.participant || m.key.remoteJid)}
 // `;
 // };
 

@@ -23,7 +23,7 @@ export default {
 
         if (!quotedImg && !urlInArgs) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 🔬 *VISION PRO AI* ⌋\n├─⊷ *${PREFIX}visionpro <question>*\n│  └⊷ Reply to an image or add a URL\n╰⊷ *Powered by ${owner} TECH*`
+                text: `╭─⌈ 🔬 *VISION PRO AI* ⌋\n├─⊷ *${PREFIX}visionpro <question>*\n│  └⊷ Reply to an image or add a URL\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

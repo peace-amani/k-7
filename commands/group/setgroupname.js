@@ -28,7 +28,7 @@ export default {
                 `├─⊷ *Usage:*\n│  └⊷ \`${PREFIX}setgroupname <new name>\`\n│\n` +
                 `├─⊷ *Aliases:* setgn, groupname\n│\n` +
                 `├─⊷ ⚠️ Max 25 characters\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 
@@ -64,7 +64,7 @@ export default {
                 `╭─⌈ ✏️ *GROUP NAME UPDATED* ⌋\n│\n` +
                 `│ ✧ *Old:* ${oldName}\n` +
                 `│ ✧ *New:* ${newName}\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
 
         } catch (err) {

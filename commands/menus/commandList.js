@@ -418,7 +418,7 @@ export const getBoxStyleCommands = () => {
 │
 ╰─⊷
 
-🐺 *POWERED BY WOLF TECH* 🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 };
 
 export const getTextOnlyCommands = (botMode) => {
@@ -755,7 +755,7 @@ export const getTextOnlyCommands = (botMode) => {
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
 📌 *Available styles: 1-7*
 
-🐺🌕*POWERED BY WOLF TECH*🌕🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 };
 
 export const getQuotedBoxCommands = () => {
@@ -1182,7 +1182,7 @@ export const getQuotedBoxCommands = () => {
 > ├────────────────
 > └────────────────
 
-> 🐺🌕*POWERED BY WOLF TECH*🌕🐺`;
+> ${getFooter(m.key.participant || m.key.remoteJid)}`;
 };
 
 export const getPlainBoxCommands = () => {
@@ -1617,5 +1617,5 @@ export const getPlainBoxCommands = () => {
 └────────────────
 
 
-🐺POWERED BY WOLFTECH🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 };

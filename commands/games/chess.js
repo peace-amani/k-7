@@ -65,7 +65,7 @@ export default {
                     `├─⊷ ⚫ Black: (waiting — type *.chess join*)\n` +
                     `├─⊷ Move with *.chess move <from><to>* e.g. *.chess move e2e4*\n` +
                     `│\n${renderBoard(chess.fen())}\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                 mentions: [sender]
             }, { quoted: m });
         }

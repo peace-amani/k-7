@@ -19,7 +19,7 @@ export default {
         return sock.sendMessage(
           jid,
           {
-            text: `╭─⌈ 📸 *IMGBB* ⌋\n│\n├─⊷ *.imgbb* (reply to image)\n│  └⊷ Upload to ImgBB\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ 📸 *IMGBB* ⌋\n│\n├─⊷ *.imgbb* (reply to image)\n│  └⊷ Upload to ImgBB\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
           },
           { quoted: m }
         );

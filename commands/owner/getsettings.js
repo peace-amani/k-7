@@ -550,7 +550,7 @@ export default {
             body += `╰──────────────\n`;
 
             body += `\n🕒 *Updated:* ${new Date().toLocaleString()}\n`;
-            body += `\n🐺 *POWERED BY ${(global.OWNER_NAME || 'SILENTW0LF').toUpperCase()} TECH* 🐺`;
+            body += `\n${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             // ── Combine and send ──────────────────────────────────────────
             const fullText = createReadMoreEffect(fadedHeader, body);

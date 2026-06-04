@@ -58,7 +58,7 @@ export default {
         `│ ✧ *Name:* ${groupName}\n` +
         `│ ✧ *Members:* ${members}\n` +
         `│\n` +
-        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       try {
         const { createRequire } = await import('module');

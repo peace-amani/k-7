@@ -37,7 +37,7 @@ export default {
                 text += `│   🔗 ${s.url}\n│\n`;
             }
 
-            text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
             await sock.sendMessage(chatId, { text }, { quoted: msg });

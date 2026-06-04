@@ -19,7 +19,7 @@ export default {
 
     if (!searchQuery) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 📄 *YTVDOC DOWNLOADER* ⌋\n│\n├─⊷ *${p}ytvdoc <video name or URL>*\n│  └⊷ Download video as document\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 📄 *YTVDOC DOWNLOADER* ⌋\n│\n├─⊷ *${p}ytvdoc <video name or URL>*\n│  └⊷ Download video as document\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

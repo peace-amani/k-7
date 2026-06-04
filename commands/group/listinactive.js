@@ -141,7 +141,7 @@ export default {
         `│ • \`${PREFIX}kick @user\` - Remove member\n` +
         `│ • \`${PREFIX}kickall\` - Remove all non-admins\n` +
         `│\n` +
-        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` +
+        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` +
         `\n🔒 _Results depend on user privacy settings_`;
 
       const allMentionIds = [...inactiveMembers, ...activeMembers].map(m => m.id);

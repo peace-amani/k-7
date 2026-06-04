@@ -62,7 +62,7 @@ export default {
             text:
                 `╭─⌈ 🏆 *LEADERBOARD — ${scopeLabel}* ⌋\n` +
                 lines.join('\n') + '\n' +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             mentions: top.map(e => `${e.id}@s.whatsapp.net`)
         }, { quoted: m });
     }

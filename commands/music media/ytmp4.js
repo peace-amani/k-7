@@ -98,7 +98,7 @@ export default {
           `├─⊷ *${p}ytmp4 720 <name or URL>*\n` +
           `│  └⊷ Choose quality (360/480/720/1080)\n` +
           `│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

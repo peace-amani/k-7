@@ -56,7 +56,7 @@ export default {
         if (shortSummary) text += `│  └⊷ ${shortSummary}\n`;
         if (source || dateStr) text += `│  └⊷ ${source}${source && dateStr ? ' │ ' : ''}${dateStr}\n`;
       });
-      text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
       await sock.sendMessage(jid, { text }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       console.log(`📰 [TEAMNEWS] News for "${team}" fetched successfully`);
@@ -65,7 +65,7 @@ export default {
       console.error('❌ [TEAMNEWS]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *TEAM NEWS ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Usage: ${PREFIX}teamnews <teamname>\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *TEAM NEWS ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Usage: ${PREFIX}teamnews <teamname>\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

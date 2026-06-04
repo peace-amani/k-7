@@ -36,7 +36,7 @@ export default {
               `│  └⊷ Random anime waifu image\n` +
               `├─⊷ *${PREFIX}imagegen neko*\n` +
               `│  └⊷ Random neko image\n` +
-              `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+              `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

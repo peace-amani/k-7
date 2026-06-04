@@ -104,7 +104,7 @@ export default {
           `╭─⌈ 🎨 *NEMOTRON VL* ⌋\n` +
           `├─⊷ *${PREFIX}nemo <question>*\n` +
           `│  └⊷ Chat, or reply to image/video\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -202,7 +202,7 @@ export default {
           `━━━━━━━━━━━━━━━━━\n` +
           `${reply}\n` +
           `━━━━━━━━━━━━━━━━━\n` +
-          `🐺 *Powered by ${owner} TECH*`
+          `${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

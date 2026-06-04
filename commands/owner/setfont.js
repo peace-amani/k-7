@@ -48,7 +48,7 @@ export default {
                     `│  └⊷ Switch font style`,
                     `├─⊷ *${PREFIX}setfont default*`,
                     `│  └⊷ Reset to normal text`,
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 ].join('\n')
             }, { quoted: msg });
         }

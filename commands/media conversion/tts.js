@@ -26,7 +26,7 @@ export default {
         try {
             if (args.length === 0) {
                 return await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🎤 *TEXT-TO-SPEECH* ⌋\n│\n├─⊷ *${p}tts <lang> <text>*\n│  └⊷ Convert text to speech\n│\n├─⊷ *Examples:*\n│  └⊷ ${p}tts en Hello world\n│  └⊷ ${p}tts es Hola mundo\n│\n├─⊷ *Languages:* en, id, ja, es, fr, de, ru, pt, ar, hi, zh, ko\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🎤 *TEXT-TO-SPEECH* ⌋\n│\n├─⊷ *${p}tts <lang> <text>*\n│  └⊷ Convert text to speech\n│\n├─⊷ *Examples:*\n│  └⊷ ${p}tts en Hello world\n│  └⊷ ${p}tts es Hola mundo\n│\n├─⊷ *Languages:* en, id, ja, es, fr, de, ru, pt, ar, hi, zh, ko\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 
@@ -42,7 +42,7 @@ export default {
 
             if (!text.trim()) {
                 return await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ❌ *NO TEXT PROVIDED* ⌋\n│\n├─⊷ *${p}tts <text>*\n│  └⊷ Example: ${p}tts Hello how are you?\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ❌ *NO TEXT PROVIDED* ⌋\n│\n├─⊷ *${p}tts <text>*\n│  └⊷ Example: ${p}tts Hello how are you?\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 

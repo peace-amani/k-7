@@ -75,26 +75,26 @@ export default {
 
         if (!sub || sub === 'status') {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ *Status:* ${config.enabled ? '✅ ON' : '❌ OFF'}\n│\n├─⊷ When enabled, all incoming group\n│  calls are automatically rejected.\n│\n├─⊷ *Usage:*\n│  .antigroupcall on\n│  .antigroupcall off\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ *Status:* ${config.enabled ? '✅ ON' : '❌ OFF'}\n│\n├─⊷ When enabled, all incoming group\n│  calls are automatically rejected.\n│\n├─⊷ *Usage:*\n│  .antigroupcall on\n│  .antigroupcall off\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         if (sub === 'on') {
             saveConfig({ enabled: true });
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ ✅ *ENABLED*\n├─⊷ Group calls will be automatically\n│  rejected/ignored.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ ✅ *ENABLED*\n├─⊷ Group calls will be automatically\n│  rejected/ignored.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         if (sub === 'off') {
             saveConfig({ enabled: false });
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ ❌ *DISABLED*\n├─⊷ Group calls will come through normally.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ ❌ *DISABLED*\n├─⊷ Group calls will come through normally.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         return sock.sendMessage(chatId, {
-            text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ *Usage:*\n│  .antigroupcall on\n│  .antigroupcall off\n│  .antigroupcall status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+            text: `╭─⌈ 📵 *ANTI GROUP CALL* ⌋\n│\n├─⊷ *Usage:*\n│  .antigroupcall on\n│  .antigroupcall off\n│  .antigroupcall status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
         }, { quoted: msg });
     }
 };

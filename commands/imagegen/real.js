@@ -36,7 +36,7 @@ export default {
               `│  └⊷ real portrait of a woman, studio lighting\n│\n` +
               `├─⊷ *Add | magic at end for Magic Studio:*\n` +
               `│  └⊷ real wolf on mountain | magic\n│\n` +
-              `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+              `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

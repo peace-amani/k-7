@@ -169,7 +169,7 @@ export default {
       resultText += `• Add \`paragraph:\` for paragraph format\n`;
       resultText += `• Reply to a message to summarize it\n\n`;
       
-      resultText += `⚡ *Powered by ${getBotName()}TECH*`;
+      resultText += `${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       // ====== SEND FINAL ANSWER ======
       await sock.sendMessage(jid, { text: resultText }, { quoted: m });

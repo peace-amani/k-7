@@ -52,7 +52,7 @@ export default {
 `╭─⌈ 🗑️ *NOTE DELETED* ⌋
 ├─⊷ ${removed.text}
 ├─⊷ Remaining: *${notes.length}*
-╰⊷ *Powered by ${owner} TECH*`
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
         return;
       }
@@ -69,7 +69,7 @@ export default {
           text:
 `╭─⌈ 🧹 *NOTES CLEARED* ⌋
 ├─⊷ Removed *${notes.length}* notes
-╰⊷ *Powered by ${owner} TECH*`
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
         return;
       }
@@ -81,7 +81,7 @@ export default {
 `╭─⌈ 📝 *MY NOTES* ⌋
 ├─⊷ You have no saved notes
 ├─⊷ *Add one:* ${PREFIX}addnote <text>
-╰⊷ *Powered by ${owner} TECH*`
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
         return;
       }
@@ -97,7 +97,7 @@ ${lines}
 ├─⊷ *Add:* ${PREFIX}addnote <text>
 ├─⊷ *Delete:* ${PREFIX}mynotes del <num>
 ├─⊷ *Clear all:* ${PREFIX}mynotes clear
-╰⊷ *Powered by ${owner} TECH*`;
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       await sock.sendMessage(jid, { text: out }, { quoted: m });
     } catch (err) {

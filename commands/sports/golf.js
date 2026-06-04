@@ -16,7 +16,7 @@ export default {
 
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ⛳ *PGA GOLF* ⌋\n├─⊷ *${PREFIX}golf leaderboard*\n│  └⊷ Current tournament leaderboard\n├─⊷ *${PREFIX}golf schedule*\n│  └⊷ Upcoming tournaments\n├─⊷ *${PREFIX}pga leaderboard*\n│  └⊷ Alias for golf\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ⛳ *PGA GOLF* ⌋\n├─⊷ *${PREFIX}golf leaderboard*\n│  └⊷ Current tournament leaderboard\n├─⊷ *${PREFIX}golf schedule*\n│  └⊷ Upcoming tournaments\n├─⊷ *${PREFIX}pga leaderboard*\n│  └⊷ Alias for golf\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -48,7 +48,7 @@ export default {
           });
         }
       });
-      text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       await sock.sendMessage(jid, { text }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
@@ -56,7 +56,7 @@ export default {
       console.error('❌ [GOLF]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *GOLF ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *GOLF ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

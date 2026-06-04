@@ -151,7 +151,7 @@ export default {
 
             // Fallback: plain text with URL inline
             await sock.sendMessage(chatId, {
-                text: `${guideText}\n\n🔗 ${platform.deployUrl}\n\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `${guideText}\n\n🔗 ${platform.deployUrl}\n\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
             return;
         }
@@ -209,7 +209,7 @@ export default {
                 `├─⊷ *${PREFIX}deploy railway*\n` +
                 `│  └⊷ 🚂 Deploy on Railway\n` +
                 `│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: msg });
     }
 };

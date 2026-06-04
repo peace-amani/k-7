@@ -63,7 +63,7 @@ export default {
                     `│  └⊷ ${PREFIX}xnxx sexy massage\n` +
                     `├⊷ *Aliases:* xnxxdl, xnx\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -119,7 +119,7 @@ export default {
                 `├⊷ 📌 *Title:* ${title || 'Unknown'}\n` +
                 `├⊷ ⏱️ *Duration:* ${formatDuration(duration)}\n` +
                 `├⊷ ℹ️ *Info:* ${(info || 'N/A').replace(/\n/g, ' | ')}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             if (thumbUrl) {
                 try {

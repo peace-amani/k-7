@@ -41,7 +41,7 @@ export default {
                 `├─⊷ *${PREFIX}trim 1,2*\n│  └⊷ Trim min 1 to min 2\n` +
                 `├─⊷ *${PREFIX}trim 1:30,2:45*\n│  └⊷ Trim 1:30 to 2:45\n` +
                 `├─⊷ *${PREFIX}trim 0,0:30*\n│  └⊷ First 30 seconds\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 

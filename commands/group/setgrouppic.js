@@ -91,7 +91,7 @@ export default {
                     `├─⊷ *Usage:*\n│  └⊷ Send or reply to an *image* with\n│     \`${PREFIX}setgrouppic\`\n│\n` +
                     `├─⊷ *Aliases:* setgpp, grouppp, gpic\n│\n` +
                     `├─⊷ 💡 Stickers also work as group pics\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 );
             }
 
@@ -115,7 +115,7 @@ export default {
             await reply(
                 `╭─⌈ 🖼️ *GROUP PIC UPDATED* ⌋\n│\n` +
                 `│ ✧ *Group:* ${groupMetadata.subject || jid}\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
 
         } catch (err) {

@@ -20,7 +20,7 @@ export default {
           `╭─⌈ 🧠 *KIMI K2 THINKING* ⌋\n` +
           `├─⊷ *${PREFIX}kimi <question>*\n` +
           `│  └⊷ Moonshot AI reasoning model via NVIDIA\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -47,7 +47,7 @@ export default {
           `━━━━━━━━━━━━━━━━━\n` +
           `${reply}\n` +
           `━━━━━━━━━━━━━━━━━\n` +
-          `🐺 *Powered by ${owner} TECH*`
+          `${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

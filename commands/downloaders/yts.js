@@ -38,7 +38,7 @@ export default {
 
     if (!query) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔍 *YTS SEARCH* ⌋\n│\n├─⊷ *${p}yts <search query>*\n│  └⊷ Search YouTube videos\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔍 *YTS SEARCH* ⌋\n│\n├─⊷ *${p}yts <search query>*\n│  └⊷ Search YouTube videos\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

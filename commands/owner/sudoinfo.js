@@ -40,7 +40,7 @@ export default {
             info += `│\n`;
         }
 
-        info += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        info += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text: info }, { quoted: msg });
     }

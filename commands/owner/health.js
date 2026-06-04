@@ -89,7 +89,7 @@ export default {
             `│ *At:*        ${new Date(data.timestamp).toLocaleTimeString()}\n` +
             `│\n` +
             `│ *JSON:*      ${prefix}health json\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text }, { quoted: msg });
     }

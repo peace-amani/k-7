@@ -860,7 +860,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 🖼️ *ANTI-IMAGE* ⌋\n│\n├─⊷ *.antiimage on <delete|warn|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antiimage off*\n│  └⊷ Disable protection\n├─⊷ *.antiimage exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            const helpText = `╭─⌈ 🖼️ *ANTI-IMAGE* ⌋\n│\n├─⊷ *.antiimage on <delete|warn|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antiimage off*\n│  └⊷ Disable protection\n├─⊷ *.antiimage exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
             
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

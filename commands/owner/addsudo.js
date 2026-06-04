@@ -53,7 +53,7 @@
 //                 targetNumber = args[0].replace(/[^0-9]/g, '');
 //             } else {
 //                 return sock.sendMessage(chatId, {
-//                     text: `╭─⌈ ⚠️ *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <phone number>*\n│  └⊷ Reply with number\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+//                     text: `╭─⌈ ⚠️ *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <phone number>*\n│  └⊷ Reply with number\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
 //                 }, { quoted: msg });
 //             }
 //         } else if (mentioned) {
@@ -69,7 +69,7 @@
 
 //         if (!targetNumber || targetNumber.length < 7) {
 //             return sock.sendMessage(chatId, {
-//                 text: `╭─⌈ 📋 *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add by number\n├─⊷ *Reply + ${PREFIX}addsudo*\n│  └⊷ Add via reply\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+//                 text: `╭─⌈ 📋 *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add by number\n├─⊷ *Reply + ${PREFIX}addsudo*\n│  └⊷ Add via reply\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
 //             }, { quoted: msg });
 //         }
 
@@ -184,7 +184,7 @@ export default {
                 targetNumber = args[0].replace(/[^0-9]/g, '');
             } else {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ ⚠️ *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <phone number>*\n│  └⊷ Reply with number\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ⚠️ *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <phone number>*\n│  └⊷ Reply with number\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
         } else if (mentioned) {
@@ -200,7 +200,7 @@ export default {
 
         if (!targetNumber || targetNumber.length < 7) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📋 *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add by number\n├─⊷ *Reply + ${PREFIX}addsudo*\n│  └⊷ Add via reply\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📋 *ADD SUDO* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add by number\n├─⊷ *Reply + ${PREFIX}addsudo*\n│  └⊷ Add via reply\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

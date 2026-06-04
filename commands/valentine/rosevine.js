@@ -17,7 +17,7 @@ export default {
 
         if (!args.length && !hasImage) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 🌹 *ROSE VINE* ⌋\n│\n│ Create a rose vine effect\n│ with text and image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}rosevine <text1> | <text2>\n│ _(reply to an image)_\n│\n├─⊷ *Example:*\n│ ${global.prefix || '.'}rosevine I Love You | Forever\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🌹 *ROSE VINE* ⌋\n│\n│ Create a rose vine effect\n│ with text and image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}rosevine <text1> | <text2>\n│ _(reply to an image)_\n│\n├─⊷ *Example:*\n│ ${global.prefix || '.'}rosevine I Love You | Forever\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

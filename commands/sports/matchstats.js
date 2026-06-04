@@ -100,7 +100,7 @@ export default {
         }
       }
 
-      text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
       await sock.sendMessage(jid, { text }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
       console.log(`📊 [MATCHSTATS] Stats for match ${matchId} fetched`);
@@ -109,7 +109,7 @@ export default {
       console.error('❌ [MATCHSTATS]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *MATCH STATS ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Make sure the match ID is correct\n├─⊷ Usage: ${PREFIX}matchstats <matchId>\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *MATCH STATS ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Make sure the match ID is correct\n├─⊷ Usage: ${PREFIX}matchstats <matchId>\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

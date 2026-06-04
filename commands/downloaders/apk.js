@@ -28,7 +28,7 @@ export default {
 
     if (!args || !args[0]) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 📱 *APK DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}apk <app name>*\n│  └⊷ Download APK file\n│\n├─⊷ *Examples:*\n│  └⊷ ${prefix}apk WhatsApp\n│  └⊷ ${prefix}apk Telegram\n│  └⊷ ${prefix}apk Spotify\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 📱 *APK DOWNLOADER* ⌋\n│\n├─⊷ *${prefix}apk <app name>*\n│  └⊷ Download APK file\n│\n├─⊷ *Examples:*\n│  └⊷ ${prefix}apk WhatsApp\n│  └⊷ ${prefix}apk Telegram\n│  └⊷ ${prefix}apk Spotify\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

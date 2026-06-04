@@ -104,7 +104,7 @@ export default {
             `│ • \`${PREFIX}listinactive\` - Find inactive members\n` +
             `│ • \`${PREFIX}tagall\` - Tag everyone\n` +
             `│\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: msg });
         try { await sock.sendMessage(jid, { react: { text: '😴', key: msg.key } }); } catch {}
         return;
@@ -146,7 +146,7 @@ export default {
         `│ • \`${PREFIX}listinactive\` - Find inactive members\n` +
         `│ • \`${PREFIX}tagall\` - Tag everyone\n` +
         `│\n` +
-        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       const mentions = allActive.map(m => m.id);
 

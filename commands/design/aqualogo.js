@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🌊 *AQUA LOGO* ⌋\n│\n├─⊷ *aqualogo*\n│  └⊷ aqualogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ aqualogo OCEAN\n│  └⊷ aqualogo WATER\n│  └⊷ aqualogo MARINE\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ 🌊 *AQUA LOGO* ⌋\n│\n├─⊷ *aqualogo*\n│  └⊷ aqualogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ aqualogo OCEAN\n│  └⊷ aqualogo WATER\n│  └⊷ aqualogo MARINE\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

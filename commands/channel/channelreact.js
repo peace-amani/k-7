@@ -306,7 +306,7 @@
 //                 text += `├─⊷ *${prefix}channelreact delay <min> <max>*\n│  └⊷ Set delay in seconds (min 300s/5min)\n`;
 //                 text += `├─⊷ *${prefix}channelreact channels*\n│  └⊷ List known channels\n`;
 //                 text += `├─⊷ *${prefix}channelreact stats*\n│  └⊷ View statistics\n`;
-//                 text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+//                 text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
 //                 await sock.sendMessage(chatId, { text }, { quoted: m });
 //                 return;
@@ -394,7 +394,7 @@
 //                     text += `│\n`;
 //                     text += `├─⊷ *${prefix}channelreact add <jid>*\n│  └⊷ Add a channel JID manually\n`;
 //                     text += `├─⊷ *${prefix}channelreact remove <jid>*\n│  └⊷ Remove a channel JID\n`;
-//                     text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+//                     text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
 //                     await sock.sendMessage(chatId, { text }, { quoted: m });
 //                     break;

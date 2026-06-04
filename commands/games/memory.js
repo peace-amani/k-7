@@ -67,7 +67,7 @@ export default {
                     `├─⊷ Find all *${SYMBOLS.length}* pairs\n` +
                     `├─⊷ Flip with *.memory <a> <b>* (1-16)\n` +
                     `│\n${render(board)}\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

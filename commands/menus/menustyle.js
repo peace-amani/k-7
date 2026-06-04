@@ -152,7 +152,7 @@ export default {
       return sock.sendMessage(
         jid,
         {
-          text: `╭─⌈ ❌ *INVALID STYLE* ⌋\n│\n├─⊷ *${PREFIX}menustyle <1-9>*\n│  └⊷ Valid styles: 1 to 9\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}menustyle 3\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ ❌ *INVALID STYLE* ⌋\n│\n├─⊷ *${PREFIX}menustyle <1-9>*\n│  └⊷ Valid styles: 1 to 9\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}menustyle 3\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         },
         { 
           quoted: m // Reply format

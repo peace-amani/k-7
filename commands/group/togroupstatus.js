@@ -127,7 +127,7 @@ export default {
 
             if (!quotedMessage && !textAfterCommand && !messageText.trim()) {
                 return sock.sendMessage(jid, {
-                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus* (reply)\n│  └⊷ Reply to media/text\n├─⊷ *${PREFIX}togstatus Your text here*\n│  └⊷ Post text status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus* (reply)\n│  └⊷ Reply to media/text\n├─⊷ *${PREFIX}togstatus Your text here*\n│  └⊷ Post text status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 
@@ -148,7 +148,7 @@ export default {
             }
             else {
                 return sock.sendMessage(jid, {
-                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus Your text*\n│  └⊷ Text or reply media\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus Your text*\n│  └⊷ Text or reply media\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 

@@ -43,7 +43,7 @@ export default {
                     `├─⊷ *Payouts (3 of a kind)*\n` +
                     Object.entries(TRIPLE_PAYOUT).map(([s, x]) => `│  ${s}${s}${s} → ${x}×`).join('\n') + '\n' +
                     `├─⊷ *Any pair* → ${PAIR_PAYOUT}×\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -93,7 +93,7 @@ export default {
                 `├─⊷ Won    : ${COIN} ${fmt(payout)}\n` +
                 `├─⊷ Net    : ${net >= 0 ? '+' : ''}${COIN} ${fmt(net)}\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

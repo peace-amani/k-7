@@ -39,7 +39,7 @@ export default {
 
     if (!url || !url.includes('mediafire.com')) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 📁 *MEDIAFIRE DOWNLOADER* ⌋\n│\n├⊷ *Usage:* ${prefix}mediafire <url>\n├⊷ *Example:*\n│  └⊷ ${prefix}mediafire https://www.mediafire.com/file/abc123/file.zip/file\n├⊷ *Aliases:* mf, mfdl, mediafiredl\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 📁 *MEDIAFIRE DOWNLOADER* ⌋\n│\n├⊷ *Usage:* ${prefix}mediafire <url>\n├⊷ *Example:*\n│  └⊷ ${prefix}mediafire https://www.mediafire.com/file/abc123/file.zip/file\n├⊷ *Aliases:* mf, mfdl, mediafiredl\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

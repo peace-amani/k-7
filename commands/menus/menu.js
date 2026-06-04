@@ -961,7 +961,7 @@ export default {
 // │
 // ╰─⊷
 
-// 🐺 *POWERED BY WOLF TECH* 🐺`;
+// ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
 //   // ========== APPLY "READ MORE" EFFECT ==========
 //   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -2184,7 +2184,7 @@ case 1: {
 │
 ╰─⊷
 
-🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -2516,7 +2516,7 @@ case 2: {
 📌 *Type "${global.prefix || "."}menu <style>" to change menu style*
 📌 *Available styles: 1-9*
 
-🐺🌕*POWERED BY ${_menuGetOwnerName().toUpperCase()} TECH*🌕🐺
+${getFooter(m.key.participant || m.key.remoteJid)}
 `; 
   await sock.sendMessage(jid, { text }, { quoted: m });
   break;
@@ -3516,7 +3516,7 @@ case 3: {
 │ comic3d
 │ ephotomenu
 └───────────────`,
-`🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
+`${getFooter(m.key.participant || m.key.remoteJid)}`
   ];
 
   const readMoreSep = Array.from({ length: 550 }, (_, i) => ['\u200E','\u200F','\u200B','\u200C','\u200D','\u2060','\uFEFF'][i % 7]).join('');
@@ -4358,7 +4358,7 @@ case 4: {
 │
 ╰─⊷
 
-🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -5243,7 +5243,7 @@ case 4: {
 // │
 // ╰─⊷
 
-// 🐺 *POWERED BY WOLF TECH* 🐺`;
+// ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
 //   // ========== APPLY "READ MORE" EFFECT ==========
 //   // Combine faded info section (visible) and commands (hidden) with "Read more"
@@ -6434,7 +6434,7 @@ case 5: {
 │
 ╰─⊷
 
-🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 
   // ========== APPLY "READ MORE" EFFECT ==========
   finalText = createReadMoreEffect(fadedInfoSection, commandsText);
@@ -7435,7 +7435,7 @@ case 6: {
 > │ comic3d
 > │ ephotomenu
 > └───────────────`,
-`> 🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
+`> ${getFooter(m.key.participant || m.key.remoteJid)} 🐺`
   ];
 
   // Create the read more separator
@@ -8260,7 +8260,7 @@ case 6: {
 
 
 
-// 🐺POWERED BY WOLFTECH🐺
+// ${getFooter(m.key.participant || m.key.remoteJid)}
 
 // `;
 
@@ -9301,7 +9301,7 @@ case 7: {
 │ comic3d
 │ ephotomenu
 └───────────────`,
-`🐺 *POWERED BY ${ownerName.toUpperCase()} TECH* 🐺`
+`${getFooter(m.key.participant || m.key.remoteJid)}`
   ];
 
   const readMoreSep = Array.from({ length: 550 }, (_, i) => ['\u200E','\u200F','\u200B','\u200C','\u200D','\u2060','\uFEFF'][i % 7]).join('');
@@ -10173,7 +10173,7 @@ case 9: {
 │
 ╰─⊷
 
-🐺 *POWERED BY ${ownerName9.toUpperCase()} TECH* 🐺`;
+${getFooter(m.key.participant || m.key.remoteJid)}`;
 
   finalText9 = createReadMoreEffect9(fadedInfoSection9, commandsText9);
 

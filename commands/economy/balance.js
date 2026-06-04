@@ -24,7 +24,7 @@ export default {
             `├─⊷ Bank   : ${COIN} ${fmt(u.bank)} / ${fmt(u.bankCap)}\n` +
             `├─⊷ Total  : ${COIN} ${fmt(total)}\n` +
             `├─⊷ Level  : ${u.level}  (XP ${u.xp}/${100 * u.level})\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text, mentions }, { quoted: m });
     }

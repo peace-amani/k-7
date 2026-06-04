@@ -36,7 +36,7 @@ export default {
                 await sock.updateReadReceiptsPrivacy('all');
                 await supabase.setConfig('read_receipts_pref', { mode: 'all' }).catch(() => {});
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *READ RECEIPTS* ⌋\n│\n├─⊷ *Status:* 🟢 ON\n├─⊷ *Saved:* ✅ Persists across restarts\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ✅ *READ RECEIPTS* ⌋\n│\n├─⊷ *Status:* 🟢 ON\n├─⊷ *Saved:* ✅ Persists across restarts\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } }); } catch {}
 
@@ -44,7 +44,7 @@ export default {
                 await sock.updateReadReceiptsPrivacy('none');
                 await supabase.setConfig('read_receipts_pref', { mode: 'none' }).catch(() => {});
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🔴 *READ RECEIPTS* ⌋\n│\n├─⊷ *Status:* 🔴 OFF\n├─⊷ *Saved:* ✅ Persists across restarts\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🔴 *READ RECEIPTS* ⌋\n│\n├─⊷ *Status:* 🔴 OFF\n├─⊷ *Saved:* ✅ Persists across restarts\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🔴', key: msg.key } }); } catch {}
 
@@ -61,7 +61,7 @@ export default {
                 } catch {}
 
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 📋 *READ RECEIPTS* ⌋\n│\n├─⊷ *Current:* ${currentStatus}\n├─⊷ *Saved pref:* ${savedPref?.mode ? (savedPref.mode === 'all' ? '🟢 ON' : '🔴 OFF') : '⚪ Not set'}\n│\n├─⊷ *${PREFIX}receipt on*\n│  └⊷ Enable receipts\n├─⊷ *${PREFIX}receipt off*\n│  └⊷ Disable receipts\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 📋 *READ RECEIPTS* ⌋\n│\n├─⊷ *Current:* ${currentStatus}\n├─⊷ *Saved pref:* ${savedPref?.mode ? (savedPref.mode === 'all' ? '🟢 ON' : '🔴 OFF') : '⚪ Not set'}\n│\n├─⊷ *${PREFIX}receipt on*\n│  └⊷ Enable receipts\n├─⊷ *${PREFIX}receipt off*\n│  └⊷ Disable receipts\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '📋', key: msg.key } }); } catch {}
             }

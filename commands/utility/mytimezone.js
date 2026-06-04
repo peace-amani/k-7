@@ -23,7 +23,7 @@ export default {
           `├─⊷ ⚠️ Could not detect your timezone\n` +
           `├─⊷ Your account uses a privacy ID (LID)\n` +
           `├─⊷ 💡 Try messaging me in DM instead\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
       return;
     }
@@ -58,7 +58,7 @@ export default {
         `├─⊷ 🔢 Offset   : ${utcOffset}\n` +
         `├─⊷ 📅 Date     : ${currentDate}\n` +
         `├─⊷ ⏰ Time     : ${currentTime}\n` +
-        `╰⊷ *Powered by ${owner} TECH*`
+        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
     }, { quoted: m });
   },
 };

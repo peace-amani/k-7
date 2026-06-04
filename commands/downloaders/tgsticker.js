@@ -112,7 +112,7 @@ export default {
           `│  └⊷ ${PREFIX}tgsticker pepe\n` +
           `│  └⊷ ${PREFIX}tgsticker anime girl\n` +
           `│  └⊷ ${PREFIX}tgs cats\n│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

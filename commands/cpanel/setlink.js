@@ -23,7 +23,7 @@ export default {
         if (!args[0]) {
             const display = config.panelUrl || '❌ Not set';
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔗 *SET PANEL LINK* ⌋\n├─⊷ *${PREFIX}setlink <url>*\n│  └⊷ e.g. \`${PREFIX}setlink https://panel.myhost.com\`\n├─⊷ *Current:* ${display}\n╰⊷ *Powered by ${owner} TECH*`
+                text: `╭─⌈ 🔗 *SET PANEL LINK* ⌋\n├─⊷ *${PREFIX}setlink <url>*\n│  └⊷ e.g. \`${PREFIX}setlink https://panel.myhost.com\`\n├─⊷ *Current:* ${display}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

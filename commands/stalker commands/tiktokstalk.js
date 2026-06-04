@@ -97,7 +97,7 @@ export default {
             lines.push(`├─⊷ *✅ Verified:* ${d.verified ? 'Yes ✔️' : 'No'}`);
             lines.push(`├─⊷ *🔒 Private:* ${d.private ? 'Yes' : 'No'}`);
             if (d.profileUrl) lines.push(`├─⊷ *🔗 Profile:* ${d.profileUrl}`);
-            lines.push(`│`, `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`, `> 🐺 *${getBotName()} STALKER*`);
+            lines.push(`│`, `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`, `> 🐺 *${getBotName()} STALKER*`);
 
             const caption = lines.join('\n');
 

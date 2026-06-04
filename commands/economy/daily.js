@@ -26,7 +26,7 @@ export default {
                     `╭─⌈ ⏳ *DAILY ON COOLDOWN* ⌋\n` +
                     `├─⊷ Come back in *${formatCooldown(left)}*\n` +
                     `├─⊷ Current streak: 🔥 ${u.streak} day(s)\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -52,7 +52,7 @@ export default {
                 `├─⊷ Earned : ${COIN} ${fmt(reward)}\n` +
                 `├─⊷ Streak : 🔥 ${streak} day(s)\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

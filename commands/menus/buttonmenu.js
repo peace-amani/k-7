@@ -59,7 +59,7 @@ export default {
 
                 if (!categoryMap[cat]) {
                     await sock.sendMessage(chatId, {
-                        text: `╭─⌈ ❌ *UNKNOWN CATEGORY* ⌋\n│\n├─⊷ Available: ${catNames.join(', ')}\n├─⊷ Usage: *${prefix}buttonmenu ${catNames[0]}*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        text: `╭─⌈ ❌ *UNKNOWN CATEGORY* ⌋\n│\n├─⊷ Available: ${catNames.join(', ')}\n├─⊷ Usage: *${prefix}buttonmenu ${catNames[0]}*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                     }, { quoted: m });
                     return;
                 }
@@ -126,7 +126,7 @@ export default {
             text += `│\n`;
             text += `│ Toggle: *${prefix}mode buttons* / *${prefix}mode default*\n`;
             text += `└────────────────\n`;
-            text += `🐺 *POWERED BY WOLFTECH* 🐺`;
+            text += `${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             // ========== SEND WITH MENU IMAGE (WITH FALLBACK) ==========
             try {

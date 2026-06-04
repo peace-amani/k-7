@@ -40,7 +40,7 @@ export default {
             `├─⊷ Total   : ${COIN} ${fmt(total)}\n` +
             `├─⊷ Wins/L  : ${u.wins}/${u.losses}  (winrate ${winrate})\n` +
             `├─⊷ Rank    : ${rankStr}\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, {
             text,

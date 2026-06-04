@@ -465,7 +465,7 @@ export default {
             const customText = args.slice(1).join(' ').trim();
             if (!customText) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *.antimention set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {user}  - mention the sender\n│  └⊷ {group} - group name\n│  └⊷ {warns} - current warning count\n│  └⊷ {limit} - max warning count\n│  └⊷ {mode}  - mode (warn/delete/kick)\n│  └⊷ {type}  - blocked mention type\n│\n├─⊷ Example:\n│  └⊷ .antimention set Hey {user}, no mentions!\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *.antimention set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {user}  - mention the sender\n│  └⊷ {group} - group name\n│  └⊷ {warns} - current warning count\n│  └⊷ {limit} - max warning count\n│  └⊷ {mode}  - mode (warn/delete/kick)\n│  └⊷ {type}  - blocked mention type\n│\n├─⊷ Example:\n│  └⊷ .antimention set Hey {user}, no mentions!\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
             const target = currentGroupSettings || {
@@ -587,7 +587,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 👥 *ANTI-MENTION* ⌋\n│\n├─⊷ *.antimention on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antimention off*\n│  └⊷ Disable protection\n├─⊷ *.antimention types [add/remove/list]*\n│  └⊷ Manage mention types\n├─⊷ *.antimention exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antimention set <text>*\n│  └⊷ Custom warning text\n│  └⊷ {user} {group} {warns} {limit} {mode} {type}\n├─⊷ *.antimention reset*\n│  └⊷ Restore default text\n├─⊷ *.antimention status*\n│  └⊷ View current status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            const helpText = `╭─⌈ 👥 *ANTI-MENTION* ⌋\n│\n├─⊷ *.antimention on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antimention off*\n│  └⊷ Disable protection\n├─⊷ *.antimention types [add/remove/list]*\n│  └⊷ Manage mention types\n├─⊷ *.antimention exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antimention set <text>*\n│  └⊷ Custom warning text\n│  └⊷ {user} {group} {warns} {limit} {mode} {type}\n├─⊷ *.antimention reset*\n│  └⊷ Restore default text\n├─⊷ *.antimention status*\n│  └⊷ View current status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
             
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

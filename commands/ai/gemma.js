@@ -20,7 +20,7 @@ export default {
           `╭─⌈ ✨ *GEMMA 2 (2B)* ⌋\n` +
           `├─⊷ *${PREFIX}gemma <question>*\n` +
           `│  └⊷ Google Gemma 2 — small, fast, sharp\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -45,7 +45,7 @@ export default {
           `━━━━━━━━━━━━━━━━━\n` +
           `${reply}\n` +
           `━━━━━━━━━━━━━━━━━\n` +
-          `🐺 *Powered by ${owner} TECH*`
+          `${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

@@ -32,7 +32,7 @@ export default {
                     `├─⊷ *Example:*\n` +
                     `│  └⊷ ${PREFIX}setchannel 120363425472822304@newsletter WolfTech\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

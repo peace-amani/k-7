@@ -16,7 +16,7 @@ export default {
 
         if (sudoers.length === 0) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📋 *SUDO LIST* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add sudo user\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📋 *SUDO LIST* ⌋\n│\n├─⊷ *${PREFIX}addsudo <number>*\n│  └⊷ Add sudo user\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

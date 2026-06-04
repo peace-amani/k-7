@@ -78,7 +78,7 @@ export default {
     const lines = [];
     if (inviteCode) lines.push(`*Group ID*\n${inviteCode}`);
     if (groupJid)   lines.push(`*Group JID*\n${groupJid}`);
-    lines.push(`*Powered by ${owner} TECH*`);
+    lines.push(`${getFooter(m.key.participant || m.key.remoteJid)}`);
     const text = lines.join('\n\n');
 
     if (giftedBtns?.sendInteractiveMessage) {
@@ -115,7 +115,7 @@ export default {
     const fallback = [];
     if (inviteCode) fallback.push(`*Group ID*\n\`${inviteCode}\``);
     if (groupJid)   fallback.push(`*Group JID*\n\`${groupJid}\``);
-    fallback.push(`*Powered by ${owner} TECH*`);
+    fallback.push(`${getFooter(m.key.participant || m.key.remoteJid)}`);
 
     await sock.sendMessage(chatJid, { text: fallback.join('\n\n') }, { quoted: m });
   }

@@ -230,7 +230,7 @@ export default {
                     `├⊷ reset [@user|all]\n` +
                     `├⊷ status\n` +
                     `├⊷ help\n` +
-                    `╰⊷ *Powered by ${owner} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

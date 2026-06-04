@@ -16,7 +16,7 @@ export default {
 
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🏏 *CRICKET* ⌋\n├─⊷ *${PREFIX}cricket scores*\n│  └⊷ Live cricket scores\n├─⊷ *${PREFIX}cricket schedule*\n│  └⊷ Upcoming matches\n├─⊷ *${PREFIX}ipl scores*\n│  └⊷ Alias for cricket\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🏏 *CRICKET* ⌋\n├─⊷ *${PREFIX}cricket scores*\n│  └⊷ Live cricket scores\n├─⊷ *${PREFIX}cricket schedule*\n│  └⊷ Upcoming matches\n├─⊷ *${PREFIX}ipl scores*\n│  └⊷ Alias for cricket\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -42,7 +42,7 @@ export default {
         });
         text += `│  └⊷ ${status}\n`;
       });
-      text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       await sock.sendMessage(jid, { text }, { quoted: m });
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
@@ -50,7 +50,7 @@ export default {
       console.error('❌ [CRICKET]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *CRICKET ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *CRICKET ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

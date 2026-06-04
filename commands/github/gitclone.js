@@ -33,7 +33,7 @@ export default {
                     `│ *Related:*\n` +
                     `│ • \`${PREFIX}zip\` - Get bot source code\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -146,7 +146,7 @@ export default {
                     `│\n` +
                     `│ ✅ Clone complete!\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
             this.cleanup(tempDir);
@@ -166,7 +166,7 @@ export default {
                     `│ • \`Repo exists and is public\`\n` +
                     `│ • \`URL format is correct\`\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
             if (tempDir) this.cleanup(tempDir);

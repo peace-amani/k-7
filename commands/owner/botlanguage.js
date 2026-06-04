@@ -23,7 +23,7 @@ export default {
     const jid = m.key.remoteJid;
     const p   = (args[0] || '').toLowerCase().trim();
 
-    const footer = `╰⊷ *Powered by ${(getOwnerName() || 'WOLF').toUpperCase()} TECH*`;
+    const footer = `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
     // ── No args: show current + list ────────────────────────────────────────
     if (!p) {

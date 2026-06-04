@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ ✨ *CHROME LOGO* ⌋\n│\n├─⊷ *chromelogo*\n│  └⊷ chromelogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ chromelogo WOLF\n│  └⊷ chromelogo CHROME\n│  └⊷ chromelogo SHINE\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ ✨ *CHROME LOGO* ⌋\n│\n├─⊷ *chromelogo*\n│  └⊷ chromelogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ chromelogo WOLF\n│  └⊷ chromelogo CHROME\n│  └⊷ chromelogo SHINE\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

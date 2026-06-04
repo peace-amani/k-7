@@ -90,7 +90,7 @@ async function settle(sock, chatId, m, session, doubled = false) {
             `├─⊷ Payout : ${COIN} ${fmt(payout)}\n` +
             `├─⊷ Net    : ${net >= 0 ? '+' : ''}${COIN} ${fmt(net)}\n` +
             `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
     }, { quoted: m });
 }
 
@@ -195,7 +195,7 @@ export default {
                 `├─⊷ Bet: ${COIN} ${fmt(bet)}\n` +
                 `│\n${render(session, true)}\n` +
                 `│\n├─⊷ *.bj hit*  •  *.bj stand*  •  *.bj double*\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

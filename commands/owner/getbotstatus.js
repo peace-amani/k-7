@@ -44,7 +44,7 @@ export default {
 
         const json = JSON.stringify(data, null, 2);
 
-        const footer = '\n\n*Powered by WOLF TECH*';
+        const footer = '\n\n${getFooter(m.key.participant || m.key.remoteJid)}';
 
         if (json.length > 3500) {
             const buf = Buffer.from(json, 'utf8');

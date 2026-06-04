@@ -220,7 +220,7 @@ export default {
         } catch (error) {
             console.error("Hug command error:", error);
             await sock.sendMessage(m.key.remoteJid, {
-                text: `╭─⌈ ❌ *HUG ERROR* ⌋\n│\n├─⊷ ${error.message}\n│  └⊷ Use *.hug help* for instructions\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ ❌ *HUG ERROR* ⌋\n│\n├─⊷ ${error.message}\n│  └⊷ Use *.hug help* for instructions\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
     }

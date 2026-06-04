@@ -51,7 +51,7 @@ export default {
                 `├─⊷ To     : @${targetId}\n` +
                 `├─⊷ Amount : ${COIN} ${fmt(amount)}\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             mentions: [`${targetId}@s.whatsapp.net`]
         }, { quoted: m });
     }

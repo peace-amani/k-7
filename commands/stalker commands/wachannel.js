@@ -15,7 +15,7 @@ export default {
 
     if (!args || !args[0]) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔍 *WHATSAPP CHANNEL STALKER* ⌋\n│\n├─⊷ *${prefix}wachannel <channel URL>*\n│  └⊷ Stalk a WhatsApp channel\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}wachannel https://whatsapp.com/channel/...\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔍 *WHATSAPP CHANNEL STALKER* ⌋\n│\n├─⊷ *${prefix}wachannel <channel URL>*\n│  └⊷ Stalk a WhatsApp channel\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}wachannel https://whatsapp.com/channel/...\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

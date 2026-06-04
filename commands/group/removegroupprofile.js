@@ -52,7 +52,7 @@ export default {
             await reply(
                 `╭─⌈ 🗑️ *GROUP PIC REMOVED* ⌋\n│\n` +
                 `│ ✧ *Group:* ${groupMetadata.subject || jid}\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
 
         } catch (err) {

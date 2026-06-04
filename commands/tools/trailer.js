@@ -87,7 +87,7 @@ export default {
       searchQuery = quoted.text.trim();
         } else {
       const helpText = 
-        `╭─⌈ 🎬 *MOVIE TRAILER* ⌋\n│\n├─⊷ *.trailer <movie name>*\n│  └⊷ Download official movie trailer\n│\n├─⊷ *.trailer <YouTube URL>*\n│  └⊷ Download trailer from URL\n│\n├─⊷ *Examples:*\n│  └⊷ .trailer Interstellar\n│  └⊷ .trailer John Wick 4\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        `╭─⌈ 🎬 *MOVIE TRAILER* ⌋\n│\n├─⊷ *.trailer <movie name>*\n│  └⊷ Download official movie trailer\n│\n├─⊷ *.trailer <YouTube URL>*\n│  └⊷ Download trailer from URL\n│\n├─⊷ *Examples:*\n│  └⊷ .trailer Interstellar\n│  └⊷ .trailer John Wick 4\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       await sock.sendMessage(jid, { text: helpText }, { quoted: m });
       return;

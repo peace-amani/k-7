@@ -28,7 +28,7 @@ export default {
 ├─⊷ *Usage:* ${PREFIX}addnote <your note>
 ├─⊷ *Example:* ${PREFIX}addnote I will come tomorrow
 ├─⊷ *View:* ${PREFIX}mynotes
-╰⊷ *Powered by ${owner} TECH*`
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
       return;
     }
@@ -69,7 +69,7 @@ export default {
 ├─⊷ *#${notes.length}*  ${text}
 ├─⊷ Total notes: *${notes.length}*
 ├─⊷ View all: *${PREFIX}mynotes*
-╰⊷ *Powered by ${owner} TECH*`
+╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     } catch (err) {
       console.error('[addnote]', err.message);

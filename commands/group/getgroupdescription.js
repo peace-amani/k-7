@@ -31,7 +31,7 @@ export default {
                     `╭⌈ ❌ *NO GROUP SPECIFIED* ⌋\n` +
                     `├⊷ Run inside a group, or provide a JID:\n` +
                     `├⊷ *${PREFIX}getdesc 1234567890-1234567890@g.us*\n` +
-                    `╰⊷ *Powered by ${BRAND()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -59,7 +59,7 @@ export default {
                     `├⊷ Group : *${name}*\n` +
                     `├⊷ Description : _No description set._\n` +
                     (!usedJid ? `├⊷ 💡 Tip: Use *${PREFIX}getdesc <JID>* to check any group from anywhere\n` : '') +
-                    `╰⊷ *Powered by ${BRAND()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -72,7 +72,7 @@ export default {
                 `${desc}\n` +
                 `│\n` +
                 (!usedJid ? `├⊷ 💡 Tip: Use *${PREFIX}getdesc <JID>* to check any group from anywhere\n` : '') +
-                `╰⊷ *Powered by ${BRAND()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: msg });
     },
 };

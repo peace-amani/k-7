@@ -122,7 +122,7 @@ export default {
 
         if (!rawTarget) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🕊️ *UNBLOCK* ⌋\n│\n├─⊷ */unblock <number>*\n│  └⊷ e.g. /unblock 254712345678\n├─⊷ *Tag* or *reply* to a user\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 🕊️ *UNBLOCK* ⌋\n│\n├─⊷ */unblock <number>*\n│  └⊷ e.g. /unblock 254712345678\n├─⊷ *Tag* or *reply* to a user\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 

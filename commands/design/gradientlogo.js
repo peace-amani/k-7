@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🌈 *GRADIENT LOGO* ⌋\n│\n├─⊷ *gradientlogo*\n│  └⊷ gradientlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ gradientlogo WOLF\n│  └⊷ gradientlogo GRADIENT\n│  └⊷ gradientlogo COLORFUL\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ 🌈 *GRADIENT LOGO* ⌋\n│\n├─⊷ *gradientlogo*\n│  └⊷ gradientlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ gradientlogo WOLF\n│  └⊷ gradientlogo GRADIENT\n│  └⊷ gradientlogo COLORFUL\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

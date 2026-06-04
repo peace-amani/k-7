@@ -20,7 +20,7 @@ export default {
           `├─⊷ *Examples:*\n` +
           `│  └⊷ ${PREFIX}tiktokinfo khaby.lame\n` +
           `│  └⊷ ${PREFIX}ttinfo @zachking\n│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
         
         return sock.sendMessage(jid, { text: helpText }, { quoted: m });
       }

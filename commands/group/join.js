@@ -22,7 +22,7 @@ export default {
 
         if (!linkText) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔗 *JOIN GROUP* ⌋\n│\n├─⊷ Reply to a WhatsApp group\n│  └⊷ invite link with *.join*\n├─⊷ Or: *.join [link]*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔗 *JOIN GROUP* ⌋\n│\n├─⊷ Reply to a WhatsApp group\n│  └⊷ invite link with *.join*\n├─⊷ Or: *.join [link]*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

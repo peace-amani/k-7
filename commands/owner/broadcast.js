@@ -40,7 +40,7 @@ export default {
             `│  • chats  — all private/DM chats\n` +
             `│  • all    — groups + chats\n` +
             `│\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         if (args.length < 2) return reply(HELP);
 

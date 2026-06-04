@@ -112,7 +112,7 @@ export default {
         text += `${con} 📁 *${cat.name}/* — ${cat.count} file${cat.count !== 1 ? 's' : ''}\n`;
       });
 
-      text += `│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       return sock.sendMessage(jid, { text }, { quoted: m });
     }
 
@@ -120,13 +120,13 @@ export default {
       const targetDir = path.join(ROOT, sub);
       if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
         return sock.sendMessage(jid, {
-          text: `╭─⌈ ❌ *LS ERROR* ⌋\n│\n├─⊷ Directory not found: *${sub}*\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ ❌ *LS ERROR* ⌋\n│\n├─⊷ Directory not found: *${sub}*\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
       }
       const listing = listDir(targetDir, 1, 3, '│  ');
       let text = `╭─⌈ 📁 *${sub.toUpperCase()}/* ⌋\n`;
       text += listing || '│  _(empty)_\n';
-      text += `│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       return sock.sendMessage(jid, { text }, { quoted: m });
     }
 
@@ -168,7 +168,7 @@ export default {
     text += `│  ├─ *${PREFIX}ls commands* — list all command categories\n`;
     text += `│  ├─ *${PREFIX}ls lib* — explore lib folder\n`;
     text += `│  ╰─ *${PREFIX}ls <folder>* — explore any folder\n`;
-    text += `│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+    text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
     return sock.sendMessage(jid, { text }, { quoted: m });
   }

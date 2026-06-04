@@ -111,7 +111,7 @@ export default {
 
     if (!url) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 📘 *FACEBOOK DOWNLOADER* ⌋\n│\n├─⊷ *${p}fb <url>*\n│  └⊷ Download video or reel\n│\n├─⊷ *Supported:*\n│  └⊷ fb.watch links\n│  └⊷ facebook.com/reel/...\n│  └⊷ facebook.com/watch/...\n│  └⊷ facebook.com/.../videos/...\n│  └⊷ facebook.com/share/v/...\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 📘 *FACEBOOK DOWNLOADER* ⌋\n│\n├─⊷ *${p}fb <url>*\n│  └⊷ Download video or reel\n│\n├─⊷ *Supported:*\n│  └⊷ fb.watch links\n│  └⊷ facebook.com/reel/...\n│  └⊷ facebook.com/watch/...\n│  └⊷ facebook.com/.../videos/...\n│  └⊷ facebook.com/share/v/...\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

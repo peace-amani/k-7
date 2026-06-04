@@ -55,7 +55,7 @@ export default {
       const customText = args.slice(1).join(' ').trim();
       if (!customText) {
         return sock.sendMessage(jid, {
-          text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *.approveall set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {count}    - total requests\n│  └⊷ {approved} - approved count\n│  └⊷ {failed}   - failed count\n│  └⊷ {group}    - group name\n│  └⊷ {bot}      - bot name\n│\n├─⊷ Example:\n│  └⊷ .approveall set Welcome! Approved {approved}/{count} new members.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *.approveall set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {count}    - total requests\n│  └⊷ {approved} - approved count\n│  └⊷ {failed}   - failed count\n│  └⊷ {group}    - group name\n│  └⊷ {bot}      - bot name\n│\n├─⊷ Example:\n│  └⊷ .approveall set Welcome! Approved {approved}/{count} new members.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: msg });
       }
       groupConfig.customMessage = customText;
@@ -94,7 +94,7 @@ export default {
     // ── Subcommand: help ─────────────────────────────────────────────────
     if (sub === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ ✅ *APPROVE-ALL* ⌋\n│\n├─⊷ *.approveall*\n│  └⊷ Approve all pending join requests\n├─⊷ *.approveall set <text>*\n│  └⊷ Custom result text\n│  └⊷ {count} {approved} {failed} {group} {bot}\n├─⊷ *.approveall reset*\n│  └⊷ Restore default text\n├─⊷ *.approveall status*\n│  └⊷ View current settings\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ✅ *APPROVE-ALL* ⌋\n│\n├─⊷ *.approveall*\n│  └⊷ Approve all pending join requests\n├─⊷ *.approveall set <text>*\n│  └⊷ Custom result text\n│  └⊷ {count} {approved} {failed} {group} {bot}\n├─⊷ *.approveall reset*\n│  └⊷ Restore default text\n├─⊷ *.approveall status*\n│  └⊷ View current settings\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: msg });
     }
 

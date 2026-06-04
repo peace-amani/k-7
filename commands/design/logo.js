@@ -10,7 +10,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎨 *LOGO MAKER* ⌋\n│\n├─⊷ *logo*\n│  └⊷ ${global.prefix}logo <text>\n│\n├─⊷ *Other Styles:*\n│  └⊷ ${global.prefix}neonlogo <text>\n│  └⊷ ${global.prefix}firelogo <text>\n│  └⊷ ${global.prefix}goldlogo <text>\n│  └⊷ ${global.prefix}shadowlogo <text>\n│  └⊷ ${global.prefix}gradientlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ ${global.prefix}logo WOLF\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ 🎨 *LOGO MAKER* ⌋\n│\n├─⊷ *logo*\n│  └⊷ ${global.prefix}logo <text>\n│\n├─⊷ *Other Styles:*\n│  └⊷ ${global.prefix}neonlogo <text>\n│  └⊷ ${global.prefix}firelogo <text>\n│  └⊷ ${global.prefix}goldlogo <text>\n│  └⊷ ${global.prefix}shadowlogo <text>\n│  └⊷ ${global.prefix}gradientlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ ${global.prefix}logo WOLF\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

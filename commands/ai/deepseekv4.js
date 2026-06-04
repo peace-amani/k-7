@@ -20,7 +20,7 @@ export default {
           `╭─⌈ 🧠 *DEEPSEEK V4 FLASH* ⌋\n` +
           `├─⊷ *${PREFIX}deepseekv4 <question>*\n` +
           `│  └⊷ Fast frontier reasoning model\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -46,7 +46,7 @@ export default {
           `━━━━━━━━━━━━━━━━━\n` +
           `${reply}\n` +
           `━━━━━━━━━━━━━━━━━\n` +
-          `🐺 *Powered by ${owner} TECH*`
+          `${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

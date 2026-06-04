@@ -57,7 +57,7 @@ export default {
     }
 
     await sock.sendMessage(jid, {
-      text: `${bodyText}\n\n📘 *Cpanel Guide* → ${PREFIX}cpanelguide\n\n🐺 *POWERED BY ${owner} TECH* 🐺`
+      text: `${bodyText}\n\n📘 *Cpanel Guide* → ${PREFIX}cpanelguide\n\n${getFooter(m.key.participant || m.key.remoteJid)}`
     }, { quoted: m });
   },
 };

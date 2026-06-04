@@ -183,7 +183,7 @@ export default {
                     `├─⊷ *${PREFIX}antigroupstatus on warn*\n│  └⊷ Warn users who post\n` +
                     `├─⊷ *${PREFIX}antigroupstatus on delete*\n│  └⊷ Auto-delete their post\n` +
                     `├─⊷ *${PREFIX}antigroupstatus on kick*\n│  └⊷ Remove them from group\n│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 );
             }
 
@@ -255,7 +255,7 @@ export default {
                 `├─⊷ *${PREFIX}antigroupstatus exemptadmins on/off*\n│  └⊷ Toggle admin exemption\n` +
                 `├─⊷ *${PREFIX}antigroupstatus reset*\n│  └⊷ Clear warning counts\n` +
                 `├─⊷ *${PREFIX}antigroupstatus status*\n│  └⊷ View settings\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
     }

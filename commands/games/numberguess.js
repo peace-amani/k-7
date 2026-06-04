@@ -32,7 +32,7 @@ export default {
                     `├─⊷ I'm thinking of a number between *${MIN}* and *${MAX}*\n` +
                     `├─⊷ You have *${MAX_GUESSES}* tries\n` +
                     `├─⊷ Type *.ng <number>* to guess\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

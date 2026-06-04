@@ -212,7 +212,7 @@ export default {
                         `│  └⊷ Set total duration\n` +
                         `├─⊷ *${PREFIX}autorecordtyping switch <1-30>*\n` +
                         `│  └⊷ Set how often it switches\n` +
-                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 
@@ -308,7 +308,7 @@ export default {
                     `├─⊷ *${PREFIX}autorecordtyping off*  — Stop\n` +
                     `├─⊷ *${PREFIX}autorecordtyping <1-120>*  — Set duration\n` +
                     `├─⊷ *${PREFIX}autorecordtyping switch <1-30>*  — Switch speed\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
         } catch (err) {

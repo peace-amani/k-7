@@ -159,7 +159,7 @@ export default {
 
         if (!rawTarget) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🚫 *BLOCK* ⌋\n│\n├─⊷ */block <number>*\n│  └⊷ e.g. /block 254712345678\n├─⊷ *Tag* or *reply* to a user\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 🚫 *BLOCK* ⌋\n│\n├─⊷ */block <number>*\n│  └⊷ e.g. /block 254712345678\n├─⊷ *Tag* or *reply* to a user\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 

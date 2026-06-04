@@ -16,7 +16,7 @@ export default {
 
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🏎️ *FORMULA 1* ⌋\n├─⊷ *${PREFIX}f1 results*\n│  └⊷ Latest race results\n├─⊷ *${PREFIX}f1 standings*\n│  └⊷ Driver standings\n├─⊷ *${PREFIX}f1 schedule*\n│  └⊷ Upcoming races\n├─⊷ *${PREFIX}formula1*\n│  └⊷ Alias for f1\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🏎️ *FORMULA 1* ⌋\n├─⊷ *${PREFIX}f1 results*\n│  └⊷ Latest race results\n├─⊷ *${PREFIX}f1 standings*\n│  └⊷ Driver standings\n├─⊷ *${PREFIX}f1 schedule*\n│  └⊷ Upcoming races\n├─⊷ *${PREFIX}formula1*\n│  └⊷ Alias for f1\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -36,7 +36,7 @@ export default {
           const short = name.length > 20 ? name.substring(0, 18) + '..' : name;
           text += `├─⊷ *${i + 1}.* ${short} │ ${pts} pts\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
       } else {
         const res = await axios.get(`${ESPN_BASE}/racing/f1/scoreboard`, { timeout: 15000 });
@@ -53,7 +53,7 @@ export default {
           if (circuit) text += `│  └⊷ 📍 ${circuit}\n`;
           text += `│  └⊷ ${date} • ${status}\n`;
         });
-        text += `╰───\n\n⚡ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        text += `╰───\n\n${getFooter(m.key.participant || m.key.remoteJid)}`;
         await sock.sendMessage(jid, { text }, { quoted: m });
       }
 
@@ -62,7 +62,7 @@ export default {
       console.error('❌ [F1]', error.message);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
-        text: `╭─⌈ ❌ *F1 ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ ❌ *F1 ERROR* ⌋\n├─⊷ ${error.message}\n├─⊷ Try again later\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
   }

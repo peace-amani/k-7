@@ -12,7 +12,7 @@ export default {
     try {
       if (args.length === 0) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ ✨ *GLOW LOGO* ⌋\n│\n├─⊷ *glowlogo*\n│  └⊷ glowlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ glowlogo WOLF\n│  └⊷ glowlogo GLOW\n│  └⊷ glowlogo LIGHT\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+          text: `╭─⌈ ✨ *GLOW LOGO* ⌋\n│\n├─⊷ *glowlogo*\n│  └⊷ glowlogo <text>\n│\n├─⊷ *Example:*\n│  └⊷ glowlogo WOLF\n│  └⊷ glowlogo GLOW\n│  └⊷ glowlogo LIGHT\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
         }, { quoted: m });
         return;
       }

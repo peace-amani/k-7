@@ -18,7 +18,7 @@ export default {
             const entries = Object.entries(allScopes).filter(([, w]) => w.length > 0);
             if (entries.length === 0) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🤬 *BAD WORD FILTER* ⌋\n│\n├─⊷ No bad words set anywhere.\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    text: `╭─⌈ 🤬 *BAD WORD FILTER* ⌋\n│\n├─⊷ No bad words set anywhere.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                 }, { quoted: msg });
             }
             let reply = `╭─⌈ 🤬 *ALL BAD WORD SCOPES* ⌋\n│\n`;
@@ -26,7 +26,7 @@ export default {
                 const label = s === 'global' ? '📱 DMs' : `👥 Group: ...${s.slice(-6)}`;
                 reply += `├─⊷ ${label} (${words.length}): ${words.map(w => `*${w}*`).join(', ')}\n`;
             }
-            reply += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            reply += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
             return sock.sendMessage(chatId, { text: reply }, { quoted: msg });
         }
 
@@ -38,7 +38,7 @@ export default {
                     `╭─⌈ 🤬 *BAD WORD FILTER* ⌋\n│\n` +
                     `├─⊷ No bad words set for ${scopeLabel}.\n│\n` +
                     `├─⊷ Use *.addbadword <word>* to add\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
@@ -50,7 +50,7 @@ export default {
                 `${numbered}\n│\n` +
                 `├─⊷ Use *.removebadword <word>* to remove\n` +
                 `├─⊷ Use *.antibadword on/off* to toggle\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
         }, { quoted: msg });
     }
 };

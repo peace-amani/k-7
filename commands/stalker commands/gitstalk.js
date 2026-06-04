@@ -21,7 +21,7 @@ export default {
           `│  └⊷ Stalk a GitHub profile\n│\n` +
           `├─⊷ *Example:*\n` +
           `│  └⊷ ${prefix}gitstalk ${DEFAULT_USER}\n│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

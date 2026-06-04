@@ -157,7 +157,7 @@ export default {
           `│ Hey ${mentionTag}! 👋\n` +
           `│ _This repository is clean and optimized!_\n` +
           `│ *Be the first to star it!* ⭐\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sendRepoCard(sock, jid, fallbackText, imagePayload, sender, fkontak);
         await sock.sendMessage(jid, { react: { text: '⚠️', key: m.key } });

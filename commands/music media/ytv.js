@@ -100,7 +100,7 @@ export default {
           `├─⊷ *${p}ytv <YouTube URL>*\n` +
           `│  └⊷ Download from link\n` +
           `│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

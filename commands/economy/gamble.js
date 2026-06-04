@@ -60,7 +60,7 @@ export default {
                 `├─⊷ Result : ${face}\n` +
                 `├─⊷ ${verdict}\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

@@ -25,28 +25,28 @@ export default {
             if (action === 'everyone' || action === 'all') {
                 await sock.updateLastSeenPrivacy('all');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can see your last seen\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can see your last seen\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🌍', key: msg.key } }); } catch {}
 
             } else if (action === 'contacts') {
                 await sock.updateLastSeenPrivacy('contacts');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 👥 Contacts Only\n│  └⊷ Only your contacts can see your last seen\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 👥 Contacts Only\n│  └⊷ Only your contacts can see your last seen\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '👥', key: msg.key } }); } catch {}
 
             } else if (action === 'except') {
                 await sock.updateLastSeenPrivacy('contact_blacklist');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🚫 Contacts Except...\n│  └⊷ Contacts except blacklisted ones\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🚫 Contacts Except...\n│  └⊷ Contacts except blacklisted ones\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🚫', key: msg.key } }); } catch {}
 
             } else if (action === 'none' || action === 'nobody' || action === 'hide' || action === 'off') {
                 await sock.updateLastSeenPrivacy('none');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔒 Nobody\n│  └⊷ No one can see your last seen\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🕓 *LAST SEEN PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔒 Nobody\n│  └⊷ No one can see your last seen\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🔒', key: msg.key } }); } catch {}
 

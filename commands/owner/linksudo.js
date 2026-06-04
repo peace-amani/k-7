@@ -84,14 +84,14 @@ export default {
                     }
                 }
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ ⚠️ *LINK SUDO* ⌋\n│\n├─⊷ *Reply + ${PREFIX}linksudo <number>*\n│  └⊷ Link sudo number\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ⚠️ *LINK SUDO* ⌋\n│\n├─⊷ *Reply + ${PREFIX}linksudo <number>*\n│  └⊷ Link sudo number\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
         }
 
         if (!isGroup) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📋 *LINK SUDO* ⌋\n│\n├─⊷ *${PREFIX}linksudo*\n│  └⊷ Auto-scan members\n├─⊷ *Reply + ${PREFIX}linksudo*\n│  └⊷ Link specific sudo user\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📋 *LINK SUDO* ⌋\n│\n├─⊷ *${PREFIX}linksudo*\n│  └⊷ Auto-scan members\n├─⊷ *Reply + ${PREFIX}linksudo*\n│  └⊷ Link specific sudo user\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

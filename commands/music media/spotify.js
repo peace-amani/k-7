@@ -36,7 +36,7 @@
 
 //     if (!query) {
 //       return sock.sendMessage(jid, {
-//         text: `╭─⌈ 🎵 *SPOTIFY DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}spotify <Spotify URL>*\n│  └⊷ Download from Spotify link\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}spotify https://open.spotify.com/track/...\n│\n├─⊷ *Aliases:* spot, spdl, spotifydl\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+//         text: `╭─⌈ 🎵 *SPOTIFY DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}spotify <Spotify URL>*\n│  └⊷ Download from Spotify link\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}spotify https://open.spotify.com/track/...\n│\n├─⊷ *Aliases:* spot, spdl, spotifydl\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
 //       }, { quoted: m });
 //     }
 
@@ -197,7 +197,7 @@ export default {
 
     if (!query) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🎵 *SPOTIFY DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}spotify <Spotify URL>*\n│  └⊷ Download from Spotify link\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}spotify https://open.spotify.com/track/...\n│\n├─⊷ *Aliases:* spot, spdl, spotifydl\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🎵 *SPOTIFY DOWNLOADER* ⌋\n│\n├─⊷ *${PREFIX}spotify <Spotify URL>*\n│  └⊷ Download from Spotify link\n│\n├─⊷ *Examples:*\n│  └⊷ ${PREFIX}spotify https://open.spotify.com/track/...\n│\n├─⊷ *Aliases:* spot, spdl, spotifydl\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

@@ -108,7 +108,7 @@ export default {
                     `│  └⊷ ${PREFIX}porn https://xhamster.com/...\n` +
                     `├⊷ *Aliases:* pornhub, porno, adultvid, 18plus\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -149,7 +149,7 @@ export default {
                 `╭─⌈ 🔞 *ADULT VIDEO* ⌋\n` +
                 `├⊷ 📌 *Title:* ${title || 'Unknown'}\n` +
                 (info ? `├⊷ ${info}\n` : '') +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             if (thumb) {
                 try {

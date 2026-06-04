@@ -81,7 +81,7 @@ export default {
 
         if (!args[0]) {
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔍 *GETCMD* ⌋\n│\n├─⊷ *${prefix}getcmd <command>*\n│  └⊷ Get source code of a command\n├─⊷ *Example:* ${prefix}getcmd song\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔍 *GETCMD* ⌋\n│\n├─⊷ *${prefix}getcmd <command>*\n│  └⊷ Get source code of a command\n├─⊷ *Example:* ${prefix}getcmd song\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
             return;
         }
@@ -129,7 +129,7 @@ export default {
         }
 
         await sock.sendMessage(chatId, {
-            text: `╭─⌈ 📄 *${fileName}* ⌋\n\`\`\`\n${cleanCode}\n\`\`\`\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ 📄 *${fileName}* ⌋\n\`\`\`\n${cleanCode}\n\`\`\`\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

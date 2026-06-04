@@ -59,7 +59,7 @@ export default {
                       `├─⊷ *${PREFIX}nestconfig disk <value>*\n` +
                       `│  └⊷ Set disk in MB (e.g. 2048)\n` +
                       `│\n` +
-                      `╰⊷ *Powered by ${owner} TECH*`
+                      `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

@@ -14,14 +14,14 @@ export default {
     
     // ====== HELP SECTION ======
     if (args.length === 0 || args[0].toLowerCase() === 'help') {
-      const helpText = `╭─⌈ 😂 *${getBotName()} JOKES* ⌋\n│\n├─⊷ *${PREFIX}joke*\n│  └⊷ Random joke\n│\n├─⊷ *${PREFIX}joke daily*\n│  └⊷ Daily joke\n│\n├─⊷ *${PREFIX}joke dark*\n│  └⊷ Dark humor\n│\n├─⊷ *${PREFIX}joke pun*\n│  └⊷ Pun jokes\n│\n├─⊷ *${PREFIX}joke list*\n│  └⊷ Show categories\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      const helpText = `╭─⌈ 😂 *${getBotName()} JOKES* ⌋\n│\n├─⊷ *${PREFIX}joke*\n│  └⊷ Random joke\n│\n├─⊷ *${PREFIX}joke daily*\n│  └⊷ Daily joke\n│\n├─⊷ *${PREFIX}joke dark*\n│  └⊷ Dark humor\n│\n├─⊷ *${PREFIX}joke pun*\n│  └⊷ Pun jokes\n│\n├─⊷ *${PREFIX}joke list*\n│  └⊷ Show categories\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       return sock.sendMessage(jid, { text: helpText }, { quoted: m });
     }
 
     // ====== LIST CATEGORIES ======
     if (args[0].toLowerCase() === 'list') {
-      const categoriesText = `╭─⌈ 📋 *JOKE CATEGORIES* ⌋\n│\n├─⊷ *${PREFIX}joke general*\n│  └⊷ General jokes (default)\n│\n├─⊷ *${PREFIX}joke programming*\n│  └⊷ Tech & programming jokes\n│\n├─⊷ *${PREFIX}joke dark*\n│  └⊷ Dark humor (18+)\n│\n├─⊷ *${PREFIX}joke pun*\n│  └⊷ Pun jokes\n│\n├─⊷ *${PREFIX}joke knock*\n│  └⊷ Knock-knock jokes\n│\n├─⊷ *${PREFIX}joke dad*\n│  └⊷ Dad jokes\n│\n├─⊷ *${PREFIX}joke random*\n│  └⊷ Completely random\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      const categoriesText = `╭─⌈ 📋 *JOKE CATEGORIES* ⌋\n│\n├─⊷ *${PREFIX}joke general*\n│  └⊷ General jokes (default)\n│\n├─⊷ *${PREFIX}joke programming*\n│  └⊷ Tech & programming jokes\n│\n├─⊷ *${PREFIX}joke dark*\n│  └⊷ Dark humor (18+)\n│\n├─⊷ *${PREFIX}joke pun*\n│  └⊷ Pun jokes\n│\n├─⊷ *${PREFIX}joke knock*\n│  └⊷ Knock-knock jokes\n│\n├─⊷ *${PREFIX}joke dad*\n│  └⊷ Dad jokes\n│\n├─⊷ *${PREFIX}joke random*\n│  └⊷ Completely random\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
       
       return sock.sendMessage(jid, { text: categoriesText }, { quoted: m });
     }

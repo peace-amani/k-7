@@ -20,7 +20,7 @@ export default {
           `╭─⌈ 🤖 *GLM 4.7 AI* ⌋\n` +
           `├─⊷ *${PREFIX}glm <question>*\n` +
           `│  └⊷ Z.ai GLM-4.7 — coding, reasoning, tools\n` +
-          `╰⊷ *Powered by ${owner} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 
@@ -46,7 +46,7 @@ export default {
           `━━━━━━━━━━━━━━━━━\n` +
           `${reply}\n` +
           `━━━━━━━━━━━━━━━━━\n` +
-          `🐺 *Powered by ${owner} TECH*`
+          `${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
 
     } catch (err) {

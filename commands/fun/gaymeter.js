@@ -66,7 +66,7 @@ export default {
             `├─⊷ ${tag}\n` +
             `│ ${pct}% [${bar}]\n` +
             `│ ${r.emoji} ${r.label}\n` +
-            `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         return sock.sendMessage(chatId, {
             text,

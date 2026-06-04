@@ -65,7 +65,7 @@ export default {
       
       if (!imageMessage) {
         await sock.sendMessage(jid, { 
-          text: `╭─⌈ 🎨 *IMAGE TO STICKER* ⌋\n│\n├─⊷ *${prefix}tosticker*\n│  └⊷ Reply to an image to convert to sticker\n│\n├─⊷ *Send image with caption ${prefix}tosticker*\n│  └⊷ Supported: JPG, PNG, GIF, WebP (max 3MB)\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ 🎨 *IMAGE TO STICKER* ⌋\n│\n├─⊷ *${prefix}tosticker*\n│  └⊷ Reply to an image to convert to sticker\n│\n├─⊷ *Send image with caption ${prefix}tosticker*\n│  └⊷ Supported: JPG, PNG, GIF, WebP (max 3MB)\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
         return;
       }

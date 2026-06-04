@@ -763,7 +763,7 @@
 // │
 // ╰─⊷
 
-// 🐺 *POWERED BY WOLF TECH* 🐺`;
+// ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
 //   // ========== APPLY "READ MORE" EFFECT ==========
 //   // Combine faded info section (visible) and commands (hidden) with "Read more"

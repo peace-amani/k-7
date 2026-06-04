@@ -293,7 +293,7 @@ export default {
             const mode = (args[1] || '').toLowerCase();
             if (!mode || !['warn', 'delete', 'kick'].includes(mode)) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ ⚙️ *ANTI-LINK SETUP* ⌋\n│\n├─⊷ *${PREFIX}antilink on warn*\n│  └⊷ Warn senders\n├─⊷ *${PREFIX}antilink on delete*\n│  └⊷ Auto-delete links\n├─⊷ *${PREFIX}antilink on kick*\n│  └⊷ Kick senders\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ⚙️ *ANTI-LINK SETUP* ⌋\n│\n├─⊷ *${PREFIX}antilink on warn*\n│  └⊷ Warn senders\n├─⊷ *${PREFIX}antilink on delete*\n│  └⊷ Auto-delete links\n├─⊷ *${PREFIX}antilink on kick*\n│  └⊷ Kick senders\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
 
@@ -309,7 +309,7 @@ export default {
             saveConfig(config);
 
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔗 *ANTI-LINK ENABLED* ⌋\n│\n├─⊷ *Mode:* ${mode.toUpperCase()}\n├─⊷ *Admins exempt:* ${config[chatId].exemptAdmins ? 'Yes' : 'No'}\n├─⊷ *Detection:* All message types\n│  └⊷ Text, captions, links in media\n│  └⊷ Bare domains (example.com)\n│  └⊷ Shortened URLs\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔗 *ANTI-LINK ENABLED* ⌋\n│\n├─⊷ *Mode:* ${mode.toUpperCase()}\n├─⊷ *Admins exempt:* ${config[chatId].exemptAdmins ? 'Yes' : 'No'}\n├─⊷ *Detection:* All message types\n│  └⊷ Text, captions, links in media\n│  └⊷ Bare domains (example.com)\n│  └⊷ Shortened URLs\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -342,7 +342,7 @@ export default {
                 return sock.sendMessage(chatId, { text: statusText }, { quoted: msg });
             }
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔗 *ANTI-LINK STATUS* ⌋\n│\n├─⊷ *Status:* ❌ DISABLED\n├─⊷ Enable: *${PREFIX}antilink on [mode]*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 🔗 *ANTI-LINK STATUS* ⌋\n│\n├─⊷ *Status:* ❌ DISABLED\n├─⊷ Enable: *${PREFIX}antilink on [mode]*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -350,7 +350,7 @@ export default {
             const linkToAllow = args.slice(1).join(' ').trim();
             if (!linkToAllow) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🔗 *ALLOW LINK* ⌋\n│\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ e.g. ${PREFIX}antilink allow youtube.com\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🔗 *ALLOW LINK* ⌋\n│\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ e.g. ${PREFIX}antilink allow youtube.com\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
 
@@ -373,7 +373,7 @@ export default {
             const linkToRemove = args.slice(1).join(' ').trim();
             if (!linkToRemove) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🔗 *DISALLOW LINK* ⌋\n│\n├─⊷ *${PREFIX}antilink disallow [link]*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🔗 *DISALLOW LINK* ⌋\n│\n├─⊷ *${PREFIX}antilink disallow [link]*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
 
@@ -427,7 +427,7 @@ export default {
             if (!typeName || !VALID_EXCLUDE_TYPES.includes(typeName)) {
                 const typeList = VALID_EXCLUDE_TYPES.join(', ');
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🚫 *EXCLUDE LINK TYPE* ⌋\n│\n├─⊷ *Usage:* \`${PREFIX}antilink exclude <type>\`\n│\n├─⊷ *Available types:*\n│  └⊷ ${typeList}\n│\n├─⊷ *Example:*\n│  └⊷ \`${PREFIX}antilink exclude grouplinks\`\n│  └⊷ \`${PREFIX}antilink exclude instagram\`\n│\n├─⊷ Excluded types are *always* actioned\n│  └⊷ even if the domain is in allow list\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🚫 *EXCLUDE LINK TYPE* ⌋\n│\n├─⊷ *Usage:* \`${PREFIX}antilink exclude <type>\`\n│\n├─⊷ *Available types:*\n│  └⊷ ${typeList}\n│\n├─⊷ *Example:*\n│  └⊷ \`${PREFIX}antilink exclude grouplinks\`\n│  └⊷ \`${PREFIX}antilink exclude instagram\`\n│\n├─⊷ Excluded types are *always* actioned\n│  └⊷ even if the domain is in allow list\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
             if (!config[chatId]) config[chatId] = { enabled: false, mode: 'delete', exemptAdmins: true, exemptLinks: [], warningCount: {}, excludeTypes: [] };
@@ -478,7 +478,7 @@ export default {
             const customText = args.slice(1).join(' ').trim();
             if (!customText) {
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *${PREFIX}antilink set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {user}  - mention the sender\n│  └⊷ {group} - group name\n│  └⊷ {warns} - current warning count\n│  └⊷ {limit} - max warning count\n│  └⊷ {mode}  - mode (warn/delete/kick)\n│  └⊷ {link}  - first detected link\n│  └⊷ {links} - all detected links\n│\n├─⊷ Example:\n│  └⊷ ${PREFIX}antilink set No links {user}! ({warns}/{limit})\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ ✏️ *SET CUSTOM MESSAGE* ⌋\n│\n├─⊷ Usage: *${PREFIX}antilink set <text>*\n│\n├─⊷ Placeholders:\n│  └⊷ {user}  - mention the sender\n│  └⊷ {group} - group name\n│  └⊷ {warns} - current warning count\n│  └⊷ {limit} - max warning count\n│  └⊷ {mode}  - mode (warn/delete/kick)\n│  └⊷ {link}  - first detected link\n│  └⊷ {links} - all detected links\n│\n├─⊷ Example:\n│  └⊷ ${PREFIX}antilink set No links {user}! ({warns}/{limit})\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
             }
             if (!config[chatId]) {
@@ -522,7 +522,7 @@ export default {
 
         const gc = config[chatId];
         const currentStatus = gc?.enabled ? `✅ ${gc.mode.toUpperCase()}` : '❌ OFF';
-        const helpText = `╭─⌈ 🔗 *ANTI-LINK* ⌋\n├─⊷ *Status:* ${currentStatus}\n│\n├─⊷ *${PREFIX}antilink on [mode]*\n│  └⊷ warn / delete / kick\n├─⊷ *${PREFIX}antilink off*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antilink status*\n│  └⊷ View current settings\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ Whitelist a domain/link\n├─⊷ *${PREFIX}antilink disallow [link]*\n│  └⊷ Remove from whitelist\n├─⊷ *${PREFIX}antilink listallowed*\n│  └⊷ Show whitelisted links\n├─⊷ *${PREFIX}antilink exclude [type]*\n│  └⊷ Always action a link type\n│  └⊷ types: grouplinks, instagram,\n│  └⊷ facebook, twitter, youtube,\n│  └⊷ tiktok, telegram, discord, shortened\n├─⊷ *${PREFIX}antilink removeexclude [type]*\n│  └⊷ Remove from exclude list\n├─⊷ *${PREFIX}antilink listexclude*\n│  └⊷ Show excluded types\n├─⊷ *${PREFIX}antilink set <text>*\n│  └⊷ Custom warning text\n│  └⊷ {user} {group} {warns} {limit} {mode} {link} {links}\n├─⊷ *${PREFIX}antilink reset*\n│  └⊷ Restore default text\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        const helpText = `╭─⌈ 🔗 *ANTI-LINK* ⌋\n├─⊷ *Status:* ${currentStatus}\n│\n├─⊷ *${PREFIX}antilink on [mode]*\n│  └⊷ warn / delete / kick\n├─⊷ *${PREFIX}antilink off*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antilink status*\n│  └⊷ View current settings\n├─⊷ *${PREFIX}antilink allow [link]*\n│  └⊷ Whitelist a domain/link\n├─⊷ *${PREFIX}antilink disallow [link]*\n│  └⊷ Remove from whitelist\n├─⊷ *${PREFIX}antilink listallowed*\n│  └⊷ Show whitelisted links\n├─⊷ *${PREFIX}antilink exclude [type]*\n│  └⊷ Always action a link type\n│  └⊷ types: grouplinks, instagram,\n│  └⊷ facebook, twitter, youtube,\n│  └⊷ tiktok, telegram, discord, shortened\n├─⊷ *${PREFIX}antilink removeexclude [type]*\n│  └⊷ Remove from exclude list\n├─⊷ *${PREFIX}antilink listexclude*\n│  └⊷ Show excluded types\n├─⊷ *${PREFIX}antilink set <text>*\n│  └⊷ Custom warning text\n│  └⊷ {user} {group} {warns} {limit} {mode} {link} {links}\n├─⊷ *${PREFIX}antilink reset*\n│  └⊷ Restore default text\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
         if (isButtonModeEnabled() && giftedBtnsAl?.sendInteractiveMessage) {
             try {
                 await giftedBtnsAl.sendInteractiveMessage(sock, chatId, {

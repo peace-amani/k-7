@@ -41,7 +41,7 @@ export default {
               `│  └⊷ | portrait  | landscape  | hd\n` +
               `├─⊷ *Example:*\n` +
               `│  └⊷ ${PREFIX}imagine neon wolf city | hd\n` +
-              `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+              `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

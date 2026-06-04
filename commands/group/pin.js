@@ -39,7 +39,7 @@ export default {
                 `│  └⊷ \`7d\`  — 7 days\n` +
                 `│  └⊷ \`30d\` — 30 days\n│\n` +
                 `├─⊷ *Example:* \`${PREFIX}pin 7d\`\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
         }
 
@@ -130,7 +130,7 @@ export default {
             await reply(
                 `╭─⌈ 📌 *MESSAGE PINNED* ⌋\n│\n` +
                 `│ ✧ *Duration:* ${durationLabel}\n│\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             );
 
         } catch (err) {

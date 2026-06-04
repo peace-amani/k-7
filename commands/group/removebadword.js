@@ -19,7 +19,7 @@ export default {
                     `├─⊷ *Usage:* .removebadword <word>\n` +
                     `├─⊷ *Example:* .removebadword badterm\n│\n` +
                     `├─⊷ Use *.listbadword* to view words for ${scopeLabel}\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
@@ -41,7 +41,7 @@ export default {
         if (removed.length > 0)  reply += `├─⊷ ✅ Removed: ${removed.map(w => `*${w}*`).join(', ')}\n`;
         if (notFound.length > 0) reply += `├─⊷ ⚠️ Not found in ${scopeLabel}: ${notFound.map(w => `*${w}*`).join(', ')}\n`;
         reply += `├─⊷ 📋 Remaining in ${scopeLabel}: *${total}*\n`;
-        reply += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        reply += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         return sock.sendMessage(chatId, { text: reply }, { quoted: msg });
     }

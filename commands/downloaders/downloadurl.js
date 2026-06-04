@@ -210,7 +210,7 @@ export default {
 
     if (!looksLikeUrl(url)) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔗 *URL DOWNLOADER* ⌋\n│\n├─⊷ *${p}downloadurl <url>*\n│  └⊷ Download any URL\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔗 *URL DOWNLOADER* ⌋\n│\n├─⊷ *${p}downloadurl <url>*\n│  └⊷ Download any URL\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

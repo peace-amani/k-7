@@ -101,7 +101,7 @@ export default {
         const { primary, fallback } = REMOTE_URLS.devNumbers;
         const devList = _devNumbers.map(n => `│ • +${n}`).join('\n');
         return await sock.sendMessage(chatId, {
-            text: `╭─⌈ 🐺 *REACT DEV* ⌋\n│\n│ Status: ✅ ALWAYS ACTIVE\n│ Emoji: ${_devEmoji}\n│\n│ *Source URLs:*\n│ • Primary: ${primary}\n│ • Fallback: ${fallback}\n│\n│ *Developers:*\n${devList}\n│\n│ _Auto-reacts to developer\n│ messages in open groups & DMs_\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            text: `╭─⌈ 🐺 *REACT DEV* ⌋\n│\n│ Status: ✅ ALWAYS ACTIVE\n│ Emoji: ${_devEmoji}\n│\n│ *Source URLs:*\n│ • Primary: ${primary}\n│ • Fallback: ${fallback}\n│\n│ *Developers:*\n${devList}\n│\n│ _Auto-reacts to developer\n│ messages in open groups & DMs_\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         });
     }
 };

@@ -33,7 +33,7 @@ export default {
                     `├─⊷ *${PREFIX}createpanel <email> <server name>*\n` +
                     `│  └⊷ Custom server name\n` +
                     `├─⊷ For unlimited resources use *${PREFIX}createunlimited*\n` +
-                    `╰⊷ *Powered by ${owner} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

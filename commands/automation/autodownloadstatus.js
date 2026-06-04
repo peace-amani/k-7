@@ -265,7 +265,7 @@ export async function handleAutoDownloadStatus(sock, statusKey, resolvedMessage)
             if (mediaInfo.caption) caption += `│ 💬 *Caption:* ${mediaInfo.caption}\n`;
             caption += `│ 📁 *Type:* ${mediaType}\n`;
             caption += `│ ⏰ *Time:* ${timeStr}\n`;
-            caption += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            caption += `╰⊷ ${getFooter(global.OWNER_CLEAN_JID || '')}`;
 
             const payload = {};
             if (mediaType === 'sticker') {
@@ -292,7 +292,7 @@ export async function handleAutoDownloadStatus(sock, statusKey, resolvedMessage)
             msg += `│ 👤 *From:* ${nameLabel}\n`;
             msg += `│ 📝 *Text:* ${textInfo.text}\n`;
             msg += `│ ⏰ *Time:* ${timeStr}\n`;
-            msg += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            msg += `╰⊷ ${getFooter(global.OWNER_CLEAN_JID || '')}`;
             await sock.sendMessage(destJid, { text: msg });
         }
 
@@ -398,7 +398,7 @@ export default {
                 `├─⊷ *${prefix}ads include <number>*\n` +
                 `├─⊷ *${prefix}ads skipown on/off*\n` +
                 `├─⊷ *${prefix}ads stats*\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 

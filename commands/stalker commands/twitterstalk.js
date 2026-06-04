@@ -15,7 +15,7 @@ export default {
 
     if (!args || !args[0]) {
       return sock.sendMessage(jid, {
-        text: `╭─⌈ 🔍 *TWITTER/X STALKER* ⌋\n│\n├─⊷ *${prefix}twitterstalk <username>*\n│  └⊷ Stalk a Twitter/X profile\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}twitterstalk giftedmauriceke\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+        text: `╭─⌈ 🔍 *TWITTER/X STALKER* ⌋\n│\n├─⊷ *${prefix}twitterstalk <username>*\n│  └⊷ Stalk a Twitter/X profile\n│\n├─⊷ *Example:*\n│  └⊷ ${prefix}twitterstalk giftedmauriceke\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

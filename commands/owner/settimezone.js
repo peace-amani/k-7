@@ -74,7 +74,7 @@ export default {
           `│\n` +
           `├─⊷ *Current:* ${current}\n` +
           `│\n` +
-          `╰⊷ *Powered by ${ownerName.toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

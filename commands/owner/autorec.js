@@ -281,7 +281,7 @@ function getStatusMessage() {
   
   return `╭─⌈ 🎙️ *RECORDING SIMULATOR* ⌋\n│\n│ 📱 *DM:* ${recordingStates.dms ? 'ON ✅' : 'OFF ❌'}\n│ 👥 *Groups:* ${recordingStates.groups ? 'ON ✅' : 'OFF ❌'}\n│ 🌐 *Both:* ${recordingStates.all ? 'ON ✅' : 'OFF ❌'}\n│ 🔧 *Command:* ${recordingStates.command ? 'ON ✅' : 'OFF ❌'}\n│` +
          (activeCount > 0 ? ` ⏺️ *Active:* ${activeCount} chat${activeCount > 1 ? 's' : ''}\n│` : '') +
-         `\n├─⊷ *.autorec dm/group/both/cmd*\n│  └⊷ Toggle recording mode\n├─⊷ *.autorec test*\n│  └⊷ Test recording\n├─⊷ *.autorec stop*\n│  └⊷ Stop in this chat\n├─⊷ *.autorec off*\n│  └⊷ Turn off all\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+         `\n├─⊷ *.autorec dm/group/both/cmd*\n│  └⊷ Toggle recording mode\n├─⊷ *.autorec test*\n│  └⊷ Test recording\n├─⊷ *.autorec stop*\n│  └⊷ Stop in this chat\n├─⊷ *.autorec off*\n│  └⊷ Turn off all\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 }
 
 function getRandomRecordingReason() {

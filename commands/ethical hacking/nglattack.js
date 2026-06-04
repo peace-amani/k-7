@@ -40,7 +40,7 @@ export default {
 
         if (args.length === 0) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 📝 *NGL ATTACK* ⌋\n│\n├─⊷ *.nglattack <username> <count> [message]*\n│  └⊷ Send anonymous NGL messages\n│\n├─⊷ *.nglattack john 5*\n│  └⊷ Sends 5 random positive messages\n│\n├─⊷ *.nglattack john 3 hello there*\n│  └⊷ Sends "hello there" 3 times\n│\n├─⊷ *Max:* 20 messages per run\n├─⊷ *Note:* Username only, not the full link\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 📝 *NGL ATTACK* ⌋\n│\n├─⊷ *.nglattack <username> <count> [message]*\n│  └⊷ Send anonymous NGL messages\n│\n├─⊷ *.nglattack john 5*\n│  └⊷ Sends 5 random positive messages\n│\n├─⊷ *.nglattack john 3 hello there*\n│  └⊷ Sends "hello there" 3 times\n│\n├─⊷ *Max:* 20 messages per run\n├─⊷ *Note:* Username only, not the full link\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

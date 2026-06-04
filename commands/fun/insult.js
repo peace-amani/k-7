@@ -111,7 +111,7 @@ export default {
                     const tag    = `@${jid.split('@')[0]}`;
                     text += `├─⊷ ${tag}\n│  ${insult}\n│\n`;
                 }
-                text += `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+                text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
                 return sock.sendMessage(chatId, {
                     text,
@@ -131,7 +131,7 @@ export default {
                     `╭─⌈ ${header} ⌋\n` +
                     `├─⊷ ${tag}\n` +
                     `│  ${insult}\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                 mentions: targets
             }, { quoted: m });
 

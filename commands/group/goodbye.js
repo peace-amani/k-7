@@ -45,7 +45,7 @@ export default {
 
         if (!action || action === 'help') {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 👋 *GOODBYE SYSTEM* ⌋\n│\n├─⊷ *${PREFIX}goodbye on*\n│  └⊷ Enable goodbye\n├─⊷ *${PREFIX}goodbye off*\n│  └⊷ Disable goodbye\n├─⊷ *${PREFIX}goodbye set <message>*\n│  └⊷ Set custom message\n├─⊷ *${PREFIX}goodbye reset*\n│  └⊷ Reset to default\n├─⊷ *${PREFIX}goodbye preview*\n│  └⊷ Preview message\n├─⊷ *${PREFIX}goodbye status*\n│  └⊷ Check status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ 👋 *GOODBYE SYSTEM* ⌋\n│\n├─⊷ *${PREFIX}goodbye on*\n│  └⊷ Enable goodbye\n├─⊷ *${PREFIX}goodbye off*\n│  └⊷ Disable goodbye\n├─⊷ *${PREFIX}goodbye set <message>*\n│  └⊷ Set custom message\n├─⊷ *${PREFIX}goodbye reset*\n│  └⊷ Reset to default\n├─⊷ *${PREFIX}goodbye preview*\n│  └⊷ Preview message\n├─⊷ *${PREFIX}goodbye status*\n│  └⊷ Check status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
         
@@ -127,7 +127,7 @@ export default {
                     
                 default:
                     await sock.sendMessage(chatId, {
-                        text: `╭─⌈ ❌ *GOODBYE* ⌋\n│\n├─⊷ *${PREFIX}goodbye help*\n│  └⊷ View help\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        text: `╭─⌈ ❌ *GOODBYE* ⌋\n│\n├─⊷ *${PREFIX}goodbye help*\n│  └⊷ View help\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                     }, { quoted: msg });
             }
         } catch (error) {

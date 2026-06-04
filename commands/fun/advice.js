@@ -79,7 +79,7 @@ export default {
                         `╭─⌈ 💡 *ADVICE FOR ${tag.toUpperCase()}* ⌋\n` +
                         `├─⊷ ${tag}\n` +
                         `│  "${advice}"\n` +
-                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                     mentions: [target]
                 }, { quoted: m });
             }
@@ -89,7 +89,7 @@ export default {
                 text:
                     `╭─⌈ 💡 *DAILY ADVICE* ⌋\n` +
                     `│  "${advice}"\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
 
         } catch (err) {

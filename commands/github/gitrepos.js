@@ -126,7 +126,7 @@ async function sendRepoList(sock, jid, m, kind, repos, login) {
             (chunks.length > 1 ? `  (page ${c + 1}/${chunks.length})` : '') + `\n` +
             `│\n`;
 
-        const footer = `\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+        const footer = `\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
         await sock.sendMessage(jid, {
             text: header + '```\n' + lines.join('\n') + '\n```' + footer
@@ -242,7 +242,7 @@ export default {
                     `│ chat can read the message. The bot tries to\n` +
                     `│ delete the original message but cannot guarantee it.\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 
@@ -296,7 +296,7 @@ export default {
                     `│ 💡 Make sure your token has the *repo* scope\n` +
                     `│    (or *Contents: Read* for fine-grained tokens).\n` +
                     `│\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
     }

@@ -32,7 +32,7 @@ export default {
                     `├─⊷ *Usage:*\n` +
                     `│  .antibadword on [warn/kick/block/delete]\n` +
                     `│  .antibadword off\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
@@ -45,12 +45,12 @@ export default {
             if (gSub === 'on') {
                 setGroupConfig('global', true, finalAction);
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ✅ *Global detection ON*\n├─⊷ *Action:* ${finalAction}\n├─⊷ Applies to all groups and DMs\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ✅ *Global detection ON*\n├─⊷ *Action:* ${finalAction}\n├─⊷ Applies to all groups and DMs\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                 }, { quoted: msg });
             } else if (gSub === 'off') {
                 setGroupConfig('global', false);
                 return sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ❌ *Global detection OFF*\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                    text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ❌ *Global detection OFF*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
                 }, { quoted: msg });
             }
         }
@@ -60,19 +60,19 @@ export default {
             const finalAction = validActions.includes(action) ? action : 'warn';
             setGroupConfig(scope, true, finalAction);
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ✅ *Detection ENABLED*\n├─⊷ *Scope:* ${isGroup ? 'This group' : 'All DMs'}\n├─⊷ *Action:* ${finalAction}\n│\n├─⊷ warn → send warning message\n├─⊷ kick → remove from group\n├─⊷ block → block the user\n├─⊷ delete → delete message silently\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ✅ *Detection ENABLED*\n├─⊷ *Scope:* ${isGroup ? 'This group' : 'All DMs'}\n├─⊷ *Action:* ${finalAction}\n│\n├─⊷ warn → send warning message\n├─⊷ kick → remove from group\n├─⊷ block → block the user\n├─⊷ delete → delete message silently\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         if (sub === 'off') {
             setGroupConfig(scope, false);
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ❌ *Detection DISABLED*\n├─⊷ *Scope:* ${isGroup ? 'This group' : 'All DMs'}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+                text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ ❌ *Detection DISABLED*\n├─⊷ *Scope:* ${isGroup ? 'This group' : 'All DMs'}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         return sock.sendMessage(chatId, {
-            text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ *Usage:*\n│  .antibadword on [warn/kick/block]\n│  .antibadword off\n│  .antibadword status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`,
+            text: `╭─⌈ 🤬 *ANTI BAD WORD* ⌋\n│\n├─⊷ *Usage:*\n│  .antibadword on [warn/kick/block]\n│  .antibadword off\n│  .antibadword status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
         }, { quoted: msg });
     }
 };

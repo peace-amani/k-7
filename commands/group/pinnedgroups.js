@@ -32,7 +32,7 @@ export default {
         text += `├─⊷ ${count}. *${name}*\n`;
       }
 
-      text += `│\n├─⊷ *Total:* ${pinned.length} pinned group(s)\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+      text += `│\n├─⊷ *Total:* ${pinned.length} pinned group(s)\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       await sock.sendMessage(jid, { text }, { quoted: msg });
 

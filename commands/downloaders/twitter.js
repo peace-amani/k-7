@@ -90,7 +90,7 @@ export default {
           `├─⊷ *Examples:*\n` +
           `│  └⊷ ${PREFIX}twitter https://twitter.com/user/status/123\n` +
           `│  └⊷ ${PREFIX}twitter https://x.com/user/status/123\n│\n` +
-          `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

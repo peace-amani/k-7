@@ -34,7 +34,7 @@ export default {
         
         if (args.length < 2) {
             return await sock.sendMessage(remoteJid, {
-                text: `╭─⌈ ⚙️ *SET SETTING* ⌋\n│\n├─⊷ *.setsetting <key> <value>*\n│  └⊷ Update a bot setting\n├─⊷ *.getsettings*\n│  └⊷ See all available settings\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                text: `╭─⌈ ⚙️ *SET SETTING* ⌋\n│\n├─⊷ *.setsetting <key> <value>*\n│  └⊷ Update a bot setting\n├─⊷ *.getsettings*\n│  └⊷ See all available settings\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
         

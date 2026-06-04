@@ -45,7 +45,7 @@ export default {
                 `├─⊷ Moved  : ${COIN} ${fmt(amount)}\n` +
                 `├─⊷ Wallet : ${COIN} ${fmt(fresh.wallet)}\n` +
                 `├─⊷ Bank   : ${COIN} ${fmt(fresh.bank)}/${fmt(fresh.bankCap)}\n` +
-                `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
     }
 };

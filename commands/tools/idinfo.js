@@ -67,7 +67,7 @@ export default {
 
       if (!kind && !inviteCode && !targetJid) {
         return sock.sendMessage(chatJid, {
-          text: `╭─⌈ 🆔 *ID INFO* ⌋\n├─⊷ *.idinfo <link / jid / code>*\n│  └⊷ Group or channel info\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+          text: `╭─⌈ 🆔 *ID INFO* ⌋\n├─⊷ *.idinfo <link / jid / code>*\n│  └⊷ Group or channel info\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
         }, { quoted: m });
       }
 
@@ -202,7 +202,7 @@ export default {
       if (info.desc)             lines.push(`📜 *Desc:* ${String(info.desc).slice(0, 200)}`);
     }
     lines.push(SEP);
-    lines.push(`🐺 *Powered by ${owner} TECH*`);
+    lines.push(`${getFooter(m.key.participant || m.key.remoteJid)}`);
     const body = lines.join('\n');
 
     // Try to send with profile picture

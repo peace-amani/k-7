@@ -26,14 +26,14 @@ export default {
             if (action === 'everyone' || action === 'all') {
                 await sock.updateOnlinePrivacy('all');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🟢 *ONLINE PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can see when you're Online\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🟢 *ONLINE PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can see when you're Online\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🌍', key: msg.key } }); } catch {}
 
             } else if (action === 'match' || action === 'matchlastseen' || action === 'same') {
                 await sock.updateOnlinePrivacy('match_last_seen');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🟢 *ONLINE PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔄 Match Last Seen\n│  └⊷ Online visibility follows your Last Seen setting\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    text: `╭─⌈ 🟢 *ONLINE PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔄 Match Last Seen\n│  └⊷ Online visibility follows your Last Seen setting\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🔄', key: msg.key } }); } catch {}
 
@@ -42,7 +42,7 @@ export default {
                     text: `╭─⌈ 🟢 *ONLINE PRIVACY* ⌋\n` +
                           `├─⊷ *${PREFIX}onlineprivacy everyone* — 🌍 All users\n` +
                           `├─⊷ *${PREFIX}onlineprivacy match* — 🔄 Match Last Seen\n` +
-                          `╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`
+                          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '📋', key: msg.key } }); } catch {}
             }

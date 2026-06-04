@@ -142,7 +142,7 @@ export default {
                     `├⊷ antichat off\n` +
                     `├⊷ antichat action delete/warn/kick\n` +
                     `├⊷ antichat status\n` +
-                    `╰⊷ *Powered by ${owner} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: msg });
         }
 

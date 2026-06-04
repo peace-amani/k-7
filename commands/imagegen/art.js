@@ -51,7 +51,7 @@ export default {
               `│  └⊷ impressionist, surreal, abstract\n` +
               `│  └⊷ fantasy, concept, pixel\n│\n` +
               `├─⊷ *Example:*\n│  └⊷ art watercolor | wolf in the forest\n│\n` +
-              `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+              `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
       }, { quoted: m });
     }
 

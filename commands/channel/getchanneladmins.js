@@ -102,7 +102,7 @@ export default {
                         `├─⊷ *${PREFIX}getchanneladmins <link>*\n│  └⊷ Channel invite link\n` +
                         `├─⊷ *${PREFIX}getchanneladmins <jid>*\n│  └⊷ e.g. 120363...@newsletter\n` +
                         `├─⊷ Run inside a channel chat\n│  └⊷ No argument needed\n` +
-                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
                 }, { quoted: m });
             }
 
@@ -150,7 +150,7 @@ export default {
                 text += `│  └⊷ \`${jid}\`\n`;
             }
 
-            text += `│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+            text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
             // If gifted-btns available, add a copy button with all JIDs
             if (giftedBtns?.sendInteractiveMessage) {

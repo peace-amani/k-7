@@ -157,7 +157,7 @@ export default {
         text += `│\n`;
       }
 
-      text += `╰⊷ _Powered by ${getOwnerName().toUpperCase()} TECH_`;
+      text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
 
       const mentionIds = allParticipants.map(p => p.id);
 

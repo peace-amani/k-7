@@ -59,7 +59,7 @@ export default {
                     `├─⊷ Type *.hangman <letter>* or *.hangman <word>*\n` +
                     `│\n${STAGES[0]}\n\n` +
                     `\`${maskWord(answer, [])}\`\n` +
-                    `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
             }, { quoted: m });
         }
 

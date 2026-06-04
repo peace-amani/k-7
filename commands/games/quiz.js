@@ -1069,7 +1069,7 @@ async function showCategories(sock, m, chatId) {
 }
 
 async function showHelp(sock, m, chatId) {
-    const helpText = `╭─⌈ 🎮 *INSTANT QUIZ GAME* ⌋\n│\n├─⊷ *.quiz*\n│  └⊷ Start a random quiz\n│\n├─⊷ *.quiz science/geography/etc*\n│  └⊷ Quiz by category\n│\n├─⊷ *.quiz stats*\n│  └⊷ Your statistics\n│\n├─⊷ *.quiz categories*\n│  └⊷ List all categories\n│\n├─⊷ *Answer:* Reply to any question with A-D\n├─⊷ ⏱️ 5 minutes to answer, multiple users can play\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`;
+    const helpText = `╭─⌈ 🎮 *INSTANT QUIZ GAME* ⌋\n│\n├─⊷ *.quiz*\n│  └⊷ Start a random quiz\n│\n├─⊷ *.quiz science/geography/etc*\n│  └⊷ Quiz by category\n│\n├─⊷ *.quiz stats*\n│  └⊷ Your statistics\n│\n├─⊷ *.quiz categories*\n│  └⊷ List all categories\n│\n├─⊷ *Answer:* Reply to any question with A-D\n├─⊷ ⏱️ 5 minutes to answer, multiple users can play\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
     
     await sock.sendMessage(chatId, { text: helpText }, { quoted: m });
 }

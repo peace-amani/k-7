@@ -18,7 +18,7 @@ export default {
     
     if (!m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
       await sock.sendMessage(jid, { 
-        text: `╭─⌈ 🖼️ *STICKER TO IMAGE* ⌋\n│\n├─⊷ *${prefix}toimage*\n│  └⊷ Reply to a sticker to convert it to image\n│\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*` 
+        text: `╭─⌈ 🖼️ *STICKER TO IMAGE* ⌋\n│\n├─⊷ *${prefix}toimage*\n│  └⊷ Reply to a sticker to convert it to image\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
       }, { quoted: m });
       return;
     }
