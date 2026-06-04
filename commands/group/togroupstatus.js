@@ -1,202 +1,109 @@
-import {
-    downloadMediaMessage,
-    generateWAMessageContent,
-    generateWAMessageFromContent
-} from '@whiskeysockets/baileys';
+import { downloadContentFromMessage, generateWAMessageContent, generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import { PassThrough } from 'stream';
 import { getOwnerName } from '../../lib/menuHelper.js';
 
-// ─── Audio → voice note converter ────────────────────────────────────────────
 async function toVN(inputBuffer) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         try {
             import('fluent-ffmpeg').then(ffmpeg => {
-                const inStream  = new PassThrough();
-                const outStream = new PassThrough();
-                const chunks    = [];
+                const inStream = new PassThrough();
                 inStream.end(inputBuffer);
+                const outStream = new PassThrough();
+                const chunks = [];
+
                 ffmpeg.default(inStream)
-                    .noVideo().audioCodec('libopus').format('ogg')
-                    .audioBitrate('48k').audioChannels(1).audioFrequency(48000)
-                    .on('error', () => resolve(inputBuffer))
-                    .on('end',   () => resolve(Buffer.concat(chunks)))
+                    .noVideo()
+                    .audioCodec("libopus")
+                    .format("ogg")
+                    .audioBitrate("48k")
+                    .audioChannels(1)
+                    .audioFrequency(48000)
+                    .on("error", reject)
+                    .on("end", () => resolve(Buffer.concat(chunks)))
                     .pipe(outStream, { end: true });
-                outStream.on('data', chunk => chunks.push(chunk));
+
+                outStream.on("data", chunk => chunks.push(chunk));
             }).catch(() => resolve(inputBuffer));
-        } catch { resolve(inputBuffer); }
+        } catch {
+            resolve(inputBuffer);
+        }
     });
 }
 
-// ─── Quoted message → payload (uses downloadMediaMessage for reliable re-upload) ──
-// The quoted message key must be reconstructed from contextInfo because m.key
-// points to the *current* message, not the quoted one.
-async function buildPayloadFromQuoted(quotedMessage, sock, m) {
-    const ctx = m.message?.extendedTextMessage?.contextInfo || {};
-    const quotedKey = {
-        remoteJid: m.key.remoteJid,
-        fromMe:    ctx.participant === sock.user?.id || ctx.participant === sock.user?.lid,
-        id:        ctx.stanzaId || '',
-        participant: ctx.participant || undefined
-    };
-    const fakeMsg = { key: quotedKey, message: quotedMessage };
-    const dlOpts  = { reuploadRequest: sock.updateMediaMessage, logger: console };
+async function downloadToBuffer(message, type) {
+    const stream = await downloadContentFromMessage(message, type);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+    return buffer;
+}
 
+async function buildPayloadFromQuoted(quotedMessage) {
     if (quotedMessage.videoMessage) {
-        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
-        console.log(`[TogStatus] Downloaded quoted video: ${buf.length} bytes`);
+        const buffer = await downloadToBuffer(quotedMessage.videoMessage, 'video');
         return {
-            video:       buf,
-            caption:     quotedMessage.videoMessage.caption || '',
+            video: buffer,
+            caption: quotedMessage.videoMessage.caption || '',
             gifPlayback: quotedMessage.videoMessage.gifPlayback || false,
-            mimetype:    quotedMessage.videoMessage.mimetype   || 'video/mp4'
+            mimetype: quotedMessage.videoMessage.mimetype || 'video/mp4'
         };
     }
     if (quotedMessage.imageMessage) {
-        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
-        console.log(`[TogStatus] Downloaded quoted image: ${buf.length} bytes`);
+        const buffer = await downloadToBuffer(quotedMessage.imageMessage, 'image');
         return {
-            image:    buf,
-            caption:  quotedMessage.imageMessage.caption || '',
-            mimetype: quotedMessage.imageMessage.mimetype || 'image/jpeg'
+            image: buffer,
+            caption: quotedMessage.imageMessage.caption || ''
         };
     }
     if (quotedMessage.audioMessage) {
-        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
-        console.log(`[TogStatus] Downloaded quoted audio: ${buf.length} bytes`);
+        const buffer = await downloadToBuffer(quotedMessage.audioMessage, 'audio');
         if (quotedMessage.audioMessage.ptt) {
             try {
-                const vn = await toVN(buf);
-                return { audio: vn, mimetype: 'audio/ogg; codecs=opus', ptt: true };
+                const audioVn = await toVN(buffer);
+                return { audio: audioVn, mimetype: "audio/ogg; codecs=opus", ptt: true };
             } catch {
-                return { audio: buf, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: true };
+                return { audio: buffer, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: true };
             }
         }
-        return { audio: buf, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: false };
+        return { audio: buffer, mimetype: quotedMessage.audioMessage.mimetype || 'audio/mpeg', ptt: false };
     }
     if (quotedMessage.stickerMessage) {
-        const buf = await downloadMediaMessage(fakeMsg, 'buffer', {}, dlOpts);
-        console.log(`[TogStatus] Downloaded quoted sticker: ${buf.length} bytes`);
-        return { sticker: buf, mimetype: quotedMessage.stickerMessage.mimetype || 'image/webp' };
+        const buffer = await downloadToBuffer(quotedMessage.stickerMessage, 'sticker');
+        return { sticker: buffer, mimetype: quotedMessage.stickerMessage.mimetype || 'image/webp' };
     }
-    const text = quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || '';
-    if (text) return { text };
+    if (quotedMessage.conversation || quotedMessage.extendedTextMessage?.text) {
+        const textContent = quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || '';
+        return { text: textContent };
+    }
     return null;
 }
 
 function detectMediaType(quotedMessage) {
-    if (!quotedMessage)                     return 'Text';
-    if (quotedMessage.videoMessage)         return 'Video';
-    if (quotedMessage.imageMessage)         return 'Image';
-    if (quotedMessage.audioMessage)         return 'Audio';
-    if (quotedMessage.stickerMessage)       return 'Sticker';
+    if (!quotedMessage) return 'Text';
+    if (quotedMessage.videoMessage) return 'Video';
+    if (quotedMessage.imageMessage) return 'Image';
+    if (quotedMessage.audioMessage) return 'Audio';
+    if (quotedMessage.stickerMessage) return 'Sticker';
     return 'Text';
 }
 
-// ─── Map payload → WA mediatype string ────────────────────────────────────────
-function payloadMediaType(payload) {
-    if (payload.image)   return 'image';
-    if (payload.video)   return payload.gifPlayback ? 'gif' : 'video';
-    if (payload.audio)   return payload.ptt ? 'ptt' : 'audio';
-    if (payload.sticker) return 'sticker';
-    return null; // text — no mediatype attribute needed
-}
-
-// ─── Core group status sender ─────────────────────────────────────────────────
-async function sendGroupStatus(sock, groupJid, payload) {
-    console.log('[TogStatus] Sending to:', groupJid, '| keys:', Object.keys(payload));
-
+async function sendGroupStatus(conn, jid, content) {
+    const inside = await generateWAMessageContent(content, { upload: conn.waUploadToServer });
     const messageSecret = crypto.randomBytes(32);
-
-    // Step 1: Upload media and get the inner message proto
-    const inside = await generateWAMessageContent(payload, {
-        upload: sock.waUploadToServer
-    });
-    console.log('[TogStatus] generateWAMessageContent done — keys:', Object.keys(inside));
-
-    // Step 2: Wrap in groupStatusMessageV2
-    // IMPORTANT: pass `inside` directly as `message` — do NOT spread it.
-    const wrapped = generateWAMessageFromContent(groupJid, {
+    const m = generateWAMessageFromContent(jid, {
         messageContextInfo: { messageSecret },
-        groupStatusMessageV2: {
-            message: inside
-        }
+        groupStatusMessageV2: { message: { ...inside, messageContextInfo: { messageSecret } } }
     }, {});
-
-    // Step 3: Relay
-    // Baileys' getMediaType() only checks top-level message keys — it cannot see
-    // inside groupStatusMessageV2 so it returns '' and leaves extraAttrs empty,
-    // meaning the <enc skmsg> stanza gets no mediatype attribute.
-    // We fix this by passing additionalAttributes so the outer <message> stanza
-    // carries the correct mediatype for server-side routing.
-    const detectedMediaType = payloadMediaType(payload);
-    const additionalAttributes = detectedMediaType ? { mediatype: detectedMediaType } : undefined;
-
-    await sock.relayMessage(groupJid, wrapped.message, {
-        messageId:            wrapped.key.id,
-        additionalAttributes: additionalAttributes ?? {}
-    });
-    console.log('[TogStatus] relayMessage done ✅ msgId:', wrapped.key.id, '| mediatype:', detectedMediaType ?? 'text');
-    return wrapped;
+    await conn.relayMessage(jid, m.message, { messageId: m.key.id });
+    return m;
 }
 
-// ─── Fallback: plain sendMessage ──────────────────────────────────────────────
-// If groupStatusMessageV2 relay succeeds but nothing appears in the group,
-// WhatsApp may have silently dropped it. This fallback sends it as a normal
-// group message so the content at least reaches the group.
-async function sendGroupStatusFallback(sock, groupJid, payload) {
-    console.log('[TogStatus] Trying plain sendMessage fallback...');
-    if (payload.image) {
-        return sock.sendMessage(groupJid, {
-            image:    payload.image,
-            caption:  payload.caption || '',
-            mimetype: payload.mimetype || 'image/jpeg'
-        });
-    }
-    if (payload.video) {
-        return sock.sendMessage(groupJid, {
-            video:    payload.video,
-            caption:  payload.caption || '',
-            mimetype: payload.mimetype || 'video/mp4'
-        });
-    }
-    if (payload.audio) {
-        return sock.sendMessage(groupJid, {
-            audio:    payload.audio,
-            mimetype: payload.mimetype || 'audio/mpeg',
-            ptt:      payload.ptt || false
-        });
-    }
-    if (payload.sticker) {
-        return sock.sendMessage(groupJid, {
-            sticker:  payload.sticker,
-            mimetype: payload.mimetype || 'image/webp'
-        });
-    }
-    if (payload.text) {
-        return sock.sendMessage(groupJid, { text: payload.text });
-    }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function stripCommand(messageText) {
-    return messageText
-        .replace(/^.*?(togroupstatus|groupstatus|gstatus|togstatus|tosgroup|swgc|gs)\b\s*/i, '')
-        .trim();
+    return messageText.replace(/^[^a-zA-Z0-9]?(togstatus|swgc|groupstatus|tosgroup|gs|gstatus|togroupstatus)\s*/i, '').trim();
 }
 
-function extractGroupJid(text) {
-    const match = text.match(/^\(?([\d][\d-]+@g\.us)\)?/);
-    if (match) return { jid: match[1], rest: text.slice(match[0].length).trim() };
-    const numMatch = text.match(/^\(?(\d{10,}(?:-\d+)?)\)?/);
-    if (numMatch) {
-        const bare = numMatch[1];
-        return { jid: bare.includes('@') ? bare : `${bare}@g.us`, rest: text.slice(numMatch[0].length).trim() };
-    }
-    return null;
-}
-
-// ─── Command ──────────────────────────────────────────────────────────────────
 export default {
     name: 'togstatus',
     aliases: ['swgc', 'groupstatus', 'tosgroup', 'gs', 'gstatus', 'togroupstatus'],
@@ -205,119 +112,72 @@ export default {
     adminOnly: false,
 
     async execute(sock, m, args, PREFIX, extra) {
-        const senderJid = m.key.remoteJid;
-        const inGroup   = senderJid.endsWith('@g.us');
+        try {
+            const jid = m.key.remoteJid;
 
-        const messageText   = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
-        const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        // Also handle direct image/video/audio (not quoted)
-        const directImage   = m.message?.imageMessage;
-        const directVideo   = m.message?.videoMessage;
-        const directAudio   = m.message?.audioMessage;
-
-        let textAfterCommand = Array.isArray(args) && args.length
-            ? args.join(' ').trim()
-            : stripCommand(messageText);
-
-        let groupJid = null;
-
-        if (inGroup) {
-            groupJid = senderJid;
-            const parsed = extractGroupJid(textAfterCommand);
-            if (parsed && parsed.jid === senderJid) textAfterCommand = parsed.rest;
-        } else {
-            const parsed = extractGroupJid(textAfterCommand);
-            if (!parsed) {
-                return sock.sendMessage(senderJid, {
-                    text:
-                        `╭─⌈ 💡 *GROUP STATUS (DM mode)* ⌋\n│\n` +
-                        `├─⊷ *${PREFIX}togstatus (groupJID) text*\n│  └⊷ Post text to that group\n` +
-                        `├─⊷ Reply to media + *${PREFIX}togstatus (groupJID)*\n│  └⊷ Post image/video/audio\n│\n` +
-                        `├─⊷ Example:\n│  └⊷ ${PREFIX}togstatus 120363424761834@g.us Hello!\n│\n` +
-                        `╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+            if (!jid.endsWith('@g.us')) {
+                return sock.sendMessage(jid, {
+                    text: '❌ This command only works in groups!'
                 }, { quoted: m });
             }
-            groupJid          = parsed.jid;
-            textAfterCommand  = parsed.rest;
-        }
 
-        if (!quotedMessage && !textAfterCommand && !directImage && !directVideo && !directAudio) {
-            const hint = inGroup
-                ? `${PREFIX}togstatus Your text  │  or reply to media`
-                : `${PREFIX}togstatus (JID) Your text  │  or reply to media`;
-            return sock.sendMessage(senderJid, {
-                text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ ${hint}\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
-            }, { quoted: m });
-        }
+            const messageText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
+            const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+            const textAfterCommand = stripCommand(messageText);
 
-        try {
-            await sock.sendMessage(senderJid, { react: { text: '⏳', key: m.key } });
+            if (!quotedMessage && !textAfterCommand && !messageText.trim()) {
+                return sock.sendMessage(jid, {
+                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus* (reply)\n│  └⊷ Reply to media/text\n├─⊷ *${PREFIX}togstatus Your text here*\n│  └⊷ Post text status\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
+                }, { quoted: m });
+            }
 
-            let payload   = null;
+            let payload = null;
             let mediaType = 'Text';
 
-            const dlOpts = { reuploadRequest: sock.updateMediaMessage, logger: console };
-
-            if (directImage && !quotedMessage) {
-                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
-                console.log(`[TogStatus] Downloaded direct image: ${buf.length} bytes`);
-                const cap = textAfterCommand || directImage.caption?.replace(/^.*?(togroupstatus|togstatus|gstatus|gs)\b\s*/i, '').trim() || '';
-                payload   = { image: buf, caption: cap, mimetype: directImage.mimetype || 'image/jpeg' };
-                mediaType = 'Image';
-            } else if (directVideo && !quotedMessage) {
-                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
-                console.log(`[TogStatus] Downloaded direct video: ${buf.length} bytes`);
-                const cap = textAfterCommand || directVideo.caption?.replace(/^.*?(togroupstatus|togstatus|gstatus|gs)\b\s*/i, '').trim() || '';
-                payload   = { video: buf, caption: cap, mimetype: directVideo.mimetype || 'video/mp4' };
-                mediaType = 'Video';
-            } else if (directAudio && !quotedMessage) {
-                const buf = await downloadMediaMessage(m, 'buffer', {}, dlOpts);
-                console.log(`[TogStatus] Downloaded direct audio: ${buf.length} bytes`);
-                payload   = { audio: buf, mimetype: directAudio.mimetype || 'audio/mpeg', ptt: directAudio.ptt || false };
-                mediaType = 'Audio';
-            } else if (quotedMessage) {
+            if (quotedMessage) {
                 mediaType = detectMediaType(quotedMessage);
-                payload   = await buildPayloadFromQuoted(quotedMessage, sock, m);
+                payload = await buildPayloadFromQuoted(quotedMessage);
+
                 if (payload && (payload.video || payload.image) && textAfterCommand) {
                     payload.caption = textAfterCommand;
                 }
-            } else if (textAfterCommand) {
-                payload   = { text: textAfterCommand };
-                mediaType = 'Text';
             }
-
-            if (!payload) {
-                return sock.sendMessage(senderJid, {
-                    text: '❌ Could not process message. Unsupported media type?'
+            else if (textAfterCommand) {
+                mediaType = 'Text';
+                payload = { text: textAfterCommand };
+            }
+            else {
+                return sock.sendMessage(jid, {
+                    text: `╭─⌈ 💡 *GROUP STATUS* ⌋\n│\n├─⊷ *${PREFIX}togstatus Your text*\n│  └⊷ Text or reply media\n╰⊷ *Powered by ${getOwnerName().toUpperCase()} TECH*`
                 }, { quoted: m });
             }
 
-            console.log('[TogStatus] payload ready — mediaType:', mediaType, '| groupJid:', groupJid);
-
-            // Try groupStatusMessageV2 first, fall back to plain sendMessage
-            try {
-                await sendGroupStatus(sock, groupJid, payload);
-            } catch (relayErr) {
-                console.error('[TogStatus] relayMessage failed:', relayErr.message, '— trying fallback');
-                await sendGroupStatusFallback(sock, groupJid, payload);
+            if (!payload) {
+                return sock.sendMessage(jid, {
+                    text: '❌ Could not process the message.'
+                }, { quoted: m });
             }
 
-            await sock.sendMessage(senderJid, { react: { text: '✅', key: m.key } });
+            await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
-            let successMsg = `✅ *${mediaType} status posted* to group!\n`;
-            if (!inGroup) successMsg += `📍 Group: \`${groupJid}\`\n`;
+            await sendGroupStatus(sock, jid, payload);
+
+            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+
+            let successMsg = `✅ ${mediaType} group status posted!\n`;
             if (payload.caption) successMsg += `📝 Caption: "${payload.caption.substring(0, 80)}"\n`;
-            if (payload.text)    successMsg += `📄 "${payload.text.substring(0, 80)}"\n`;
+            if (payload.text) successMsg += `📄 "${payload.text.substring(0, 80)}"\n`;
             successMsg += `\n👥 Visible to all group members`;
 
-            await sock.sendMessage(senderJid, { text: successMsg }, { quoted: m });
+            await sock.sendMessage(jid, { text: successMsg }, { quoted: m });
 
         } catch (error) {
-            console.error('[TogStatus] ERROR:', error.message);
-            await sock.sendMessage(senderJid, { react: { text: '❌', key: m.key } }).catch(() => {});
-            await sock.sendMessage(senderJid, {
-                text: `❌ *togstatus failed*\n\n*Error:* ${error.message}`
-            }, { quoted: m });
+            console.error('[TogStatus] Error:', error);
+            try {
+                await sock.sendMessage(m.key.remoteJid, {
+                    text: `❌ Failed: ${error.message}`
+                }, { quoted: m });
+            } catch {}
         }
     }
 };
