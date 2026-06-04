@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const GIFTED_DL   = 'https://api.giftedtech.co.ke/api/download/xvideosdl';
 const GIFTED_SRCH = 'https://api.giftedtech.co.ke/api/search/xvideossearch';

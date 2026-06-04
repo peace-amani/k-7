@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 import axios from 'axios';
 import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { xwolfSearch } from '../../lib/xwolfApi.js';

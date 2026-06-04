@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // Resolve a participant's actual phone JID — LIDs cannot be kicked directly
 function resolvePhoneJid(targetP, fallbackJid) {

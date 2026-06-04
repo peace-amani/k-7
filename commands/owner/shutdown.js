@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import os from "os";
 import { scheduleJob, cancelJob, scheduledJobs } from "node-schedule";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);

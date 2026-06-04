@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const EPHOTO_EFFECTS = {
   neon: { id: 68, name: 'Neon Text', url: 'https://en.ephoto360.com/tao-hieu-ung-chu-neon-dep-68.html', emoji: '💡' },

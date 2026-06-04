@@ -7,7 +7,7 @@
 // import crypto from 'crypto';
 // import webp from 'node-webpmux';
 // import { getBotName } from '../../lib/botname.js';
-// import { getOwnerName } from '../../lib/menuHelper.js';
+// import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // export default {
 //   name: 'stickertext',
@@ -231,7 +231,7 @@ import path from 'path';
 import crypto from 'crypto';
 import webp from 'node-webpmux';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
   name: 'stickertext',

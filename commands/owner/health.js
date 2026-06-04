@@ -1,5 +1,5 @@
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 function getServerPort() {
     if (process.env.PORT)        return parseInt(process.env.PORT);

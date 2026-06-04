@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const SEND_DELAY = 1500; // ms between each send to avoid spam detection
 

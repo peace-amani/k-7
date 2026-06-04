@@ -28,7 +28,7 @@ import { getCurrentMenuStyle } from "./menustyle.js";
 import { setLastMenu, getAllFieldsStatus } from "../menus/menuToggles.js";
 import { getBotName as _getBotName } from '../../lib/botname.js';
 import { getPlatformInfo } from '../../lib/platformDetect.js';
-import { getOwnerName as _menuGetOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName as _menuGetOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { getTimezoneFromPhone } from '../../lib/phoneTimezone.js';
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys';
 

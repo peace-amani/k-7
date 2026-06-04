@@ -1,3 +1,4 @@
+import { getFooter } from '../../lib/menuHelper.js';
 function getServerPort() {
     if (process.env.PORT)        return parseInt(process.env.PORT);
     if (process.env.SERVER_PORT) return parseInt(process.env.SERVER_PORT);

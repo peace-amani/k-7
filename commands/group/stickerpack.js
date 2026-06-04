@@ -969,7 +969,7 @@ import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createCanvas } from '../../lib/canvasWrapper.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const execAsync = promisify(exec);
 

@@ -1,5 +1,5 @@
 import { getUser, updateUser, getSender, COIN, fmt, formatCooldown } from './_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const WORK_COOLDOWN = 60 * 60 * 1000; // 1 hour
 

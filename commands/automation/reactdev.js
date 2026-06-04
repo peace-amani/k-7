@@ -1,5 +1,5 @@
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import axios from 'axios';
 import { REMOTE_URLS } from '../../lib/remoteUrls.js';
 

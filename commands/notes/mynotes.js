@@ -1,5 +1,5 @@
 import db from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const KEY_PREFIX = 'user_notes_';
 

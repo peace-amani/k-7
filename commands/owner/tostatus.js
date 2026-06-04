@@ -1,5 +1,5 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
 
 // Core poster — sends to status@broadcast.

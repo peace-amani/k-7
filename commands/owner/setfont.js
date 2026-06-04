@@ -1,6 +1,6 @@
 import db from '../../lib/database.js';
 import { applyFont, AVAILABLE_FONTS } from '../../lib/fontTransformer.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
     name: 'setfont',

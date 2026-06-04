@@ -1,5 +1,5 @@
 import { getUser, updateUser, getSender, getMentionTarget, parseAmount, cleanId, COIN, fmt } from './_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
     name: 'pay',

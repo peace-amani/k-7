@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { getSession, setSession, clearSession, getSender } from './_sessions.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const TYPE = 'chess';
 

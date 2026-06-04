@@ -5,7 +5,7 @@ import { WolfLogger } from '../../lib/wolfLogger.js';
 import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const _requireAds = createRequire(import.meta.url);
 let giftedBtnsAds;

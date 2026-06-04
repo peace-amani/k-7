@@ -433,7 +433,7 @@
 import { downloadContentFromMessage, generateWAMessageContent, generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import { PassThrough } from 'stream';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // 📌 Convert audio to voice note
 async function toVN(inputBuffer) {

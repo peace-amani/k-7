@@ -1,5 +1,5 @@
 import { getUser, getAllUsers, getSender, getMentionTarget, cleanId, COIN, fmt } from './_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 function rankOf(targetId) {
     const all = Object.entries(getAllUsers())

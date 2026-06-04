@@ -665,7 +665,7 @@ HOW TO USE THIS AUTO-JOIN SYSTEM:
 3. IN YOUR MAIN BOT FILE (index.js/bot.js), add:
 
    import { initializeAutoJoin } from './commands/add.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
    
    // After initializing sock/baileys
    sock.ev.on('connection.update', async (update) => {

@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 // // commands/group/antileave.js
 
 // const antiLeaveGroups = new Map(); // Store with group info

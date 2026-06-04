@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 // // commands/owner/autoreact.js
 
 // // AutoReact Manager (State Management)

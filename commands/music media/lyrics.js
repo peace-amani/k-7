@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { xwolfLyrics } from '../../lib/xwolfApi.js';
 
 export default {

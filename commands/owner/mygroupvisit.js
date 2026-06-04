@@ -1,5 +1,5 @@
 import { getActionSession } from '../../lib/actionSession.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
     name: 'mygroupvisit',

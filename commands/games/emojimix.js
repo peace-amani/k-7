@@ -199,7 +199,7 @@ let sharp = null;
 import('sharp').then(m => { sharp = m.default; }).catch(() => {});
 import webp from 'node-webpmux';
 import crypto from 'crypto';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
   name: 'emojimix',

@@ -1,5 +1,5 @@
 import { createRequire } from 'module';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;

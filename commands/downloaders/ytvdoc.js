@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { xwolfSearch, streamXWolf, xwolfDownloadVideo } from '../../lib/xwolfApi.js';
 import { xcasperVideo } from '../../lib/xcasperApi.js';
 

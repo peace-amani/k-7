@@ -1,5 +1,5 @@
 import { getUser, updateUser, getSender, parseAmount, COIN, fmt } from './_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const MAX_BET = 100000;
 const MIN_BET = 10;

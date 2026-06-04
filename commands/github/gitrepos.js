@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { setActionSession, getActionSession, deleteActionSession } from '../../lib/actionSession.js';
 import { sendInteractiveWithImage, isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
-import { getOwnerName, getMenuImageBuffer } from '../../lib/menuHelper.js';
+import { getOwnerName, getMenuImageBuffer, getFooter} from '../../lib/menuHelper.js';
 
 const GH_API = 'https://api.github.com';
 const PER_PAGE = 100;

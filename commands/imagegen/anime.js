@@ -1,7 +1,7 @@
 import axios from 'axios';
 import FormData from 'form-data';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const CASPER_URL = 'https://ai-image-gen.xcasper.space/v1/image/prompt/generate';
 

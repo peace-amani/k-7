@@ -1,5 +1,5 @@
 import { setActionSession } from '../../lib/actionSession.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { getBotName } from '../../lib/botname.js';
 
 // Tracks sent group lists: messageId → sorted array of { id, name }

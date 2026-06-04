@@ -28,7 +28,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { isButtonModeEnabled, setButtonMode } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isChannelModeEnabled, setChannelMode, getChannelInfo } from '../../lib/channelMode.js';
 
 const __filename = fileURLToPath(import.meta.url);

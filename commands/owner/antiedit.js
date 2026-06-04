@@ -1,7 +1,7 @@
 import { downloadMediaMessage, getContentType } from '@whiskeysockets/baileys';
 import { createRequire } from 'module';
 import db from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
 

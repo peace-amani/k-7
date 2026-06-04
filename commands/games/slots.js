@@ -1,6 +1,6 @@
 import { getSender } from './_sessions.js';
 import { getUser, updateUser, parseAmount, COIN, fmt } from '../economy/_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // Reel symbols ordered by rarity (left = common). Payouts scale by rarity.
 // Three-of-a-kind multipliers below; two-of-a-kind pays a smaller bonus.

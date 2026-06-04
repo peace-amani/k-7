@@ -2,7 +2,7 @@ import axios from "axios";
 import { getBotName } from '../../lib/botname.js';
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import crypto from "crypto";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
   name: "imgbb",

@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const execFileAsync = promisify(execFile);
 

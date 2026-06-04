@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const XWOLF_API = 'https://apis.xwolf.space/api/stalk/github';
 const DEFAULT_USER = 'WOLFTECH-Ke';

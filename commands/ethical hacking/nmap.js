@@ -5,7 +5,7 @@ import net from 'net';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

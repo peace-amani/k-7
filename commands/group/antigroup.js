@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const antiGroupLinkFile = './antigrouplink.json';
 

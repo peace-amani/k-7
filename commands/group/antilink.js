@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const _requireAl = createRequire(import.meta.url);
 let giftedBtnsAl;

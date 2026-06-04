@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // ── Config helpers (globalThis pattern, wired in index.js) ───────────────────
 function loadConfig() {

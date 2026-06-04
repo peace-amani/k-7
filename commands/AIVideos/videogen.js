@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
     name: "videogen",

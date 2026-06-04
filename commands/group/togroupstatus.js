@@ -1,7 +1,7 @@
 import { downloadContentFromMessage, generateWAMessageContent, generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import { PassThrough } from 'stream';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 async function toVN(inputBuffer) {
     return new Promise((resolve, reject) => {

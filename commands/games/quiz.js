@@ -522,7 +522,7 @@
 
 
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const activeQuestions = new Map(); // Store active questions by message ID
 const userStats = new Map(); // Track user statistics

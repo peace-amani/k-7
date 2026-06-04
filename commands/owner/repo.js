@@ -4,7 +4,7 @@ import moment from 'moment-timezone';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { OWNER, REPO, REPO_URL, REPO_ZIP } from '../../lib/repoConfig.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { createRequire } from 'module';

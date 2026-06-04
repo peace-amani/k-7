@@ -4,7 +4,7 @@
 // Sub-command: guide text + single "Deploy Now" / "Watch Guide" cta_url button
 
 import { createRequire } from 'module';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
 

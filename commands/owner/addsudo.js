@@ -1,5 +1,5 @@
 // import { addSudo, mapLidToPhone, addSudoJid, getSudoList } from '../../lib/sudo-store.js';
-// import { getOwnerName } from '../../lib/menuHelper.js';
+// import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // function resolveRealNumber(jid, sock) {
 //     if (!jid) return null;
@@ -130,7 +130,7 @@
 
 
 import { addSudo, addSudoJid, mapLidToPhone, getSudoList } from '../../lib/sudo-store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 function resolveRealNumber(jid, sock) {
     if (!jid) return null;

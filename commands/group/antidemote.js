@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { jidNormalizedUser } from '@whiskeysockets/baileys';
 import supabase from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const DATA_DIR = './data/antidemote';
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');

@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 import axios from 'axios';
 import fs from 'fs/promises';
 import path from 'path';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { getBotName } from '../../lib/botname.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 

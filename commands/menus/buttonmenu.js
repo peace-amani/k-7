@@ -1,7 +1,7 @@
 import { getButtonCommandList } from '../../lib/commandButtons.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // Try to import menu media, but don't fail if it doesn't exist
 let getMenuMedia;

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const PRESENCE_FILE = './data/presence/config.json';
 

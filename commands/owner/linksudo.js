@@ -1,5 +1,5 @@
 import { getSudoList, mapLidToPhone, isSudoNumber } from '../../lib/sudo-store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 function resolveRealNumber(participant, sock) {
     if (!participant) return null;

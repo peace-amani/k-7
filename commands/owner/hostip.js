@@ -4,7 +4,7 @@ import os from 'os';
 import dns from 'dns';
 import util from 'util';
 import { existsSync, readFileSync } from 'fs';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const dnsLookup = util.promisify(dns.lookup);
 const dnsResolve = util.promisify(dns.resolve);

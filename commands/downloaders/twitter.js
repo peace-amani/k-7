@@ -8,7 +8,7 @@ import axios from 'axios';
 import { createWriteStream, existsSync } from 'fs';
 import fs from 'fs';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 

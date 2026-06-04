@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const FALLBACK_INSULTS = [
     "You're the reason the gene pool needs a lifeguard.",

@@ -3,7 +3,7 @@
 // .botlanguage english / .botlanguage reset — turn off translation
 
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import {
   LANGUAGE_CODES,
   getBotLanguage,

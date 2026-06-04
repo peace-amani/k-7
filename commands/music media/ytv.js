@@ -1,7 +1,7 @@
 import axios from 'axios';
 import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { xwolfDownloadVideo } from '../../lib/xwolfApi.js';
 
 const KEITH_BASE  = 'https://apiskeith.top/download';

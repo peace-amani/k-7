@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 // File: ./commands/owner/setprefix.js
 export default {
     name: 'setprefix',

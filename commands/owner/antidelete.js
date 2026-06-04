@@ -4,7 +4,7 @@ import { getBotName } from '../../lib/botname.js';
 import { WolfLogger } from '../../lib/wolfLogger.js';
 import db from '../../lib/database.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const _require = createRequire(import.meta.url);
 let giftedBtns;

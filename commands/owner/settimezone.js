@@ -1,5 +1,5 @@
 import { getConfig, setConfig } from '../../lib/database.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

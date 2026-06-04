@@ -1,3 +1,4 @@
+import { getFooter } from '../../lib/menuHelper.js';
 export const getBoxStyleCommands = () => {
   return `╭─⊷ *🏠 GROUP MANAGEMENT*
 │

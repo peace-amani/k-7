@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 const BUG_PATTERNS = [
     { pattern: /\u200E{10,}/, type: 'lrm_crash', label: 'LRM overflow' },
     { pattern: /\u200F{10,}/, type: 'rlm_crash', label: 'RLM overflow' },

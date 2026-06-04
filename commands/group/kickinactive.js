@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { getGroupActivity, trackingStartedAt } from '../../lib/groupActivity.js';
 
 const BRAND = () => getOwnerName().toUpperCase();

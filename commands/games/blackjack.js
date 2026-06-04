@@ -1,6 +1,6 @@
 import { getSession, setSession, clearSession, getSender } from './_sessions.js';
 import { getUser, updateUser, parseAmount, COIN, fmt } from '../economy/_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const TYPE = 'blackjack';
 const SUITS = ['♠','♥','♦','♣'];

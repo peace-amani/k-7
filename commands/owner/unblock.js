@@ -1,5 +1,5 @@
 import { delay } from '@whiskeysockets/baileys';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { resolveJid } from '../tools/getjid.js';
 
 const onlyDigits = (v) => String(v || '').replace(/\D/g, '');

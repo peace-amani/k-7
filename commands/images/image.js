@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 // ── Primary API ───────────────────────────────────────────────────────────────
 async function searchXWolfImages(query, limit = 8) {

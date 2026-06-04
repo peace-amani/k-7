@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import supabase from '../../lib/database.js';
 
 globalThis._receiptInit = async (sock) => {

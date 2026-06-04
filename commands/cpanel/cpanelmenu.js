@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName, buildMenuHeader } from '../../lib/menuHelper.js';
+import { getOwnerName, buildMenuHeader, getFooter} from '../../lib/menuHelper.js';
 
 const require = createRequire(import.meta.url);
 let giftedBtns;

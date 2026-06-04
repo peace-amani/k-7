@@ -1,5 +1,5 @@
 import { getArchivedList } from '../../lib/chat-state.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
   name: 'archivedgroups',

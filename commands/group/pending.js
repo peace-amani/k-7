@@ -10,7 +10,7 @@
  * to recover the real +phone number when possible.
  */
 
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const PAGE_SIZE = 50;   // safety cap per message — groups can have hundreds pending
 

@@ -8,7 +8,7 @@ import {
     clearMusicSongs,
     sendMusicClip,
 } from '../../lib/musicMode.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import axios from 'axios';
 
 async function verifyShortClip(query) {

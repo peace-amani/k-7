@@ -3,7 +3,7 @@ import crypto from "crypto";
 import yts from "yt-search";
 import fs from "fs";
 import path from "path";
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);

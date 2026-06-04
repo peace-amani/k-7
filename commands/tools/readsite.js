@@ -3,7 +3,7 @@
 // Extracts: title, description, headings, links, text body, and any JSON data URLs
 
 import axios from 'axios';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const MAX_TEXT = 2800;
 

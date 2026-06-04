@@ -1,5 +1,5 @@
 import { getSudoList } from '../../lib/sudo-store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 export default {
     name: 'getsudo',

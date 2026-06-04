@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const DEV_NUMBERS = ['254703397679', '254713046497', '254733961184'];
 const CONFIG_FILE = './data/autofollow/extra_channels.json';

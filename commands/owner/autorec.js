@@ -1,4 +1,4 @@
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 // autorec.js - Fake recording simulation
 let recordingStates = {
   groups: false,

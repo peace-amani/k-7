@@ -590,6 +590,7 @@
 
 
 import fs from 'fs';
+import { getFooter } from '../../lib/menuHelper.js';
 
 const antiCallFile = './anticall.json';
 

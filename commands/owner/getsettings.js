@@ -15,8 +15,7 @@ import {
     sendLoadingMessage,
     getRAMUsage,
     formatUptime as menuFormatUptime,
-    getBotVersion,
-} from '../../lib/menuHelper.js';
+    getBotVersion,, getFooter} from '../../lib/menuHelper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

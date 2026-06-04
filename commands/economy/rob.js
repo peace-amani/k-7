@@ -1,5 +1,5 @@
 import { getUser, updateUser, getSender, getMentionTarget, cleanId, COIN, fmt, formatCooldown } from './_store.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
 const ROB_COOLDOWN = 30 * 60 * 1000; // 30 min
 const MIN_TARGET_WALLET = 200;

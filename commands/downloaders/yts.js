@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 
 const _require = createRequire(import.meta.url);
