@@ -1,6 +1,7 @@
 import os from 'os';
 import moment from 'moment-timezone';
 import { getBotName } from '../../lib/botname.js';
+import { getPlatformInfo } from '../../lib/platformDetect.js';
 
 export default {
   name: 'platform',
@@ -12,74 +13,7 @@ export default {
     try {
       const jid = m.key.remoteJid;
 
-      function createFakeContact(message) {
-        return {
-          key: {
-            participant: "0@s.whatsapp.net",
-            remoteJid: jid,
-            fromMe: false,
-            id: getBotName()
-          },
-          messageTimestamp: moment().unix(),
-          pushName: getBotName(),
-          message: {
-            contactMessage: {
-              vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:${getBotName()}\nitem1.TEL;waid=${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}:${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-            }
-          },
-          participant: "0@s.whatsapp.net"
-        };
-      }
-
-      const fkontak = createFakeContact(m);
-
-      const getDeploymentPlatform = () => {
-        if (process.env.HEROKU_APP_NAME || process.env.DYNO || process.env.HEROKU_API_KEY) {
-          return { name: 'Heroku', icon: '🦸', url: 'heroku.com' };
-        }
-        if (process.env.RENDER_SERVICE_ID || process.env.RENDER_SERVICE_NAME || process.env.RENDER) {
-          return { name: 'Render', icon: '⚡', url: 'render.com' };
-        }
-        if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_NAME || process.env.RAILWAY_SERVICE_NAME) {
-          return { name: 'Railway', icon: '🚂', url: 'railway.app' };
-        }
-        if (process.env.REPL_ID || process.env.REPLIT_DB_URL || process.env.REPLIT_USER || process.env.REPL_SLUG) {
-          return { name: 'Replit', icon: '🌀', url: 'replit.com' };
-        }
-        if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
-          return { name: 'Vercel', icon: '▲', url: 'vercel.com' };
-        }
-        if (process.env.GLITCH_PROJECT_REMIX || process.env.PROJECT_REMIX_CHAIN || process.env.GLITCH) {
-          return { name: 'Glitch', icon: '🎏', url: 'glitch.com' };
-        }
-        if (process.env.KOYEB_APP || process.env.KOYEB_REGION || process.env.KOYEB_SERVICE) {
-          return { name: 'Koyeb', icon: '☁️', url: 'koyeb.com' };
-        }
-        if (process.env.CYCLIC_URL || process.env.CYCLIC_APP_ID || process.env.CYCLIC_DB) {
-          return { name: 'Cyclic', icon: '🔄', url: 'cyclic.sh' };
-        }
-        if (process.env.PANEL || process.env.PTERODACTYL) {
-          return { name: 'Panel/Pterodactyl', icon: '🖥️', url: 'pterodactyl.io' };
-        }
-        if (process.env.SSH_CONNECTION || process.env.SSH_CLIENT || (process.platform === 'linux' && process.env.USER === 'root')) {
-          return { name: 'VPS/SSH', icon: '🖥️', url: 'N/A' };
-        }
-        if (process.platform === 'win32') {
-          return { name: 'Windows PC', icon: '💻', url: 'Local' };
-        }
-        if (process.platform === 'darwin') {
-          return { name: 'MacOS', icon: '🍎', url: 'Local' };
-        }
-        if (process.platform === 'android') {
-          return { name: 'Termux (Android)', icon: '📱', url: 'Local' };
-        }
-        if (process.platform === 'linux') {
-          return { name: 'Linux', icon: '🐧', url: 'Local' };
-        }
-        return { name: 'Unknown', icon: '🏠', url: 'N/A' };
-      };
-
-      const platform = getDeploymentPlatform();
+      const platform = getPlatformInfo();
 
       const uptime = process.uptime();
       const days = Math.floor(uptime / (3600 * 24));
