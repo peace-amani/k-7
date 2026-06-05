@@ -72,7 +72,7 @@ export default {
                 `│\n` +
                 rows.join('\n') + '\n' +
                 `│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 
@@ -128,10 +128,10 @@ export default {
                     }]
                 });
             } catch {
-                await reply(msgText + `\n\n${getFooter(m.key.participant || m.key.remoteJid)}`);
+                await reply(msgText + `\n\n${getFooter(msg.key.participant || msg.key.remoteJid)}`);
             }
         } else {
-            await reply(msgText + `\n\n${getFooter(m.key.participant || m.key.remoteJid)}`);
+            await reply(msgText + `\n\n${getFooter(msg.key.participant || msg.key.remoteJid)}`);
         }
 
         await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });

@@ -112,7 +112,7 @@ function createEphotoCommand(effectKey) {
 
       if (!text) {
         return await sock.sendMessage(chatId, {
-          text: `╭─⌈ ${effect.emoji} *${effect.name.toUpperCase()}* ⌋\n│\n├─⊷ *Usage:* ${PREFIX}${effectKey} <text>\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}${effectKey} ${getBotName()}\n│\n├─⊷ *Aliases:* ephoto${effect.id}, ep${effect.id}\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          text: `╭─⌈ ${effect.emoji} *${effect.name.toUpperCase()}* ⌋\n│\n├─⊷ *Usage:* ${PREFIX}${effectKey} <text>\n│\n├─⊷ *Example:*\n│  └⊷ ${PREFIX}${effectKey} ${getBotName()}\n│\n├─⊷ *Aliases:* ephoto${effect.id}, ep${effect.id}\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         }, { quoted: msg });
       }
 

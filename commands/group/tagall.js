@@ -157,7 +157,7 @@ export default {
         text += `│\n`;
       }
 
-      text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+      text += `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
       const mentionIds = allParticipants.map(p => p.id);
 

@@ -35,7 +35,7 @@ export default {
                 `╭─⌈ 🔗 *VISIT GROUP* ⌋\n│\n` +
                 `│  *${session.name}*\n│\n` +
                 `│  https://chat.whatsapp.com/${inviteCode}\n│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         }, { quoted: msg });
     }
 };

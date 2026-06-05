@@ -935,7 +935,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 📖 *AUTO-READ* ⌋\n│\n├─⊷ *.autoread groups*\n│  └⊷ Groups only\n├─⊷ *.autoread dms*\n│  └⊷ DMs only\n├─⊷ *.autoread both*\n│  └⊷ Read all messages\n├─⊷ *.autoread off*\n│  └⊷ Disable auto-read\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            const helpText = `╭─⌈ 📖 *AUTO-READ* ⌋\n│\n├─⊷ *.autoread groups*\n│  └⊷ Groups only\n├─⊷ *.autoread dms*\n│  └⊷ DMs only\n├─⊷ *.autoread both*\n│  └⊷ Read all messages\n├─⊷ *.autoread off*\n│  └⊷ Disable auto-read\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

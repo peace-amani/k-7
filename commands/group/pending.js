@@ -139,7 +139,7 @@ export default {
           `╭─⌈ 📋 *PENDING REQUESTS* ⌋\n` +
           `├─⊷ *${groupMetadata.subject || 'this group'}*\n` +
           `├─⊷ ✨ No pending join requests right now\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
       return;
     }
@@ -173,7 +173,7 @@ export default {
         body +
         `│\n` +
         `├─⊷ Use *approveall* to approve or *rejectall* to reject\n` +
-        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
       mentions
     }, { quoted: msg });
   }

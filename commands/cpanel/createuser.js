@@ -26,7 +26,7 @@ export default {
 
         if (!email || !email.includes('@')) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 👤 *CREATE USER* ⌋\n├─⊷ *${PREFIX}createuser <email>*\n│  └⊷ Creates a panel user and returns credentials\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 👤 *CREATE USER* ⌋\n├─⊷ *${PREFIX}createuser <email>*\n│  └⊷ Creates a panel user and returns credentials\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

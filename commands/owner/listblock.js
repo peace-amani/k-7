@@ -27,7 +27,7 @@ export default {
 
             if (!blocklist || blocklist.length === 0) {
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 🚫 *BLOCK LIST* ⌋\n│\n├─⊷ *Status:* Empty\n│  └⊷ No contacts are currently blocked.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+                    text: `╭─⌈ 🚫 *BLOCK LIST* ⌋\n│\n├─⊷ *Status:* Empty\n│  └⊷ No contacts are currently blocked.\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } }); } catch {}
                 return;
@@ -100,7 +100,7 @@ export default {
                 text += `│\n├─⊷ More: *listblock ${page + 1}*\n`;
             }
 
-            text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            text += `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
             await sock.sendMessage(chatId, { text, mentions }, { quoted: msg });
             try { await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } }); } catch {}

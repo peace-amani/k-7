@@ -549,7 +549,7 @@ export default {
             body += `╰──────────────\n`;
 
             body += `\n🕒 *Updated:* ${new Date().toLocaleString()}\n`;
-            body += `\n${getFooter(m.key.participant || m.key.remoteJid)}`;
+            body += `\n${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
             // ── Combine and send ──────────────────────────────────────────
             const fullText = createReadMoreEffect(fadedHeader, body);

@@ -85,7 +85,7 @@ export default {
                     `├─⊷ Bot Approval Msg : *${approvalIcon}*\n` +
                     `├─⊷ WA Join Approval : *${waIcon}*\n` +
                     `├─⊷ Use *${PREFIX}joinapproval on/off* to toggle\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -111,7 +111,7 @@ export default {
                     `╭─⌈ ${icon} *JOIN APPROVAL — ${groupMeta.subject}* ⌋\n` +
                     `├─⊷ Status : *${enable ? 'ON' : 'OFF'}*\n` +
                     `├─⊷ ${statusLine}\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -122,7 +122,7 @@ export default {
                 `├─⊷ *${PREFIX}joinapproval*       — show current settings\n` +
                 `├─⊷ *${PREFIX}joinapproval on*    — enable approval message\n` +
                 `├─⊷ *${PREFIX}joinapproval off*   — disable approval message\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         }, { quoted: msg });
     },
 };

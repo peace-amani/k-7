@@ -64,7 +64,7 @@ export default {
       // Ask for owner phone verification
       if (!args[0]) {
         await sock.sendMessage(jid, {
-          text: `╭─⌈ 🔐 *VERIFY OWNERSHIP* ⌋\n│\n├─⊷ *.iamowner <full_owner_phone>*\n│  └⊷ Verify with number\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          text: `╭─⌈ 🔐 *VERIFY OWNERSHIP* ⌋\n│\n├─⊷ *.iamowner <full_owner_phone>*\n│  └⊷ Verify with number\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         }, { quoted: msg });
         return;
       }

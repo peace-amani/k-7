@@ -101,7 +101,7 @@ export default {
                     `╭─⌈ 🧹 *INACTIVE KICK DONE* ⌋\n` +
                     `├─⊷ ✅ Kicked: ${ok}\n` +
                     `├─⊷ ❌ Failed: ${fail}\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -123,7 +123,7 @@ export default {
                     `│  └⊷ Confirm pending kick\n` +
                     `│\n` +
                     `├─⊷ *Days:* 1 – 365\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -170,7 +170,7 @@ export default {
                     `╭─⌈ ✅ *NO INACTIVE MEMBERS* ⌋\n` +
                     `├─⊷ All non-admin members active in last ${days}d\n` +
                     (warning ? `│${warning}│\n` : '') +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -195,7 +195,7 @@ export default {
                     `├─⊷ Threshold: ${days} day(s)\n` +
                     (warning ? `│${warning}│\n` : '│\n') +
                     body +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
                 mentions
             }, { quoted: msg });
         }
@@ -216,7 +216,7 @@ export default {
                 `│\n` +
                 `├─⊷ Reply with *${PREFIX}kickinactive confirm*\n` +
                 `├─⊷ Expires in 5 minutes\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
             mentions
         }, { quoted: msg });
     }

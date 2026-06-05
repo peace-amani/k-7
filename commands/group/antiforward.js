@@ -230,7 +230,7 @@ export default {
                     `├⊷ reset [@user|all]\n` +
                     `├⊷ status\n` +
                     `├⊷ help\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

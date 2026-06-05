@@ -375,7 +375,7 @@ export default {
                     `├─⊷ *${PREFIX}autobio interval <min>*\n│  └⊷ Set update interval\n` +
                     `├─⊷ *${PREFIX}autobio test*\n│  └⊷ Test bio update now\n` +
                     `├─⊷ *${PREFIX}autobio weather <city> <code>*\n│  └⊷ Enable weather in bio\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
         

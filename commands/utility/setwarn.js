@@ -39,7 +39,7 @@ export default {
 
         if (args.length === 0) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ 📊 *WARN LIMIT* ⌋\n├─⊷ *Current:* ${currentLimit} warnings\n├─⊷ *${PREFIX}setwarn <1-20>*\n│  └⊷ Set warning limit\n╰─── *${getBotName()}* ───\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 📊 *WARN LIMIT* ⌋\n├─⊷ *Current:* ${currentLimit} warnings\n├─⊷ *${PREFIX}setwarn <1-20>*\n│  └⊷ Set warning limit\n╰─── *${getBotName()}* ───\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

@@ -8,7 +8,7 @@ export default {
     const sender = msg.key.remoteJid;
     
     if (!args[0]) {
-      const helpText = `╭─⌈ 🚫 *BLOCK DETECTION* ⌋\n│\n├─⊷ *blockdetect <phone_number>*\n│  └⊷ Check block status\n├─⊷ *blockdetect @mention*\n│  └⊷ Check via mention\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+      const helpText = `╭─⌈ 🚫 *BLOCK DETECTION* ⌋\n│\n├─⊷ *blockdetect <phone_number>*\n│  └⊷ Check block status\n├─⊷ *blockdetect @mention*\n│  └⊷ Check via mention\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
       
       await sock.sendMessage(sender, { text: helpText }, { quoted: msg });
       return;

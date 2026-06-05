@@ -42,7 +42,7 @@ export default {
           `├─⊷ Current : *${current}*\n` +
           `├─⊷ *${PREFIX}onlyadmins on*  — only admins can add members\n` +
           `├─⊷ *${PREFIX}onlyadmins off* — anyone can add members\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -66,7 +66,7 @@ export default {
           `╭─⌈ ${icon} *MEMBER ADD MODE* ⌋\n` +
           `├─⊷ Status : *${adminsOnly ? 'Admins only' : 'All members'}*\n` +
           `├─⊷ ${desc}\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     } catch (err) {
       return sock.sendMessage(chatId, {

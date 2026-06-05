@@ -26,28 +26,28 @@ export default {
             if (action === 'everyone' || action === 'all') {
                 await sock.updateGroupsAddPrivacy('all');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can add you to groups\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🌍 Everyone\n│  └⊷ Anyone can add you to groups\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🌍', key: msg.key } }); } catch {}
 
             } else if (action === 'contacts') {
                 await sock.updateGroupsAddPrivacy('contacts');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 👥 Contacts Only\n│  └⊷ Only your contacts can add you to groups\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 👥 Contacts Only\n│  └⊷ Only your contacts can add you to groups\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '👥', key: msg.key } }); } catch {}
 
             } else if (action === 'except') {
                 await sock.updateGroupsAddPrivacy('contact_blacklist');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🚫 Contacts Except...\n│  └⊷ Contacts except blacklisted ones can add you\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🚫 Contacts Except...\n│  └⊷ Contacts except blacklisted ones can add you\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🚫', key: msg.key } }); } catch {}
 
             } else if (action === 'none' || action === 'nobody' || action === 'off') {
                 await sock.updateGroupsAddPrivacy('none');
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔒 Nobody\n│  └⊷ No one can add you to groups directly\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ 👥 *GROUP ADD PRIVACY* ⌋\n│\n├─⊷ *Set:* 🔒 Nobody\n│  └⊷ No one can add you to groups directly\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 try { await sock.sendMessage(chatId, { react: { text: '🔒', key: msg.key } }); } catch {}
 

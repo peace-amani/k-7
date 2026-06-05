@@ -91,7 +91,7 @@ export default {
                 `├─⊷ AI detects & erases the object\n` +
                 `│  then fills in the background\n` +
                 `│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 

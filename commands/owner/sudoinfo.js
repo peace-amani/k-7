@@ -40,7 +40,7 @@ export default {
             info += `│\n`;
         }
 
-        info += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+        info += `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text: info }, { quoted: msg });
     }

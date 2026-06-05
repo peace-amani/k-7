@@ -40,7 +40,7 @@ export default {
 
         if (!targetUser) {
             return sock.sendMessage(jid, {
-                text: `╭─⌈ ⚠️ *WARN* ⌋\n│\n├─⊷ *${PREFIX}warn* (reply)\n│  └⊷ Warn via reply\n├─⊷ *${PREFIX}warn @user*\n│  └⊷ Warn via mention\n├─⊷ *${PREFIX}warn @user spamming*\n│  └⊷ Warn with reason\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ⚠️ *WARN* ⌋\n│\n├─⊷ *${PREFIX}warn* (reply)\n│  └⊷ Warn via reply\n├─⊷ *${PREFIX}warn @user*\n│  └⊷ Warn via mention\n├─⊷ *${PREFIX}warn @user spamming*\n│  └⊷ Warn with reason\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

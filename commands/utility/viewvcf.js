@@ -74,7 +74,7 @@ export default {
         const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📇 *VIEW VCF* ⌋\n├─⊷ Reply to a *.vcf* file with\n│  └⊷ *${PREFIX}viewvcf*\n├─⊷ Lists contacts as JSON\n╰─── *${getBotName()}* ───\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 📇 *VIEW VCF* ⌋\n├─⊷ Reply to a *.vcf* file with\n│  └⊷ *${PREFIX}viewvcf*\n├─⊷ Lists contacts as JSON\n╰─── *${getBotName()}* ───\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

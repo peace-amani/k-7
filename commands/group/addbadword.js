@@ -20,7 +20,7 @@ export default {
                     `├─⊷ *Example:* .addbadword badterm\n│\n` +
                     `├─⊷ Add multiple: .addbadword word1 word2\n` +
                     `├─⊷ *Scope:* ${scopeLabel} only\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
@@ -42,7 +42,7 @@ export default {
         if (added.length > 0)    reply += `├─⊷ ✅ Added: ${added.map(w => `*${w}*`).join(', ')}\n`;
         if (existing.length > 0) reply += `├─⊷ ⚠️ Already exists: ${existing.map(w => `*${w}*`).join(', ')}\n`;
         reply += `├─⊷ 📋 Words in ${scopeLabel}: *${total}*\n`;
-        reply += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+        reply += `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         return sock.sendMessage(chatId, { text: reply }, { quoted: msg });
     }

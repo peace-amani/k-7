@@ -32,7 +32,7 @@ export default {
         text += `├─⊷ ${count}. *${name}*\n`;
       }
 
-      text += `│\n├─⊷ *Total:* ${archived.length} archived group(s)\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+      text += `│\n├─⊷ *Total:* ${archived.length} archived group(s)\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
       await sock.sendMessage(jid, { text }, { quoted: msg });
 

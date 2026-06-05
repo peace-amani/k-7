@@ -17,7 +17,7 @@ export default {
 
         if (!args.length && !hasImage) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 💝 *VALENTINE'S DAY* ⌋\n│\n│ Create a Valentine's Day effect\n│ with text and image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}valentine <text>\n│ _(reply to an image)_\n│\n├─⊷ *Example:*\n│ ${global.prefix || '.'}valentine I Love You\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 💝 *VALENTINE'S DAY* ⌋\n│\n│ Create a Valentine's Day effect\n│ with text and image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}valentine <text>\n│ _(reply to an image)_\n│\n├─⊷ *Example:*\n│ ${global.prefix || '.'}valentine I Love You\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

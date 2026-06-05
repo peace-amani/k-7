@@ -21,7 +21,7 @@ export default {
                     `│  ▸ .lyrics what shall I render to Jehovah\n` +
                     `│  ▸ .lyrics Blinding Lights\n` +
                     `│  ▸ .lyrics Home by NF\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

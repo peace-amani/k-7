@@ -62,7 +62,7 @@ export default {
           `├─⊷ *${prefix}anticallmessage view*\n│  └⊷ View current message\n│\n` +
           `├─⊷ *Status:* ${s.autoMessage ? '✅ ON' : '❌ OFF'}\n` +
           (s.autoMessage ? `├─⊷ *Message:* _${s.message.substring(0, 50)}${s.message.length > 50 ? '…' : ''}_\n│\n` : `│\n`) +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
         return sock.sendMessage(jid, { text: helpText }, { quoted: msg });
       }
 
@@ -78,7 +78,7 @@ export default {
         `├─⊷ *Message:* _${newMsg.substring(0, 50)}${newMsg.length > 50 ? '…' : ''}_\n│\n` +
         `├─⊷ Sent after every rejected call\n` +
         `│  └⊷ Use *${prefix}anticall enable* to activate\n│\n` +
-        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
 
@@ -90,7 +90,7 @@ export default {
         (s.autoMessage
           ? `├─⊷ *Message:* _${s.message.substring(0, 50)}${s.message.length > 50 ? '…' : ''}_\n│\n`
           : `│  └⊷ No message set\n│\n`) +
-        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
 
@@ -105,7 +105,7 @@ export default {
         `╭─⌈ 📞 *ANTICALL MESSAGE* ⌋\n│\n` +
         `├─⊷ *Auto-reply:* ❌ OFF\n` +
         `│  └⊷ No message will be sent after rejected calls\n│\n` +
-        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
       return sock.sendMessage(jid, { text: reply }, { quoted: msg });
     }
   }

@@ -60,7 +60,7 @@ export default {
 
         if (!targetNumber || targetNumber.length < 7) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 📋 *REMOVE SUDO* ⌋\n│\n├─⊷ *${PREFIX}delsudo <number>*\n│  └⊷ Remove by number\n├─⊷ *Reply + ${PREFIX}delsudo*\n│  └⊷ Remove via reply\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 📋 *REMOVE SUDO* ⌋\n│\n├─⊷ *${PREFIX}delsudo <number>*\n│  └⊷ Remove by number\n├─⊷ *Reply + ${PREFIX}delsudo*\n│  └⊷ Remove via reply\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

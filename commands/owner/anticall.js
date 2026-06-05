@@ -855,7 +855,7 @@ export default {
             `├─⊷ *${PREFIX}anticall status*\n│  └⊷ View current settings\n` +
             `├─⊷ *${PREFIX}anticall logs*\n│  └⊷ View recent call history\n` +
             `├─⊷ *${PREFIX}anticall clearhandled*\n│  └⊷ Clear call tracking cache\n` +
-            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         );
     }
 };

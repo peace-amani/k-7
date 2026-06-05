@@ -142,7 +142,7 @@ export default {
                     `├⊷ antichat off\n` +
                     `├⊷ antichat action delete/warn/kick\n` +
                     `├⊷ antichat status\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

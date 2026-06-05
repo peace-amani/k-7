@@ -62,7 +62,7 @@ export default {
                     `│   view-once message.\n` +
                     `├─⊷ The original message will be deleted\n` +
                     `│   automatically (where possible).\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

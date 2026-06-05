@@ -87,7 +87,7 @@ export default {
           `├─⊷ *.disp week*  → 7 days\n` +
           `├─⊷ *.disp 90d*   → 90 days\n` +
           `├─⊷ *.disp off*   → Turn off\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -120,7 +120,7 @@ export default {
         text:
           `╭─⌈ ⏳ *DISAPPEARING MESSAGES* ⌋\n` +
           `├─⊷ ${stateText}\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
 
     } catch (err) {

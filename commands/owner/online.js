@@ -123,7 +123,7 @@ export default {
                         `│ • \`${PREFIX}online off\` - Disable\n` +
                         `│ • \`${PREFIX}privacy\` - View all settings\n` +
                         `│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 break;
             }
@@ -152,7 +152,7 @@ export default {
                         `│ • \`${PREFIX}online on\` - Re-enable\n` +
                         `│ • \`${PREFIX}privacy\` - View all settings\n` +
                         `│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 break;
             }
@@ -184,7 +184,7 @@ export default {
                         `│ • \`${PREFIX}online ${config.enabled ? 'off' : 'on'}\` - Toggle\n` +
                         `│ • \`${PREFIX}privacy\` - View all settings\n` +
                         `│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 break;
             }

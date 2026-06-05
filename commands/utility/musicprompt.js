@@ -94,7 +94,7 @@ export default {
                 `│\n` +
                 `│ Just copy and send it — done.\n` +
                 `│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 
@@ -141,7 +141,7 @@ export default {
             `│ 👆 Copy the command above and send it\n` +
             `│    to generate your song with *${PREFIX}genmusic*\n` +
             `│\n` +
-            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         const _gb = globalThis._giftedBtns;
         if (_gb && typeof _gb.sendInteractiveMessage === 'function') {

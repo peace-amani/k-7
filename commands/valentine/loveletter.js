@@ -17,7 +17,7 @@ export default {
 
         if (!hasImage) {
             return await sock.sendMessage(chatId, {
-                text: `╭─⌈ 💌 *LOVE LETTER* ⌋\n│\n│ Create a love letter effect\n│ with your image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}loveletter\n│ _(reply to an image)_\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 💌 *LOVE LETTER* ⌋\n│\n│ Create a love letter effect\n│ with your image\n│\n├─⊷ *Usage:*\n│ ${global.prefix || '.'}loveletter\n│ _(reply to an image)_\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

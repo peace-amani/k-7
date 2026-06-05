@@ -166,7 +166,7 @@ export default {
                     `│\n` +
                     `├─⊷ *Current:* ${currentLabel}${buttonsActive ? ' + 🔘 Buttons' : ''}${channelActive ? ' + 📡 Channel' : ''}\n` +
                     `│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -222,7 +222,7 @@ export default {
                     }
                 } else {
                     await sock.sendMessage(chatId, {
-                        text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ Interactive button responses enabled\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *🔘 Buttons Mode*\n│  └⊷ Interactive button responses enabled\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     }, { quoted: msg });
                 }
 
@@ -243,7 +243,7 @@ export default {
                         `├─⊷ *Channel:* ${chInfo.name}\n` +
                         `├─⊷ Change channel with:\n` +
                         `│  └⊷ ${PREFIX}setchannel <JID> <Name>\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
                 console.log(`✅ Channel mode ENABLED by ${cleaned.cleanNumber}`);
                 return;
@@ -255,7 +255,7 @@ export default {
                 setChannelMode(false, cleaned.cleanNumber || 'Unknown');
 
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n│  └⊷ Buttons & channel mode disabled\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *📝 Default Mode*\n│  └⊷ Normal text responses restored\n│  └⊷ Buttons & channel mode disabled\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
 
                 console.log(`✅ Default mode set (buttons + channel OFF) by ${cleaned.cleanNumber}`);
@@ -309,7 +309,7 @@ export default {
                 }
             } else {
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ ✅ *MODE UPDATED* ⌋\n├─⊷ *${modeInfo.name}*\n│  └⊷ ${modeInfo.description}\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
             }
 

@@ -54,7 +54,7 @@ export default {
                     `╭─⌈ 🎵 *MUSIC MODE* ⌋\n│\n` +
                     `├─⊷ Status: *ENABLED* ✅\n` +
                     `├─⊷ Songs in pool: *${count}*\n│  └⊷ ${count ? 'Alan Walker, NF & more' : 'Pool is empty — add songs first'}\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 );
             }
 
@@ -64,7 +64,7 @@ export default {
                 return reply(
                     `╭─⌈ 🔇 *MUSIC MODE* ⌋\n│\n` +
                     `├─⊷ Status: *DISABLED* ❌\n│  └⊷ No audio clips will be sent\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 );
             }
 
@@ -74,12 +74,12 @@ export default {
                     return reply(
                         `╭─⌈ 🎵 *MUSIC POOL* ⌋\n│\n` +
                         `├─⊷ Pool is currently empty\n│  └⊷ Use *${PREFIX}musicmode add <song>*\n│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     );
                 }
                 let text = `╭─⌈ 🎵 *MUSIC POOL (${songs.length})* ⌋\n│\n`;
                 songs.forEach((s, i) => { text += `├─⊷ ${i + 1}. ${s}\n`; });
-                text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+                text += `│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
                 return reply(text);
             }
 
@@ -90,7 +90,7 @@ export default {
                         `╭─⌈ 🎵 *ADD SONG* ⌋\n│\n` +
                         `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ e.g. alan walker faded\n` +
                         `├─⊷ *${PREFIX}musicmode add <audio url>*\n│  └⊷ Reply audio with *${PREFIX}url* to get link\n│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     );
                 }
 
@@ -104,7 +104,7 @@ export default {
                         `╭─⌈ ✅ *CLIP ADDED* ⌋\n│\n` +
                         `├─⊷ Direct audio URL saved\n│  └⊷ Will play as-is in music mode\n` +
                         `├─⊷ Pool size: *${getMusicSongs().length}*\n│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     );
                 }
 
@@ -117,14 +117,14 @@ export default {
                             `├─⊷ *${check.artistName} - ${check.trackName}*\n│  └⊷ Full track is too long for music mode\n` +
                             `├─⊷ Music mode only plays 30s clips\n│  └⊷ Use *${PREFIX}trim* to cut a short clip\n` +
                             `├─⊷ Then reply the clip with *${PREFIX}url*\n│  └⊷ And add the link here\n│\n` +
-                            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                         );
                     }
                     return reply(
                         `╭─⌈ ❌ *SONG NOT FOUND* ⌋\n│\n` +
                         `├─⊷ No preview found for:\n│  └⊷ *${query}*\n` +
                         `├─⊷ Try a different name\n│  └⊷ e.g. alan walker faded\n│\n` +
-                        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     );
                 }
                 const added = addMusicSong(query);
@@ -133,7 +133,7 @@ export default {
                     `╭─⌈ ✅ *SONG ADDED* ⌋\n│\n` +
                     `├─⊷ *${check.artistName} - ${check.trackName}*\n│  └⊷ Added as: _${query}_\n` +
                     `├─⊷ Pool size: *${getMusicSongs().length}*\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 );
             }
 
@@ -143,7 +143,7 @@ export default {
                     `╭─⌈ 🗑️ *POOL CLEARED* ⌋\n│\n` +
                     `├─⊷ All songs removed from pool\n│  └⊷ Music mode will stay silent\n` +
                     `├─⊷ Use *${PREFIX}musicmode add <song>*\n│  └⊷ To add songs back\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 );
             }
 
@@ -186,7 +186,7 @@ export default {
                     `├─⊷ *${PREFIX}musicmode list*\n│  └⊷ View songs in pool\n` +
                     `├─⊷ *${PREFIX}musicmode add <song name>*\n│  └⊷ Add a 30s song to the pool\n` +
                     `├─⊷ *${PREFIX}musicmode clear*\n│  └⊷ Clear all songs from pool\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 );
             }
         }

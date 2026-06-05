@@ -512,7 +512,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 🚫 *ANTI-GROUP-LINK* ⌋\n│\n├─⊷ *.antigrouplink on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antigrouplink off*\n│  └⊷ Disable protection\n├─⊷ *.antigrouplink getlink*\n│  └⊷ Show invite link\n├─⊷ *.antigrouplink resetlink*\n│  └⊷ Reset invite link\n├─⊷ *.antigrouplink exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antigrouplink status*\n│  └⊷ View current status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            const helpText = `╭─⌈ 🚫 *ANTI-GROUP-LINK* ⌋\n│\n├─⊷ *.antigrouplink on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antigrouplink off*\n│  └⊷ Disable protection\n├─⊷ *.antigrouplink getlink*\n│  └⊷ Show invite link\n├─⊷ *.antigrouplink resetlink*\n│  └⊷ Reset invite link\n├─⊷ *.antigrouplink exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antigrouplink status*\n│  └⊷ View current status\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
             
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

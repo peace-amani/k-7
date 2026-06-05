@@ -23,7 +23,7 @@ export default {
             const prefixlessStatus = isPrefixless ? '✅ ENABLED' : '❌ DISABLED';
             
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔧 *SET PREFIX* ⌋\n│\n│ 📌 Current: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\n│ Prefixless: ${prefixlessStatus}\n├─⊷ *${PREFIX}setprefix <new_prefix>*\n│  └⊷ Change prefix\n├─⊷ *${PREFIX}setprefix none*\n│  └⊷ Enable prefixless mode\n├─⊷ *${PREFIX}setprefix "."*\n│  └⊷ Set prefix to dot\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🔧 *SET PREFIX* ⌋\n│\n│ 📌 Current: "${isPrefixless ? 'none (prefixless)' : currentPrefix}"\n│ Prefixless: ${prefixlessStatus}\n├─⊷ *${PREFIX}setprefix <new_prefix>*\n│  └⊷ Change prefix\n├─⊷ *${PREFIX}setprefix none*\n│  └⊷ Enable prefixless mode\n├─⊷ *${PREFIX}setprefix "."*\n│  └⊷ Set prefix to dot\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
         

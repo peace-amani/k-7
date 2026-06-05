@@ -480,7 +480,7 @@ export default {
         }
         else {
             // Show help
-            const helpText = `╭─⌈ 🎭 *ANTI-STICKER* ⌋\n│\n├─⊷ *.antisticker on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antisticker off*\n│  └⊷ Disable protection\n├─⊷ *.antisticker exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antisticker status*\n│  └⊷ View current status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            const helpText = `╭─⌈ 🎭 *ANTI-STICKER* ⌋\n│\n├─⊷ *.antisticker on <warn|delete|kick>*\n│  └⊷ Enable with mode\n├─⊷ *.antisticker off*\n│  └⊷ Disable protection\n├─⊷ *.antisticker exemptadmins [on/off]*\n│  └⊷ Toggle admin exemption\n├─⊷ *.antisticker status*\n│  └⊷ View current status\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
             
             await sock.sendMessage(chatId, { text: helpText }, { quoted: msg });
         }

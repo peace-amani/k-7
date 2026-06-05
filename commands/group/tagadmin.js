@@ -45,7 +45,7 @@ export default {
         text += `├⊷ ${num}. ${tag} @${admin.id.split('@')[0]}\n`;
       });
 
-      text += `│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+      text += `│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
       const mentionIds = admins.map(a => a.id);
 

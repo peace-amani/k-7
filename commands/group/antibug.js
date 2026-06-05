@@ -161,7 +161,7 @@ export default {
             saveConfig(config);
             const scope = target === 'global' ? 'ALL CHATS (Global)' : (isGroup ? 'this group' : 'this DM');
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🛡️ *ANTI-BUG ENABLED* ⌋\n│\n├─⊷ *Scope:* ${scope}\n├─⊷ *Action:* ${config[target].action.toUpperCase()}\n│\n├─⊷ Bug bots will be detected and handled\n│  └⊷ Crash messages auto-deleted\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🛡️ *ANTI-BUG ENABLED* ⌋\n│\n├─⊷ *Scope:* ${scope}\n├─⊷ *Action:* ${config[target].action.toUpperCase()}\n│\n├─⊷ Bug bots will be detected and handled\n│  └⊷ Crash messages auto-deleted\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -198,18 +198,18 @@ export default {
             const localAction = config[chatId]?.action || 'delete';
 
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🛡️ *ANTI-BUG STATUS* ⌋\n│\n├─⊷ *Global:* ${globalEnabled ? '✅ ON' : '❌ OFF'} (${globalAction})\n├─⊷ *This chat:* ${localEnabled ? '✅ ON' : '❌ OFF'} (${localAction})\n├─⊷ *Active:* ${globalEnabled || localEnabled ? '✅ YES' : '❌ NO'}\n├─⊷ *Patterns:* ${BUG_PATTERNS.length + 10} detection rules\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🛡️ *ANTI-BUG STATUS* ⌋\n│\n├─⊷ *Global:* ${globalEnabled ? '✅ ON' : '❌ OFF'} (${globalAction})\n├─⊷ *This chat:* ${localEnabled ? '✅ ON' : '❌ OFF'} (${localAction})\n├─⊷ *Active:* ${globalEnabled || localEnabled ? '✅ YES' : '❌ NO'}\n├─⊷ *Patterns:* ${BUG_PATTERNS.length + 10} detection rules\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
         if (sub === 'test') {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🛡️ *ANTI-BUG TEST* ⌋\n│\n├─⊷ Detection engine: ✅ Active\n├─⊷ Patterns loaded: ${BUG_PATTERNS.length} text + 10 structural\n├─⊷ Scope: Groups + DMs\n│\n├─⊷ *Detects:*\n│  ├⊷ Text crash bombs (ZWJ, diacritics, bidi)\n│  ├⊷ VCF contact bombs\n│  ├⊷ Protocol exploits\n│  ├⊷ Button/list overflow\n│  ├⊷ Empty message exploits\n│  ├⊷ Malicious files\n│  ├⊷ Oversized stickers\n│  ├⊷ Mass mention bombs\n│  └⊷ Text flood attacks\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🛡️ *ANTI-BUG TEST* ⌋\n│\n├─⊷ Detection engine: ✅ Active\n├─⊷ Patterns loaded: ${BUG_PATTERNS.length} text + 10 structural\n├─⊷ Scope: Groups + DMs\n│\n├─⊷ *Detects:*\n│  ├⊷ Text crash bombs (ZWJ, diacritics, bidi)\n│  ├⊷ VCF contact bombs\n│  ├⊷ Protocol exploits\n│  ├⊷ Button/list overflow\n│  ├⊷ Empty message exploits\n│  ├⊷ Malicious files\n│  ├⊷ Oversized stickers\n│  ├⊷ Mass mention bombs\n│  └⊷ Text flood attacks\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
         return sock.sendMessage(chatId, {
-            text: `╭─⌈ 🛡️ *ANTI-BUG* ⌋\n│\n├─⊷ *${PREFIX}antibug on [global]*\n│  └⊷ Enable (optionally for all chats)\n├─⊷ *${PREFIX}antibug off [global]*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antibug action <mode>*\n│  └⊷ block / kick / delete / warn\n├─⊷ *${PREFIX}antibug status*\n│  └⊷ Check current status\n├─⊷ *${PREFIX}antibug test*\n│  └⊷ Test detection engine\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+            text: `╭─⌈ 🛡️ *ANTI-BUG* ⌋\n│\n├─⊷ *${PREFIX}antibug on [global]*\n│  └⊷ Enable (optionally for all chats)\n├─⊷ *${PREFIX}antibug off [global]*\n│  └⊷ Disable protection\n├─⊷ *${PREFIX}antibug action <mode>*\n│  └⊷ block / kick / delete / warn\n├─⊷ *${PREFIX}antibug status*\n│  └⊷ Check current status\n├─⊷ *${PREFIX}antibug test*\n│  └⊷ Test detection engine\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
         }, { quoted: msg });
     }
 };

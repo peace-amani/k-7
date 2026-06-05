@@ -51,7 +51,7 @@ export default {
 
     if (!participants.length) {
       return sock.sendMessage(chatId, {
-        text: `╭─⌈ 👢 *KICK* ⌋\n│\n├─⊷ *${PREFIX}kick @user*\n│  └⊷ Kick mentioned user\n├─⊷ *${PREFIX}kick* (reply to msg)\n│  └⊷ Kick replied user\n├─⊷ *${PREFIX}kick 1234567890*\n│  └⊷ Kick by phone number\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+        text: `╭─⌈ 👢 *KICK* ⌋\n│\n├─⊷ *${PREFIX}kick @user*\n│  └⊷ Kick mentioned user\n├─⊷ *${PREFIX}kick* (reply to msg)\n│  └⊷ Kick replied user\n├─⊷ *${PREFIX}kick 1234567890*\n│  └⊷ Kick by phone number\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -108,7 +108,7 @@ export default {
     if (isButtonModeEnabled()) {
       const sessionKey = `kick:${senderClean}:${chatId.split('@')[0]}`;
       setActionSession(sessionKey, { action: 'remove', targets: toKick, chatId });
-      const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Reply *${PREFIX}kickconfirm* to proceed.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+      const confirmText = `╭─⌈ 👢 *KICK CONFIRM* ⌋\n├─⊷ About to kick ${toKick.length} user(s):\n├─⊷ ${targetNames}\n├─⊷ Reply *${PREFIX}kickconfirm* to proceed.\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
       if (giftedBtnsKick?.sendInteractiveMessage) {
         try {
           await giftedBtnsKick.sendInteractiveMessage(sock, chatId, {

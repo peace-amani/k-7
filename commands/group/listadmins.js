@@ -31,7 +31,7 @@ export default {
                     `╭⌈ ❌ *NO GROUP SPECIFIED* ⌋\n` +
                     `├⊷ Run inside a group, or provide a JID:\n` +
                     `├⊷ *${PREFIX}listadmins 1234567890-1234567890@g.us*\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -55,7 +55,7 @@ export default {
                     `╭⌈ 👑 *GROUP ADMINS* ⌋\n` +
                     `├⊷ Group : *${groupName}*\n` +
                     `├⊷ ⚠️ No admins found in this group.\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -91,7 +91,7 @@ export default {
 
         text +=
             (!usedJid ? `├⊷ 💡 Tip: Use *${PREFIX}listadmins <JID>* to check any group from anywhere\n` : '') +
-            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         // Try to send with group picture, fall back to text-only
         let ppUrl = null;

@@ -75,7 +75,7 @@ export default {
             `├─⊷ *Device:* ${info.emoji} ${info.label}\n` +
             `├─⊷ *Type:* ${info.desc}\n` +
             `│\n` +
-            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         await sock.sendMessage(chatId, { text }, { quoted: msg });
     }

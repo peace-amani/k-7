@@ -336,7 +336,7 @@ export default {
       const leaveCount = groupData.leaveLogs.length;
       
       return sock.sendMessage(jid, { 
-        text: `╭─⌈ 🛡️ *ANTI-LEAVE* ⌋\n│\n├─⊷ *.antileave on*\n│  └⊷ Enable detection\n├─⊷ *.antileave off*\n│  └⊷ Disable detection\n├─⊷ *.antileave log*\n│  └⊷ View recent leaves\n├─⊷ *.antileave clear*\n│  └⊷ Clear leave logs\n├─⊷ *.antileave status*\n│  └⊷ Check current status\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}` 
+        text: `╭─⌈ 🛡️ *ANTI-LEAVE* ⌋\n│\n├─⊷ *.antileave on*\n│  └⊷ Enable detection\n├─⊷ *.antileave off*\n│  └⊷ Disable detection\n├─⊷ *.antileave log*\n│  └⊷ View recent leaves\n├─⊷ *.antileave clear*\n│  └⊷ Clear leave logs\n├─⊷ *.antileave status*\n│  └⊷ Check current status\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}` 
       }, { quoted: msg });
     }
     

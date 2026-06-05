@@ -973,21 +973,21 @@ export default {
             setMode(false, false, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ❌ *OFF*\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ❌ *OFF*\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (['private', 'priv'].includes(scope)) {
             setMode(true, true, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 🔒 *PRIVATE* (→ your DM)\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 🔒 *PRIVATE* (→ your DM)\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (['public', 'chat', 'pub'].includes(scope)) {
             setMode(true, true, 'chat');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 📢 *PUBLIC* (shown in chat)\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 📢 *PUBLIC* (shown in chat)\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (['gc', 'groups', 'group'].includes(scope)) {
@@ -995,7 +995,7 @@ export default {
             setMode(true, false, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 👥 *GROUPS only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 👥 *GROUPS only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (['dms', 'dm', 'pm', 'pms'].includes(scope)) {
@@ -1003,7 +1003,7 @@ export default {
             setMode(false, true, 'private');
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 💬 *DMs only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 💬 *DMs only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (scope === 'status' || scope === 'stats' || scope === '') {
@@ -1019,7 +1019,7 @@ export default {
                     `├─⊷ Edits  : ${edits} caught\n` +
                     `├─⊷ DM     : ${dm} sent\n` +
                     `├─⊷ Chat   : ${chat} sent\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else if (scope === 'clear' || scope === 'reset') {
@@ -1030,7 +1030,7 @@ export default {
             try { await db.cleanOlderThan('antidelete_messages', 'timestamp', 0); } catch {}
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ 🧹 Cache cleared\n│\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ 🧹 Cache cleared\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
 
         } else {
@@ -1049,7 +1049,7 @@ export default {
                     `│  └ DMs only → alert to your DM\n` +
                     `├─⊷ *${prefix}antiedit status*\n` +
                     `│  └ Current mode & stats\n│\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
     }

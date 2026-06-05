@@ -40,7 +40,7 @@ export default {
             `│  • chats  — all private/DM chats\n` +
             `│  • all    — groups + chats\n` +
             `│\n` +
-            `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
         if (args.length < 2) return reply(HELP);
 

@@ -25,7 +25,7 @@ export default {
                 ? `✅ Set (${config.apiKey.slice(0, 6)}••••••••)`
                 : '❌ Not set';
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔑 *SET API KEY* ⌋\n├─⊷ *${PREFIX}setkey <api-key>*\n│  └⊷ Save your Pterodactyl Application key\n├─⊷ *Status:* ${status}\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🔑 *SET API KEY* ⌋\n├─⊷ *${PREFIX}setkey <api-key>*\n│  └⊷ Save your Pterodactyl Application key\n├─⊷ *Status:* ${status}\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

@@ -511,7 +511,7 @@ export default {
                     response += `├─⊷ *${PREFIX}hostip test*\n│  └⊷ Connection test\n`;
                     response += `├─⊷ *${PREFIX}hostip scan [host]*\n│  └⊷ Port scan\n`;
                     response += `├─⊷ *${PREFIX}hostip dns [domain]*\n│  └⊷ DNS lookup\n`;
-                    response += `├─⊷ *${PREFIX}hostip whois [ip]*\n│  └⊷ WHOIS lookup\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+                    response += `├─⊷ *${PREFIX}hostip whois [ip]*\n│  └⊷ WHOIS lookup\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
                     
                     await sock.sendMessage(chatId, {
                         text: response
@@ -952,7 +952,7 @@ export default {
                 
                 if (!domain) {
                     return sock.sendMessage(chatId, {
-                        text: `╭─⌈ ❌ *HOSTIP DNS* ⌋\n│\n├─⊷ *${PREFIX}hostip dns <domain>*\n│  └⊷ DNS lookup\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        text: `╭─⌈ ❌ *HOSTIP DNS* ⌋\n│\n├─⊷ *${PREFIX}hostip dns <domain>*\n│  └⊷ DNS lookup\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     }, { quoted: msg });
                 }
                 
@@ -1048,7 +1048,7 @@ export default {
                 
                 if (!query) {
                     return sock.sendMessage(chatId, {
-                        text: `╭─⌈ ❌ *HOSTIP WHOIS* ⌋\n│\n├─⊷ *${PREFIX}hostip whois <ip_or_domain>*\n│  └⊷ WHOIS lookup\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                        text: `╭─⌈ ❌ *HOSTIP WHOIS* ⌋\n│\n├─⊷ *${PREFIX}hostip whois <ip_or_domain>*\n│  └⊷ WHOIS lookup\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                     }, { quoted: msg });
                 }
                 
@@ -1219,7 +1219,7 @@ export default {
                 
             default:
                 await sock.sendMessage(chatId, {
-                    text: `╭─⌈ ❌ *HOSTIP* ⌋\n│\n├─⊷ *${PREFIX}hostip help*\n│  └⊷ Show all commands\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    text: `╭─⌈ ❌ *HOSTIP* ⌋\n│\n├─⊷ *${PREFIX}hostip help*\n│  └⊷ Show all commands\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
                 }, { quoted: msg });
         }
     }

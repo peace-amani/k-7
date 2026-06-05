@@ -28,7 +28,7 @@ export default {
                 `├─⊷ *${PREFIX}npm update [pkg]*\n│  └⊷ Update package(s)\n` +
                 `├─⊷ *${PREFIX}npm list*\n│  └⊷ Show installed packages\n` +
                 `├─⊷ *${PREFIX}npm outdated*\n│  └⊷ Check for outdated\n│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 

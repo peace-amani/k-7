@@ -22,7 +22,7 @@ export default {
         if (!args[0]) {
             const currentName = getBotName();
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🤖 *SET BOT NAME* ⌋\n│\n│ 📝 Current: *${currentName}*\n├─⊷ *${PREFIX}setbotname <new_name>*\n│  └⊷ Change bot name\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🤖 *SET BOT NAME* ⌋\n│\n│ 📝 Current: *${currentName}*\n├─⊷ *${PREFIX}setbotname <new_name>*\n│  └⊷ Change bot name\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
         

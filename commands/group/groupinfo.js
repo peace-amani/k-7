@@ -314,7 +314,7 @@ export default {
         `┃ 📅 *Created:* ${creationDate}\n` +
         `┃ 🔧 *Mode:* ${groupMode}\n` +
         "┣━━━━━━━━━━━━━━━━━━━━\n" +
-        `┃ > ${getFooter(m.key.participant || m.key.remoteJid)}
+        `┃ > ${getFooter(msg.key.participant || msg.key.remoteJid)}
 ` +
         "┗━━━━━━━━━━━━━━━━━━━━";
 
@@ -365,7 +365,7 @@ export default {
         `┃ Failed to fetch group info.\n` +
         `┃ Please try again.\n` +
         "┣━━━━━━━━━━━━━━━━━━━━━━\n" +
-        `┃ > ${getFooter(m.key.participant || m.key.remoteJid)}
+        `┃ > ${getFooter(msg.key.participant || msg.key.remoteJid)}
 ` +
         "┗━━━━━━━━━━━━━━━━━━━━━━┛";
       

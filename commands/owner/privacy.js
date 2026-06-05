@@ -114,7 +114,7 @@ export default {
             text += `│ • \`${PREFIX}mutedgroups\` - List muted groups\n`;
             text += `│ • \`${PREFIX}archivedgroups\` - List archived groups\n`;
             text += `│ • \`${PREFIX}starredchats\` - List favourite groups\n│\n`;
-            text += `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`;
+            text += `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`;
 
             await sock.sendMessage(chatId, { text }, { quoted: msg });
 

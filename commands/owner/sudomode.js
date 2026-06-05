@@ -23,7 +23,7 @@ export default {
 
         if (!args[0]) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🔧 *SUDO MODE* ⌋\n│\n│ 📊 Current: ${currentMode ? '✅ ON' : '❌ OFF'}\n│ 👥 Sudo Users: ${getSudoCount()}\n├─⊷ *${PREFIX}sudomode on*\n│  └⊷ Sudo-only access\n├─⊷ *${PREFIX}sudomode off*\n│  └⊷ Normal mode\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 🔧 *SUDO MODE* ⌋\n│\n│ 📊 Current: ${currentMode ? '✅ ON' : '❌ OFF'}\n│ 👥 Sudo Users: ${getSudoCount()}\n├─⊷ *${PREFIX}sudomode on*\n│  └⊷ Sudo-only access\n├─⊷ *${PREFIX}sudomode off*\n│  └⊷ Normal mode\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 
@@ -31,7 +31,7 @@ export default {
 
         if (action !== 'on' && action !== 'off') {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ ❌ *INVALID OPTION* ⌋\n│\n├─⊷ *${PREFIX}sudomode on/off*\n│  └⊷ Toggle sudo mode\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ ❌ *INVALID OPTION* ⌋\n│\n├─⊷ *${PREFIX}sudomode on/off*\n│  └⊷ Toggle sudo mode\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

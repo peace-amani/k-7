@@ -185,7 +185,7 @@ export default {
           `│  └⊷ Delete msg & kick sender\n` +
           `├─⊷ *${PREFIX}antibot off*\n` +
           `│  └⊷ Disable protection\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -201,7 +201,7 @@ export default {
         text:
           `╭─⌈ 🤖 *ANTI-BOT ENABLED* ⌋\n` +
           `├─⊷ *Mode:* ${mode.toUpperCase()}\n` +
-          `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+          `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -210,7 +210,7 @@ export default {
       config[chatId] = { ...gc, enabled: false };
       saveConfig(config);
       return sock.sendMessage(chatId, {
-        text: `╭─⌈ 🤖 *ANTI-BOT DISABLED* ⌋\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+        text: `╭─⌈ 🤖 *ANTI-BOT DISABLED* ⌋\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
       }, { quoted: msg });
     }
 
@@ -228,7 +228,7 @@ export default {
         `│  └⊷ Disable protection\n` +
         `├─⊷ *${PREFIX}antibot status*\n` +
         `│  └⊷ View current settings\n` +
-        `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+        `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
     }, { quoted: msg });
   }
 };

@@ -26,12 +26,12 @@ export default {
 
         if (jidList.length === 0) {
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 🚫 *BLOCK ALL* ⌋\n│\n├─⊷ ⚠️ No contacts found to block.\n│  Contacts are loaded as the bot receives\n│  messages. Try again after chatting.\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+                text: `╭─⌈ 🚫 *BLOCK ALL* ⌋\n│\n├─⊷ ⚠️ No contacts found to block.\n│  Contacts are loaded as the bot receives\n│  messages. Try again after chatting.\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
             }, { quoted: msg });
         }
 
         await sock.sendMessage(chatId, {
-            text: `╭─⌈ 🚫 *BLOCK ALL* ⌋\n│\n├─⊷ 🔄 Blocking *${jidList.length}* contacts...\n├─⊷ ⚠️ This may take a moment\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+            text: `╭─⌈ 🚫 *BLOCK ALL* ⌋\n│\n├─⊷ 🔄 Blocking *${jidList.length}* contacts...\n├─⊷ ⚠️ This may take a moment\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
         }, { quoted: msg });
 
         let blocked = 0;
@@ -48,7 +48,7 @@ export default {
         }
 
         return sock.sendMessage(chatId, {
-            text: `╭─⌈ 🚫 *BLOCK ALL - DONE* ⌋\n│\n├─⊷ ✅ Blocked: *${blocked}*\n├─⊷ ❌ Failed: *${failed}*\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`,
+            text: `╭─⌈ 🚫 *BLOCK ALL - DONE* ⌋\n│\n├─⊷ ✅ Blocked: *${blocked}*\n├─⊷ ❌ Failed: *${failed}*\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`,
         }, { quoted: msg });
     }
 };

@@ -32,7 +32,7 @@ export default {
                     `│  └⊷ Creates an unlimited server (no resource caps)\n` +
                     `├─⊷ *${PREFIX}createunlimited <email> <server name>*\n` +
                     `│  └⊷ Custom server name\n` +
-                    `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
 

@@ -97,7 +97,7 @@ export default {
                 `├─⊷ *🎤 Vocal:* Male • Female  *(default: Male)*\n` +
                 `│\n` +
                 `│ ⏳ Generation takes 2–3 minutes.\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             );
         }
 

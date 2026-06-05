@@ -30,7 +30,7 @@
 //             const originalOwner = this.getOriginalOwner();
             
 //             return sock.sendMessage(chatId, {
-//                 text: `╭─⌈ 👑 *SET OWNER* ⌋\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+//                 text: `╭─⌈ 👑 *SET OWNER* ⌋\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
 //             }, { quoted: msg });
 //         }
         
@@ -227,7 +227,7 @@ export default {
             const originalOwner = this.getOriginalOwner();
             
             return sock.sendMessage(chatId, {
-                text: `╭─⌈ 👑 *SET OWNER* ⌋\n│\n├─⊷ *${PREFIX}setowner <name>*\n│  └⊷ Set owner name\n╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
+                text: `╭─⌈ 👑 *SET OWNER* ⌋\n│\n├─⊷ *${PREFIX}setowner <name>*\n│  └⊷ Set owner name\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
         }
         
