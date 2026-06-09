@@ -894,10 +894,75 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
     }
   }
 
-  // ── Media intent detection ─────────────────────────────────────────────
+  // ── Load shared state (needed by image gen + intent + AI blocks) ──────
+  const config       = loadConfig();
+  const botName      = config.chatbotName || 'W.O.L.F';
+  const conversation = loadConversation(senderJid);
+  const botId        = getBotId();
+  let   profile      = loadProfile(botId, senderJid);
+
+  // ── NVIDIA Image generation — checked BEFORE detectIntent ─────────────
+  // detectIntent also catches "generate image of X" and runs ?imagine
+  // (which always sends ✅ but may send no image). We intercept here first.
+  const imageGenPatterns = [
+    /^(?:generate|create|make|draw|paint|design|render)\s+(?:me\s+)?(?:an?\s+)?(?:ai\s+)?(?:image|picture|photo|art|artwork|illustration|painting|wallpaper)\s+(?:of|showing|with|about)\s+(.+)/i,
+    /^(?:generate|create|make|draw|paint)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|art|painting)\s+(.+)/i,
+    /^imagine\s+(.+)/i,
+    /^flux\s+(.+)/i,
+    /^(?:nvidia\s+)?(?:flux|image)\s+(.+)/i,
+    /^(?:generate|create)\s+(?:ai\s+)?(?:image|art)\s+(.+)/i,
+  ];
+  let imagePrompt = null;
+  for (const pat of imageGenPatterns) {
+    const m = userText.match(pat);
+    if (m?.[1]?.trim().length > 3) { imagePrompt = m[1].trim(); break; }
+  }
+
+  if (imagePrompt) {
+    try {
+      await sock.sendPresenceUpdate('composing', chatId);
+      await sock.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
+
+      const imgBuf = await generateImage(imagePrompt);
+
+      if (imgBuf) {
+        await sock.sendMessage(chatId, {
+          image:   imgBuf,
+          caption: `🎨 *${imagePrompt}*\n_Generated with FLUX Dev_`
+        }, { quoted: msg });
+
+        conversation.messages.push({ role: 'user',      content: userText });
+        conversation.messages.push({ role: 'assistant', content: `[Generated image: ${imagePrompt}]` });
+        saveConversation(senderJid, conversation);
+        profile = learnFromMessage(userText, profile);
+        saveProfile(botId, senderJid, profile);
+
+        config.stats.totalQueries  = (config.stats.totalQueries  || 0) + 1;
+        config.stats.imagesCreated = (config.stats.imagesCreated || 0) + 1;
+        saveConfig(config);
+
+        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+        return true;
+      }
+      // generation returned null — fall through to text AI
+      await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
+      await sock.sendMessage(chatId, {
+        text: `🐺 _Image generation failed. Try again in a moment._`
+      }, { quoted: msg });
+      return true;
+    } catch (imgErr) {
+      console.error(`[${botName}] Image gen error:`, imgErr.message);
+      await sock.sendMessage(chatId, {
+        text: `🐺 _Image generation error: ${imgErr.message}_`
+      }, { quoted: msg });
+      return true;
+    }
+  }
+
+  // ── Media intent detection (play/video/song — NOT image) ──────────────
   const intent = detectIntent(userText);
 
-  if (intent && commandsMap) {
+  if (intent && intent.type !== 'image' && commandsMap) {
     if (intent.vague) {
       // Vague request — ask for a specific target
       setPendingAction(senderJid, chatId, intent.type, intent.command);
@@ -907,7 +972,6 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       }, { quoted: msg });
 
       // Record in conversation
-      const conversation = loadConversation(senderJid);
       conversation.messages.push({ role: 'user',      content: userText });
       conversation.messages.push({ role: 'assistant', content: promptInfo?.ask || 'Sure! What would you like?' });
       saveConversation(senderJid, conversation);
@@ -929,65 +993,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   }
 
   // ── AI text response ───────────────────────────────────────────────────
-  const config       = loadConfig();
-  const botName      = config.chatbotName || 'W.O.L.F';
-  const conversation = loadConversation(senderJid);
-  const botId        = getBotId();
-
-  // Load user profile for personalisation & learning
-  let profile = loadProfile(botId, senderJid);
-
-  // ── NVIDIA Image generation intent ──────────────────────────────────────
-  // Detect requests like "generate me an AI image of a dragon" or
-  // "use FLUX to create a picture of Tokyo at night" and bypass the text AI.
-  const imageGenPatterns = [
-    /^(?:generate|create|make|draw|paint|design|render)\s+(?:me\s+)?(?:an?\s+)?(?:ai\s+)?(?:image|picture|photo|art|artwork|illustration|painting|wallpaper)\s+(?:of|showing|with|about)\s+(.+)/i,
-    /^(?:generate|create|make|draw|paint)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|art|painting)\s+(.+)/i,
-    /^imagine\s+(.+)/i,
-    /^flux\s+(.+)/i,
-    /^(?:nvidia\s+)?(?:flux|image)\s+(.+)/i,
-    /^(?:generate|create)\s+(?:ai\s+)?(?:image|art)\s+(.+)/i,
-  ];
-  let imagePrompt = null;
-  for (const pat of imageGenPatterns) {
-    const m = userText.match(pat);
-    if (m && m[1] && m[1].trim().length > 3) { imagePrompt = m[1].trim(); break; }
-  }
-
-  if (imagePrompt) {
-    try {
-      await sock.sendPresenceUpdate('composing', chatId);
-      await sock.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
-
-      const imgBuf = await generateImage(imagePrompt);
-
-      if (imgBuf) {
-        await sock.sendMessage(chatId, {
-          image:   imgBuf,
-          caption: `🎨 *${imagePrompt}*\n_Generated with FLUX Dev_`
-        }, { quoted: msg });
-
-        // Update conversation + profile
-        conversation.messages.push({ role: 'user',      content: userText });
-        conversation.messages.push({ role: 'assistant', content: `[Generated image: ${imagePrompt}]` });
-        saveConversation(senderJid, conversation);
-        profile = learnFromMessage(userText, profile);
-        saveProfile(botId, senderJid, profile);
-
-        config.stats.totalQueries  = (config.stats.totalQueries || 0) + 1;
-        config.stats.imagesCreated = (config.stats.imagesCreated || 0) + 1;
-        saveConfig(config);
-
-        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
-        return true;
-      } else {
-        // Fall through to normal text AI (generation failed)
-      }
-    } catch (imgErr) {
-      console.error(`[${botName}] Image gen error:`, imgErr.message);
-      // Fall through to normal text AI
-    }
-  }
+  // (config / botName / conversation / botId / profile already loaded above)
 
   try {
     await sock.sendPresenceUpdate('composing', chatId); // show "typing…"
