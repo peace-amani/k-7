@@ -34,14 +34,24 @@ import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
 import {
   AI_MODELS,
+  NVIDIA_VISION_MODELS,
+  NVIDIA_IMAGE_MODELS,
+  DEFAULT_IMAGE_MODEL,
   MODEL_PRIORITY,
   XWOLF_API_BASE,
   XWOLF_API_KEY,
   extractXWolfResponse,
+  extractImageUrl,
   buildTextUrl,
   buildVisionUrl,
-  modelSupportsVision
+  buildNvidiaVisionUrl,
+  buildNvidiaImageUrl,
+  modelSupportsVision,
+  getModelList
 } from '../../lib/aiModels.js';
+import {
+  loadProfile, saveProfile, learnFromMessage, buildProfileContext, getPersonalizedGreeting
+} from '../../lib/userProfile.js';
 
 // ── Data directory paths ───────────────────────────────────────────────────
 const DATA_DIR         = './data/chatbot';
@@ -351,16 +361,16 @@ function getConversationFile(userId) {
 }
 
 // Load the conversation history for a user.
-// Returns an empty history if the file is absent or older than 1 hour.
+// Returns an empty history if the file is absent or older than 24 hours.
 // Also attempts a background restore from the SQLite database.
 function loadConversation(userId) {
   ensureDataDirs();
   const file = getConversationFile(userId);
   try {
     if (fs.existsSync(file)) {
-      const data   = JSON.parse(fs.readFileSync(file, 'utf8'));
-      const oneHour = 60 * 60 * 1000;
-      if (Date.now() - (data.lastActive || 0) > oneHour) {
+      const data      = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      if (Date.now() - (data.lastActive || 0) > twentyFourHours) {
         // Conversation is stale — return a fresh one
         return { messages: [], lastActive: Date.now(), model: null };
       }
@@ -382,13 +392,13 @@ function loadConversation(userId) {
 }
 
 // Save a user's conversation to disk and to the SQLite database.
-// Trims to the last 20 messages to keep files small.
+// Trims to the last 40 messages to keep files small.
 function saveConversation(userId, conversation) {
   ensureDataDirs();
   const file           = getConversationFile(userId);
   conversation.lastActive = Date.now();
-  if (conversation.messages.length > 20) {
-    conversation.messages = conversation.messages.slice(-20);
+  if (conversation.messages.length > 40) {
+    conversation.messages = conversation.messages.slice(-40);
   }
   fs.writeFileSync(file, JSON.stringify(conversation, null, 2));
   const botId = getBotId();
@@ -417,19 +427,24 @@ function clearConversation(userId) {
 // SECTION 5 — AI query engine
 // ══════════════════════════════════════════════════════════════════════════
 
-// Build the AI prompt with system instructions + conversation history.
+// Build the AI prompt with system instructions + profile context + conversation history.
 // The system instructions tell the AI to identify as `botName` (not GPT/Claude)
 // and to keep replies short and conversational.
-function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F') {
+function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F', userProfile = null) {
   const n = botName;
-  let context = `You are ${n}, an elite AI assistant created by WolfTech. Your name is ${n} and you must always identify yourself as ${n} when asked who you are. You are intelligent, conversational, and helpful. You remember the conversation context and respond naturally like a real chat partner. Keep responses SHORT and CONCISE — aim for 2-3 sentences maximum unless the question genuinely requires more detail.\n\nCRITICAL IDENTITY RULES:\n- Your name is ${n}. Always refer to yourself as ${n}.\n- You were created by WolfTech. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, etc).\n- If asked what you are, say: "I'm ${n}, an AI assistant by WolfTech."\n- Never say "As an AI language model" - instead say "As ${n}" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are ${n}.\n\n`;
+  const profileCtx = userProfile ? buildProfileContext(userProfile) : '';
 
-  // Append the last 6 messages of conversation history for context
+  let context = `You are ${n}, an elite AI assistant created by WolfTech. Your name is ${n} and you must always identify yourself as ${n} when asked who you are. You are intelligent, witty, warm, and helpful. You have a distinct personality — you're friendly and sometimes a bit humorous without being annoying. You remember the conversation context and respond naturally like a real chat partner. Keep responses SHORT and CONCISE — aim for 2-3 sentences maximum unless the question genuinely requires more detail. Occasionally ask a follow-up question to keep the conversation flowing.\n\nCRITICAL IDENTITY RULES:\n- Your name is ${n}. Always refer to yourself as ${n}.\n- You were created by WolfTech. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, NVIDIA, etc).\n- If asked what you are, say: "I'm ${n}, an AI assistant by WolfTech."\n- Never say "As an AI language model" - instead say "As ${n}" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are ${n}.\n\n`;
+
+  // Inject user profile knowledge (what the bot has learned about this user)
+  if (profileCtx) context += profileCtx + '\n';
+
+  // Append recent conversation history for context (last 10 turns = 20 messages)
   if (conversation.messages.length > 0) {
     context += `Previous conversation:\n`;
-    const recentMessages = conversation.messages.slice(-6);
-    for (const msg of recentMessages) {
-      context += `${msg.role === 'user' ? 'Human' : n}: ${msg.content}\n`;
+    const recentMessages = conversation.messages.slice(-10);
+    for (const m of recentMessages) {
+      context += `${m.role === 'user' ? 'Human' : n}: ${m.content}\n`;
     }
     context += `\n`;
   }
@@ -479,24 +494,40 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
   }
 }
 
-// Analyse an image using the Gemini vision endpoint.
-// `imageBuffer` — raw Buffer of the image bytes.
-// Returns the analysis text or null.
+// Analyse an image using NVIDIA vision models (primary) with xwolf Gemini fallback.
 async function queryVision(prompt, imageBuffer, timeout = 40000) {
-  try {
-    const base64 = imageBuffer.toString('base64');
-    const url    = buildVisionUrl(prompt, base64);
+  const base64 = imageBuffer.toString('base64');
 
-    const response = await axios.get(url, {
+  // 1. Try NVIDIA vision models first (vision-pro → vision)
+  for (const nvidiaModel of NVIDIA_VISION_MODELS) {
+    try {
+      const url = buildNvidiaVisionUrl(nvidiaModel.endpoint, prompt, base64);
+      const res = await axios.get(url, {
+        timeout,
+        headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
+        validateStatus: (s) => s >= 200 && s < 500
+      });
+      if (!res.data) continue;
+      let data = res.data;
+      if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+      const text = extractXWolfResponse(data);
+      if (text && text.length > 10 && !text.toLowerCase().includes("don't see an image")) {
+        return text.trim();
+      }
+    } catch { /* try next */ }
+  }
+
+  // 2. Fall back to xwolf Gemini vision
+  try {
+    const url = buildVisionUrl(prompt, base64);
+    const res = await axios.get(url, {
       timeout,
       headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
       validateStatus: (s) => s >= 200 && s < 500
     });
-
-    if (!response.data) return null;
-    let data = response.data;
+    if (!res.data) return null;
+    let data = res.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-
     const text = extractXWolfResponse(data);
     return (text && text.length > 3) ? text.trim() : null;
   } catch {
@@ -504,11 +535,34 @@ async function queryVision(prompt, imageBuffer, timeout = 40000) {
   }
 }
 
+// Generate an image using NVIDIA FLUX endpoints.
+// Returns { url } on success, null on failure.
+async function generateImage(prompt, modelKey = DEFAULT_IMAGE_MODEL, timeout = 60000) {
+  const models = [modelKey, 'flux', 'flux-dev'];
+  for (const key of [...new Set(models)]) {
+    try {
+      const url = buildNvidiaImageUrl(key, prompt);
+      const res = await axios.get(url, {
+        timeout,
+        headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
+        validateStatus: (s) => s >= 200 && s < 500
+      });
+      if (!res.data) continue;
+      let data = res.data;
+      if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+      if (data && data.success === false) continue;
+      const imageUrl = extractImageUrl(data);
+      if (imageUrl) return { url: imageUrl, model: key };
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
 // Try every model in MODEL_PRIORITY order using the full context prompt.
 // If all fail, fall back to sending just the bare user query to GPT.
 // Returns { response, model } or null.
-async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F') {
-  const contextPrompt = buildContextPrompt(conversation, query, botName);
+async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F', userProfile = null) {
+  const contextPrompt = buildContextPrompt(conversation, query, botName, userProfile);
 
   // Preferred model first
   let result = await queryAI(preferredModel, contextPrompt);
@@ -785,9 +839,15 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
     const config   = loadConfig();
     const botName  = config.chatbotName || 'W.O.L.F';
     const caption  = textMsg.trim() || 'What is in this image? Describe it in detail.';
+    const botId    = getBotId();
+
+    // Load & update user profile
+    let profile = loadProfile(botId, senderJid);
 
     try {
       await sock.sendPresenceUpdate('composing', chatId);
+      await sock.sendMessage(chatId, { react: { text: '👀', key: msg.key } });
+
       const imageBuffer = await downloadMediaMessage(msg, 'buffer', {});
       let visionReply   = null;
 
@@ -796,26 +856,34 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       }
 
       if (visionReply) {
-        const cleaned = cleanAIResponse(visionReply, botName);
-        const trimmed = trimResponse(cleaned);
+        const cleaned  = cleanAIResponse(visionReply, botName);
+        const trimmed  = trimResponse(cleaned, 1000);
+
+        // Build personalised prefix
+        const greeting  = getPersonalizedGreeting(profile);
+        const prefix    = greeting ? `${greeting} ` : '';
 
         // Record in conversation history
         const conversation = loadConversation(senderJid);
-        conversation.messages.push({ role: 'user',      content: `[Image] ${caption}` });
+        conversation.messages.push({ role: 'user',      content: `[Image sent] ${caption}` });
         conversation.messages.push({ role: 'assistant', content: cleaned });
         saveConversation(senderJid, conversation);
 
+        // Update profile + stats
+        profile = learnFromMessage(caption, profile);
+        saveProfile(botId, senderJid, profile);
         config.stats.totalQueries = (config.stats.totalQueries || 0) + 1;
         saveConfig(config);
 
-        await sock.sendMessage(chatId, { text: `🐺 ${trimmed}` }, { quoted: msg });
+        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+        await sock.sendMessage(chatId, { text: `🐺 ${prefix}${trimmed}` }, { quoted: msg });
       } else {
         await sock.sendMessage(chatId, {
-          text: `🐺 _I received your image but couldn't analyse it right now. Try sending it again!_`
+          text: `🐺 _I received your image but couldn't analyse it right now. Try again or add a caption describing what you'd like to know!_`
         }, { quoted: msg });
       }
     } catch (err) {
-      console.error(`[${config.chatbotName || 'W.O.L.F'}] Vision error:`, err.message);
+      console.error(`[${botName}] Vision error:`, err.message);
       await sock.sendMessage(chatId, {
         text: `🐺 _Image analysis failed. Please try again._`
       }, { quoted: msg });
@@ -896,14 +964,80 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   }
 
   // ── AI text response ───────────────────────────────────────────────────
-  const config     = loadConfig();
-  const botName    = config.chatbotName || 'W.O.L.F';
+  const config       = loadConfig();
+  const botName      = config.chatbotName || 'W.O.L.F';
   const conversation = loadConversation(senderJid);
+  const botId        = getBotId();
+
+  // Load user profile for personalisation & learning
+  let profile = loadProfile(botId, senderJid);
+
+  // ── NVIDIA Image generation intent ──────────────────────────────────────
+  // Detect requests like "generate me an AI image of a dragon" or
+  // "use FLUX to create a picture of Tokyo at night" and bypass the text AI.
+  const imageGenPatterns = [
+    /^(?:generate|create|make|draw|paint|design|render)\s+(?:me\s+)?(?:an?\s+)?(?:ai\s+)?(?:image|picture|photo|art|artwork|illustration|painting|wallpaper)\s+(?:of|showing|with|about)\s+(.+)/i,
+    /^(?:generate|create|make|draw|paint)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|art|painting)\s+(.+)/i,
+    /^imagine\s+(.+)/i,
+    /^flux\s+(.+)/i,
+    /^(?:nvidia\s+)?(?:flux|image)\s+(.+)/i,
+    /^(?:generate|create)\s+(?:ai\s+)?(?:image|art)\s+(.+)/i,
+  ];
+  let imagePrompt = null;
+  for (const pat of imageGenPatterns) {
+    const m = userText.match(pat);
+    if (m && m[1] && m[1].trim().length > 3) { imagePrompt = m[1].trim(); break; }
+  }
+
+  if (imagePrompt) {
+    try {
+      await sock.sendPresenceUpdate('composing', chatId);
+      await sock.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
+
+      const imgResult = await generateImage(imagePrompt);
+
+      if (imgResult?.url) {
+        // Download the image and send it
+        try {
+          const imgRes = await axios.get(imgResult.url, { responseType: 'arraybuffer', timeout: 30000 });
+          const imgBuf = Buffer.from(imgRes.data);
+          await sock.sendMessage(chatId, {
+            image:   imgBuf,
+            caption: `🎨 *${imagePrompt}*\n_Generated with FLUX AI_`
+          }, { quoted: msg });
+        } catch {
+          // If download fails, send the URL as text
+          await sock.sendMessage(chatId, {
+            text: `🎨 *${imagePrompt}*\n\n${imgResult.url}`
+          }, { quoted: msg });
+        }
+
+        // Update conversation + profile
+        conversation.messages.push({ role: 'user',      content: userText });
+        conversation.messages.push({ role: 'assistant', content: `[Generated image: ${imagePrompt}]` });
+        saveConversation(senderJid, conversation);
+        profile = learnFromMessage(userText, profile);
+        saveProfile(botId, senderJid, profile);
+
+        config.stats.totalQueries  = (config.stats.totalQueries || 0) + 1;
+        config.stats.imagesCreated = (config.stats.imagesCreated || 0) + 1;
+        saveConfig(config);
+
+        await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
+        return true;
+      } else {
+        // Fall through to normal text AI (generation failed)
+      }
+    } catch (imgErr) {
+      console.error(`[${botName}] Image gen error:`, imgErr.message);
+      // Fall through to normal text AI
+    }
+  }
 
   try {
     await sock.sendPresenceUpdate('composing', chatId); // show "typing…"
 
-    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt', botName);
+    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt', botName, profile);
 
     if (!aiResult) {
       await sock.sendMessage(chatId, {
@@ -915,10 +1049,18 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
     const cleanedResponse = cleanAIResponse(aiResult.response, botName);
     const finalResponse   = trimResponse(cleanedResponse);
 
+    // Build personalised prefix (use name if known, or standard wolf emoji)
+    const greeting = getPersonalizedGreeting(profile);
+    const prefix   = greeting ? `${greeting} ` : '🐺 ';
+
     // Save both turns to conversation history
     conversation.messages.push({ role: 'user',      content: userText });
     conversation.messages.push({ role: 'assistant', content: cleanedResponse });
     saveConversation(senderJid, conversation);
+
+    // Learn from this message and save profile
+    profile = learnFromMessage(userText, profile);
+    saveProfile(botId, senderJid, profile);
 
     // Update query stats
     config.stats.totalQueries = (config.stats.totalQueries || 0) + 1;
@@ -926,7 +1068,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
     config.stats.modelsUsed[aiResult.model] = (config.stats.modelsUsed[aiResult.model] || 0) + 1;
     saveConfig(config);
 
-    await sock.sendMessage(chatId, { text: `🐺 ${finalResponse}` }, { quoted: msg });
+    await sock.sendMessage(chatId, { text: `${prefix}${finalResponse}` }, { quoted: msg });
     return true;
   } catch (error) {
     console.error(`[${botName}] Chat error:`, error.message);
