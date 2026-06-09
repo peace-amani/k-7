@@ -28,10 +28,20 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { normalizeMessageContent, jidNormalizedUser } from '@whiskeysockets/baileys';
+import { normalizeMessageContent, jidNormalizedUser, downloadMediaMessage } from '@whiskeysockets/baileys';
 import supabase from '../../lib/database.js';
 import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
+import {
+  AI_MODELS,
+  MODEL_PRIORITY,
+  XWOLF_API_BASE,
+  XWOLF_API_KEY,
+  extractXWolfResponse,
+  buildTextUrl,
+  buildVisionUrl,
+  modelSupportsVision
+} from '../../lib/aiModels.js';
 
 // ── Data directory paths ───────────────────────────────────────────────────
 const DATA_DIR         = './data/chatbot';
@@ -88,57 +98,9 @@ const PENDING_TIMEOUT  = 120000; // 2 minutes
 // ══════════════════════════════════════════════════════════════════════════
 // SECTION 1 — AI model registry
 // ══════════════════════════════════════════════════════════════════════════
-// 7 AI backends in priority order.  The chatbot tries each one until it
-// gets a usable response.  Falls back to a simple bare query to GPT if all
-// model+context calls fail.
-
-// ── AI model registry ──────────────────────────────────────────────────────
-// All models use Pollinations.ai (free, no API key needed).
-// `buildUrl(prompt)` is used instead of `params` when the prompt must be
-// embedded in the URL path rather than as a query parameter.
-// `extract` handles plain-text responses (Pollinations returns raw text).
-const POLLINATIONS_BASE = 'https://text.pollinations.ai';
-
-const AI_MODELS = {
-  gpt: {
-    name: 'GPT', icon: '🤖',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  copilot: {
-    name: 'Copilot', icon: '🧠',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai&seed=77`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  claude: {
-    name: 'Claude', icon: '🔮',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai-large`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  grok: {
-    name: 'Grok', icon: '⚡',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai&seed=13`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  blackbox: {
-    name: 'Blackbox', icon: '🖥️',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai&seed=55`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  bard: {
-    name: 'Bard', icon: '🌐',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai&seed=99`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  },
-  perplexity: {
-    name: 'Perplexity', icon: '🔍',
-    buildUrl: (q) => `${POLLINATIONS_BASE}/${encodeURIComponent(q)}?model=openai&seed=21`,
-    extract: (data) => (typeof data === 'string' && data.length > 2) ? data : null
-  }
-};
-
-// Order to try AI models — fastest/most reliable first
-const MODEL_PRIORITY = ['gpt', 'copilot', 'claude', 'blackbox', 'grok', 'bard', 'perplexity'];
+// All 37 models are defined in lib/aiModels.js and imported above.
+// AI_MODELS, MODEL_PRIORITY, buildTextUrl, buildVisionUrl, extractXWolfResponse
+// are all available from that import — no Pollinations dependency needed.
 
 // ══════════════════════════════════════════════════════════════════════════
 // SECTION 2 — Intent detection
@@ -476,39 +438,70 @@ function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F') {
   return context;
 }
 
-// Call a single AI model.  Returns the extracted response text or null.
+// Call a single AI model via apis.xwolf.space.
+// Returns the extracted response text, or null on failure.
 async function queryAI(modelKey, prompt, timeout = 35000) {
-  const model = AI_MODELS[modelKey];
-  if (!model) return null;
+  if (!AI_MODELS[modelKey]) return null;
+
+  const url = buildTextUrl(modelKey, prompt);
+  if (!url) return null;
 
   try {
-    // Pollinations-style: prompt is embedded in the URL path via buildUrl()
-    const requestUrl = model.buildUrl ? model.buildUrl(prompt) : model.url;
-    const response = await axios({
-      method: model.method || 'GET',
-      url: requestUrl,
-      params: model.params ? model.params(prompt) : undefined,
+    const response = await axios.get(url, {
       timeout,
-      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'text/plain, application/json', 'Cache-Control': 'no-cache' },
-      validateStatus: (status) => status >= 200 && status < 500,
-      responseType: 'text'
+      headers: {
+        'User-Agent':    'WOLF-Chatbot/2.0',
+        'Accept':        'application/json, text/plain',
+        'Cache-Control': 'no-cache'
+      },
+      validateStatus: (s) => s >= 200 && s < 500
     });
 
-    const raw = typeof response.data === 'string' ? response.data.trim() : JSON.stringify(response.data);
-    if (!raw || raw.length < 3) return null;
+    if (!response.data) return null;
 
-    // Reject obvious error responses from the provider
-    const lower = raw.toLowerCase();
-    if (lower.includes('"error"') || lower.startsWith('error') || lower.includes('queue full') ||
-        lower.includes('rate limit') || lower.includes('payment required') || lower.includes('deployment_disabled')) {
-      return null;
+    // Parse JSON if the response came back as a string
+    let data = response.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { /* keep as string */ }
     }
 
-    const result = model.extract(raw);
-    if (result && result.trim().length > 3) return result.trim();
-  } catch {}
+    const text = extractXWolfResponse(data);
+    if (!text || text.length < 3) return null;
 
-  return null;
+    // Reject obvious provider-level error messages
+    const lower = text.toLowerCase();
+    if (lower.startsWith('error') || lower.includes('rate limit') ||
+        lower.includes('invalid key') || lower.includes('unauthorized')) return null;
+
+    return text.trim();
+  } catch {
+    return null;
+  }
+}
+
+// Analyse an image using the Gemini vision endpoint.
+// `imageBuffer` — raw Buffer of the image bytes.
+// Returns the analysis text or null.
+async function queryVision(prompt, imageBuffer, timeout = 40000) {
+  try {
+    const base64 = imageBuffer.toString('base64');
+    const url    = buildVisionUrl(prompt, base64);
+
+    const response = await axios.get(url, {
+      timeout,
+      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
+      validateStatus: (s) => s >= 200 && s < 500
+    });
+
+    if (!response.data) return null;
+    let data = response.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+
+    const text = extractXWolfResponse(data);
+    return (text && text.length > 3) ? text.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 // Try every model in MODEL_PRIORITY order using the full context prompt.
@@ -517,18 +510,18 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
 async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F') {
   const contextPrompt = buildContextPrompt(conversation, query, botName);
 
-  // Try the preferred model first
+  // Preferred model first
   let result = await queryAI(preferredModel, contextPrompt);
   if (result) return { response: result, model: preferredModel };
 
-  // Try all other models in priority order
+  // Walk the fallback chain
   for (const modelKey of MODEL_PRIORITY) {
     if (modelKey === preferredModel) continue;
     result = await queryAI(modelKey, contextPrompt);
     if (result) return { response: result, model: modelKey };
   }
 
-  // Last resort: bare query without conversation history
+  // Last resort: bare query with no conversation history
   result = await queryAI('gpt', query);
   if (result) return { response: result, model: 'gpt' };
 
@@ -762,12 +755,13 @@ function trackMediaAction(intentType, config) {
 
 // Called by index.js for every message in a chat where the chatbot is active.
 // Processing pipeline:
-//   1. Extract text; ignore command-prefixed messages and empty messages.
-//   2. Check for a pending clarification action from a previous turn.
-//   3. Detect media intent (image/play/video/song).
-//   4. If intent is vague → ask for clarification and set pendingAction.
-//   5. If intent is specific → execute the command immediately.
-//   6. If no intent → query the AI and send a text reply.
+//   1. Extract text (and image if present); ignore command-prefixed / empty messages.
+//   2. If a user sent an image → run multimodal vision analysis via Gemini and reply.
+//   3. Check for a pending clarification action from a previous turn.
+//   4. Detect media intent (image/play/video/song).
+//   5. If intent is vague → ask for clarification and set pendingAction.
+//   6. If intent is specific → execute the command immediately.
+//   7. If no intent → query the AI and send a text reply.
 //
 // `commandsMap` — the full Map of command name → command module (for intent execution).
 // Returns true if the message was handled, false otherwise.
@@ -778,7 +772,56 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
 
   // Extract plain text from the message
   const normalized = normalizeMessageContent(msg.message);
-  const textMsg    = normalized?.conversation || normalized?.extendedTextMessage?.text || '';
+  const textMsg    = normalized?.conversation
+                  || normalized?.extendedTextMessage?.text
+                  || normalized?.imageMessage?.caption
+                  || normalized?.videoMessage?.caption
+                  || '';
+
+  // ── Multimodal: image analysis ─────────────────────────────────────────
+  // If the user sends a photo (with or without a caption), analyse it.
+  const hasImage = !!(msg.message?.imageMessage || msg.message?.viewOnceMessageV2?.message?.imageMessage);
+  if (hasImage) {
+    const config   = loadConfig();
+    const botName  = config.chatbotName || 'W.O.L.F';
+    const caption  = textMsg.trim() || 'What is in this image? Describe it in detail.';
+
+    try {
+      await sock.sendPresenceUpdate('composing', chatId);
+      const imageBuffer = await downloadMediaMessage(msg, 'buffer', {});
+      let visionReply   = null;
+
+      if (imageBuffer && imageBuffer.length > 0) {
+        visionReply = await queryVision(caption, imageBuffer);
+      }
+
+      if (visionReply) {
+        const cleaned = cleanAIResponse(visionReply, botName);
+        const trimmed = trimResponse(cleaned);
+
+        // Record in conversation history
+        const conversation = loadConversation(senderJid);
+        conversation.messages.push({ role: 'user',      content: `[Image] ${caption}` });
+        conversation.messages.push({ role: 'assistant', content: cleaned });
+        saveConversation(senderJid, conversation);
+
+        config.stats.totalQueries = (config.stats.totalQueries || 0) + 1;
+        saveConfig(config);
+
+        await sock.sendMessage(chatId, { text: `🐺 ${trimmed}` }, { quoted: msg });
+      } else {
+        await sock.sendMessage(chatId, {
+          text: `🐺 _I received your image but couldn't analyse it right now. Try sending it again!_`
+        }, { quoted: msg });
+      }
+    } catch (err) {
+      console.error(`[${config.chatbotName || 'W.O.L.F'}] Vision error:`, err.message);
+      await sock.sendMessage(chatId, {
+        text: `🐺 _Image analysis failed. Please try again._`
+      }, { quoted: msg });
+    }
+    return true;
+  }
 
   if (!textMsg || textMsg.trim().length < 2) return false;
 
