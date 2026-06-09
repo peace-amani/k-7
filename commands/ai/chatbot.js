@@ -34,21 +34,14 @@ import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { getPhoneFromLid } from '../../lib/sudo-store.js';
 import {
   AI_MODELS,
-  NVIDIA_VISION_MODELS,
-  NVIDIA_IMAGE_MODELS,
-  DEFAULT_IMAGE_MODEL,
   MODEL_PRIORITY,
   XWOLF_API_BASE,
   XWOLF_API_KEY,
   extractXWolfResponse,
-  extractImageUrl,
   buildTextUrl,
-  buildVisionUrl,
-  buildNvidiaVisionUrl,
-  buildNvidiaImageUrl,
-  modelSupportsVision,
   getModelList
 } from '../../lib/aiModels.js';
+import { vision as nvidiaVision, image as nvidiaImage } from '../../lib/nvidia.js';
 import {
   loadProfile, saveProfile, learnFromMessage, buildProfileContext, getPersonalizedGreeting
 } from '../../lib/userProfile.js';
@@ -496,61 +489,36 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
   }
 }
 
-// Analyse an image using NVIDIA Nemotron (primary) with xwolf Gemini fallback.
-async function queryVision(prompt, imageBuffer, timeout = 40000) {
-  const base64 = imageBuffer.toString('base64');
-
-  // 1. NVIDIA Nemotron — primary vision endpoint
+// Analyse an image using NVIDIA Nemotron VL via lib/nvidia.js (same path as the
+// ?nemotron command). Falls back to a text-only description on error.
+// Returns the analysis text, or null on total failure.
+async function queryVision(prompt, imageBuffer) {
   try {
-    const url = buildNvidiaVisionUrl(prompt, base64);
-    const res = await axios.get(url, {
-      timeout,
-      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
-      validateStatus: (s) => s >= 200 && s < 500
-    });
-    if (res.data) {
-      let data = res.data;
-      if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-      const text = extractXWolfResponse(data);
-      if (text && text.length > 10) return text.trim();
-    }
-  } catch { /* fall through */ }
-
-  // 2. Fall back to xwolf Gemini vision
-  try {
-    const url = buildVisionUrl(prompt, base64);
-    const res = await axios.get(url, {
-      timeout,
-      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
-      validateStatus: (s) => s >= 200 && s < 500
-    });
-    if (!res.data) return null;
-    let data = res.data;
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-    const text = extractXWolfResponse(data);
-    return (text && text.length > 3) ? text.trim() : null;
-  } catch {
+    const text = await nvidiaVision(
+      prompt || 'Describe this image in detail.',
+      imageBuffer,
+      { model: 'nvidia/nemotron-nano-12b-v2-vl', maxTokens: 1024, timeoutMs: 90000 }
+    );
+    return text ? text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim() : null;
+  } catch (err) {
+    console.error('[Chatbot/Vision]', err.message);
     return null;
   }
 }
 
-// Generate an image using NVIDIA FLUX Dev.
-// Returns { url } on success, null on failure.
-async function generateImage(prompt, timeout = 60000) {
+// Generate an image using NVIDIA FLUX Dev via lib/nvidia.js.
+// Returns a Buffer (ready to send) on success, or null on failure.
+async function generateImage(prompt) {
   try {
-    const url = buildNvidiaImageUrl(prompt);
-    const res = await axios.get(url, {
-      timeout,
-      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
-      validateStatus: (s) => s >= 200 && s < 500
+    const buf = await nvidiaImage(prompt, {
+      model:     'black-forest-labs/flux.1-dev',
+      width:     1024,
+      height:    1024,
+      timeoutMs: 120000
     });
-    if (!res.data) return null;
-    let data = res.data;
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-    if (data?.success === false) return null;
-    const imageUrl = extractImageUrl(data);
-    return imageUrl ? { url: imageUrl } : null;
-  } catch {
+    return Buffer.isBuffer(buf) && buf.length > 0 ? buf : null;
+  } catch (err) {
+    console.error('[Chatbot/ImageGen]', err.message);
     return null;
   }
 }
@@ -991,23 +959,13 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       await sock.sendPresenceUpdate('composing', chatId);
       await sock.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
 
-      const imgResult = await generateImage(imagePrompt);
+      const imgBuf = await generateImage(imagePrompt);
 
-      if (imgResult?.url) {
-        // Download the image and send it
-        try {
-          const imgRes = await axios.get(imgResult.url, { responseType: 'arraybuffer', timeout: 30000 });
-          const imgBuf = Buffer.from(imgRes.data);
-          await sock.sendMessage(chatId, {
-            image:   imgBuf,
-            caption: `🎨 *${imagePrompt}*\n_Generated with FLUX AI_`
-          }, { quoted: msg });
-        } catch {
-          // If download fails, send the URL as text
-          await sock.sendMessage(chatId, {
-            text: `🎨 *${imagePrompt}*\n\n${imgResult.url}`
-          }, { quoted: msg });
-        }
+      if (imgBuf) {
+        await sock.sendMessage(chatId, {
+          image:   imgBuf,
+          caption: `🎨 *${imagePrompt}*\n_Generated with FLUX Dev_`
+        }, { quoted: msg });
 
         // Update conversation + profile
         conversation.messages.push({ role: 'user',      content: userText });
