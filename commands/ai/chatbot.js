@@ -483,8 +483,10 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
     const text = extractXWolfResponse(data);
     if (!text || text.length < 3) return null;
 
-    // Reject obvious provider-level error messages
+    // Reject HTML (endpoint returned an error page) and provider-level errors
     const lower = text.toLowerCase();
+    if (lower.startsWith('<!') || lower.startsWith('<html') ||
+        lower.includes('<!doctype')) return null;
     if (lower.startsWith('error') || lower.includes('rate limit') ||
         lower.includes('invalid key') || lower.includes('unauthorized')) return null;
 
@@ -494,28 +496,25 @@ async function queryAI(modelKey, prompt, timeout = 35000) {
   }
 }
 
-// Analyse an image using NVIDIA vision models (primary) with xwolf Gemini fallback.
+// Analyse an image using NVIDIA Nemotron (primary) with xwolf Gemini fallback.
 async function queryVision(prompt, imageBuffer, timeout = 40000) {
   const base64 = imageBuffer.toString('base64');
 
-  // 1. Try NVIDIA vision models first (vision-pro → vision)
-  for (const nvidiaModel of NVIDIA_VISION_MODELS) {
-    try {
-      const url = buildNvidiaVisionUrl(nvidiaModel.endpoint, prompt, base64);
-      const res = await axios.get(url, {
-        timeout,
-        headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
-        validateStatus: (s) => s >= 200 && s < 500
-      });
-      if (!res.data) continue;
+  // 1. NVIDIA Nemotron — primary vision endpoint
+  try {
+    const url = buildNvidiaVisionUrl(prompt, base64);
+    const res = await axios.get(url, {
+      timeout,
+      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
+      validateStatus: (s) => s >= 200 && s < 500
+    });
+    if (res.data) {
       let data = res.data;
       if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
       const text = extractXWolfResponse(data);
-      if (text && text.length > 10 && !text.toLowerCase().includes("don't see an image")) {
-        return text.trim();
-      }
-    } catch { /* try next */ }
-  }
+      if (text && text.length > 10) return text.trim();
+    }
+  } catch { /* fall through */ }
 
   // 2. Fall back to xwolf Gemini vision
   try {
@@ -535,27 +534,25 @@ async function queryVision(prompt, imageBuffer, timeout = 40000) {
   }
 }
 
-// Generate an image using NVIDIA FLUX endpoints.
+// Generate an image using NVIDIA FLUX Dev.
 // Returns { url } on success, null on failure.
-async function generateImage(prompt, modelKey = DEFAULT_IMAGE_MODEL, timeout = 60000) {
-  const models = [modelKey, 'flux', 'flux-dev'];
-  for (const key of [...new Set(models)]) {
-    try {
-      const url = buildNvidiaImageUrl(key, prompt);
-      const res = await axios.get(url, {
-        timeout,
-        headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
-        validateStatus: (s) => s >= 200 && s < 500
-      });
-      if (!res.data) continue;
-      let data = res.data;
-      if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-      if (data && data.success === false) continue;
-      const imageUrl = extractImageUrl(data);
-      if (imageUrl) return { url: imageUrl, model: key };
-    } catch { /* try next */ }
+async function generateImage(prompt, timeout = 60000) {
+  try {
+    const url = buildNvidiaImageUrl(prompt);
+    const res = await axios.get(url, {
+      timeout,
+      headers: { 'User-Agent': 'WOLF-Chatbot/2.0', 'Accept': 'application/json, text/plain' },
+      validateStatus: (s) => s >= 200 && s < 500
+    });
+    if (!res.data) return null;
+    let data = res.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+    if (data?.success === false) return null;
+    const imageUrl = extractImageUrl(data);
+    return imageUrl ? { url: imageUrl } : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 // Try every model in MODEL_PRIORITY order using the full context prompt.
