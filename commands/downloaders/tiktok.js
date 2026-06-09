@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 import fs from 'fs';
 import { getBotName } from '../../lib/botname.js';
-import { getOwnerName } from '../../lib/menuHelper.js';
+import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setActionSession } from '../../lib/actionSession.js';
 
@@ -16,6 +16,9 @@ try { giftedBtnsTt = _requireTt('gifted-btns'); } catch (e) {}
 const execAsync = promisify(exec);
 
 const globalUserCaptions = new Map();
+
+const XWOLF_API_KEY = process.env.XWOLF_API_KEY || 'wxa_u_xwk7sch6xj';
+const XWOLF_TT_API = 'https://apis.xwolf.space/api/download/tiktok';
 
 export default {
   name: "tiktok",
@@ -49,10 +52,9 @@ export default {
           if (meta.success) {
             const senderClean = (m.key.participant || m.key.remoteJid).split(':')[0].split('@')[0];
             const sessionKey = `tiktok:${senderClean}:${jid.split('@')[0]}`;
-            setActionSession(sessionKey, { url, play: meta.play, wmplay: meta.wmplay });
-            const cardText = `╭─⌈ 🎵 *TIKTOK* ⌋\n├─⊷ *${meta.title || 'TikTok Video'}*\n├─⊷ By: ${meta.author || 'Unknown'}\n├─⊷ Duration: ${meta.duration || '?'}s\n╰───`;
+            setActionSession(sessionKey, { url, play: meta.videoUrl, wmplay: meta.videoUrlNoWatermark });
+            const cardText = `╭─⌈ 🎵 *TIKTOK* ⌋\n├─⊷ *${meta.title || 'TikTok Video'}*\n├─⊷ Powered by: ${meta.provider || 'Wolf Tech'}\n╰───`;
             await giftedBtnsTt.sendInteractiveMessage(sock, jid, {
-              image: meta.cover ? { url: meta.cover } : undefined,
               body: { text: cardText },
               footer: { text: getBotName() },
               interactiveButtons: [
@@ -75,7 +77,6 @@ export default {
       }
 
       const { videoPath } = result;
-
       const userCaption = globalUserCaptions.get(userId) || `${getBotName()} is the Alpha`;
 
       await sock.sendMessage(jid, {
@@ -108,17 +109,20 @@ export function getUserCaptionMap() {
 
 async function fetchTikTokMeta(url) {
   try {
-    const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 15000 });
-    const data = response.data?.data;
-    if (!data) return { success: false };
+    const response = await axios.get(XWOLF_TT_API, {
+      params: { url, key: XWOLF_API_KEY },
+      timeout: 20000
+    });
+    const data = response.data;
+    if (!data?.success) return { success: false };
     return {
       success: true,
       title: data.title || '',
-      cover: data.cover || data.origin_cover || '',
-      author: data.author?.nickname || data.author?.unique_id || '',
-      duration: data.duration || 0,
-      play: data.play || '',
-      wmplay: data.wmplay || data.play || ''
+      videoUrl: data.videoUrl || '',
+      videoUrlNoWatermark: data.videoUrlNoWatermark || data.videoUrl || '',
+      videoProxyUrl: data.videoProxyUrl || data.videoUrl || '',
+      videoNoWatermarkProxyUrl: data.videoNoWatermarkProxyUrl || data.videoUrlNoWatermark || '',
+      provider: data.provider || 'Wolf Tech'
     };
   } catch (e) {
     return { success: false };
@@ -136,70 +140,46 @@ function isValidTikTokUrl(url) {
 }
 
 async function downloadTikTok(url) {
+  const timestamp = Date.now();
+  const rand = Math.random().toString(36).slice(2);
+  const videoPath = `/tmp/wolfbot_tiktok_${timestamp}_${rand}.mp4`;
+
+  // 1. Try xwolf API first (no-watermark preferred)
   try {
-    const timestamp = Date.now();
-    const rand = Math.random().toString(36).slice(2);
-    const videoPath = `/tmp/wolfbot_tiktok_${timestamp}_${rand}.mp4`;
-
-    const apis = [
-      {
-        url: `https://tikwm.com/api/?url=${encodeURIComponent(url)}`,
-        videoKey: 'data.play'
-      },
-      {
-        url: `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(url)}`,
-        process: (data) => ({
-          video_url: `https://tikmate.app/download/${data.token}/${data.id}.mp4`
-        })
-      }
-    ];
-
-    let videoUrl = null;
-
-    for (const api of apis) {
-      try {
-        const response = await axios.get(api.url, { timeout: 30000 });
-
-        if (response.data) {
-          let data = response.data;
-
-          if (api.process) {
-            const processed = api.process(data);
-            videoUrl = processed.video_url;
-          } else {
-            videoUrl = api.videoKey.split('.').reduce((obj, key) => obj?.[key], data);
-          }
-
-          if (videoUrl) break;
-        }
-      } catch {
-        continue;
+    const response = await axios.get(XWOLF_TT_API, {
+      params: { url, key: XWOLF_API_KEY },
+      timeout: 20000
+    });
+    const data = response.data;
+    if (data?.success) {
+      const videoUrl = data.videoNoWatermarkProxyUrl || data.videoUrlNoWatermark || data.videoProxyUrl || data.videoUrl;
+      if (videoUrl) {
+        await downloadFile(videoUrl, videoPath);
+        return { success: true, videoPath };
       }
     }
+  } catch {}
 
-    if (!videoUrl) {
-      return await downloadWithYtDlp(url, videoPath);
+  // 2. Fallback: tikwm.com
+  try {
+    const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 30000 });
+    const videoUrl = response.data?.data?.play;
+    if (videoUrl) {
+      await downloadFile(videoUrl, videoPath);
+      return { success: true, videoPath };
     }
+  } catch {}
 
-    await downloadFile(videoUrl, videoPath);
-
-    return {
-      success: true,
-      videoPath
-    };
-
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+  // 3. Last resort: yt-dlp
+  return await downloadWithYtDlp(url, videoPath);
 }
 
 async function downloadWithYtDlp(url, videoPath) {
   try {
     await execAsync('yt-dlp --version');
   } catch {
-    return { success: false, error: 'yt-dlp not installed' };
+    return { success: false, error: 'All download methods failed' };
   }
-
   try {
     await execAsync(`yt-dlp -f "best[ext=mp4]" -o "${videoPath}" "${url}"`, { timeout: 60000 });
     return { success: true, videoPath };
@@ -216,9 +196,7 @@ async function downloadFile(url, filePath) {
     responseType: 'stream',
     timeout: 60000
   });
-
   response.data.pipe(writer);
-
   return new Promise((resolve, reject) => {
     writer.on('finish', resolve);
     writer.on('error', reject);
