@@ -409,11 +409,7 @@ function clearConversation(userId) {
   if (fs.existsSync(file)) fs.unlinkSync(file);
   const botId       = getBotId();
   const sanitizedId = userId.replace(/[^a-zA-Z0-9]/g, '_');
-  // Use raw query because supabase.removeWhere doesn't support parameterised queries
-  supabase.query(
-    `DELETE FROM chatbot_conversations WHERE user_id = $1 AND bot_id = $2`,
-    [sanitizedId, botId]
-  ).catch(() => {});
+  supabase.removeWhere('chatbot_conversations', { user_id: sanitizedId, bot_id: botId }).catch(() => {});
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -448,10 +444,15 @@ function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F', userPro
 
 // Call a single AI model via apis.xwolf.space.
 // Returns the extracted response text, or null on failure.
-async function queryAI(modelKey, prompt, timeout = 35000) {
+// rawQuery: the bare user message — used for models (like wormgpt) that expect a
+// direct question rather than a long system-prompt+history context string.
+async function queryAI(modelKey, prompt, timeout = 35000, rawQuery = null) {
   if (!AI_MODELS[modelKey]) return null;
 
-  const url = buildTextUrl(modelKey, prompt);
+  // WormGPT works best with a short direct query, not a full context dump.
+  // Using the context prompt causes URL-length failures and poor responses.
+  const queryParam = (modelKey === 'wormgpt' && rawQuery) ? rawQuery : prompt;
+  const url = buildTextUrl(modelKey, queryParam);
   if (!url) return null;
 
   try {
@@ -529,14 +530,14 @@ async function generateImage(prompt) {
 async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F', userProfile = null) {
   const contextPrompt = buildContextPrompt(conversation, query, botName, userProfile);
 
-  // Preferred model first
-  let result = await queryAI(preferredModel, contextPrompt);
+  // Preferred model first (pass raw query so wormgpt gets a direct question)
+  let result = await queryAI(preferredModel, contextPrompt, 35000, query);
   if (result) return { response: result, model: preferredModel };
 
   // Walk the fallback chain
   for (const modelKey of MODEL_PRIORITY) {
     if (modelKey === preferredModel) continue;
-    result = await queryAI(modelKey, contextPrompt);
+    result = await queryAI(modelKey, contextPrompt, 35000, query);
     if (result) return { response: result, model: modelKey };
   }
 
