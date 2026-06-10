@@ -60,6 +60,36 @@ const _lgCache = new Map();
 globalThis._chatbotGroupListCache = _lgCache;
 const _LG_MAX  = 30;
 
+// ── Per-group user-filter helpers ─────────────────────────────────────────
+// Extracts target user JIDs from @mentions and plain number args.
+// args[0] is the sub-command so we start at args[1].
+function _extractTargetUsers(m, args) {
+  const users = new Set();
+  const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+  for (const jid of mentions) {
+    if (jid && !jid.includes('status')) users.add(jid);
+  }
+  for (let i = 1; i < args.length; i++) {
+    const num = String(args[i]).replace(/[^0-9]/g, '');
+    if (num.length >= 7) users.add(`${num}@s.whatsapp.net`);
+  }
+  return [...users];
+}
+
+// Returns false when the sender is blocked by the per-group user filter.
+function _checkGroupUserFilter(config, groupJid, senderJid) {
+  const filter = (config.groupUserFilters || {})[groupJid];
+  if (!filter || !filter.users || filter.users.length === 0) return true; // no filter
+  const senderNum = senderJid.split('@')[0].split(':')[0];
+  const inList = filter.users.some(u => {
+    const uNum = u.split('@')[0].split(':')[0];
+    return uNum === senderNum || u === senderJid;
+  });
+  if (filter.mode === 'allow') return inList;   // allow-only: must be in list
+  if (filter.mode === 'block') return !inList;  // block-list: must NOT be in list
+  return true;
+}
+
 // ── Bot ID helpers ─────────────────────────────────────────────────────────
 // Each bot number gets its own config and conversation directory so two bot
 // numbers on the same host don't share state.
@@ -803,6 +833,12 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   const rawSender = msg.key.participant || chatId;
   const senderJid = jidNormalizedUser(rawSender);
 
+  // ── Per-group user filter gate ────────────────────────────────────────
+  if (chatId.endsWith('@g.us')) {
+    const _cfg = loadConfig();
+    if (!_checkGroupUserFilter(_cfg, chatId, senderJid)) return false;
+  }
+
   // Extract plain text from the message
   const normalized = normalizeMessageContent(msg.message);
   const textMsg    = normalized?.conversation
@@ -1163,6 +1199,14 @@ export default {
         `├─⊷ *${PREFIX}chatbot removegroup [jid]*\n│  └⊷ Exclude this group (or by JID)\n` +
         `├─⊷ *${PREFIX}chatbot listgroups*\n│  └⊷ List all groups + status\n` +
         `├─⊷ *${PREFIX}chatbot cleargroups*\n│  └⊷ Clear all exclusions\n` +
+        `├─⌈ 👤 *USER FILTER (per group)* ⌋\n` +
+        `├─⊷ *${PREFIX}chatbot allowonly @user*\n│  └⊷ Reply ONLY to mentioned user(s)\n` +
+        `├─⊷ *${PREFIX}chatbot blockuser @user*\n│  └⊷ Ignore specific user(s) in this group\n` +
+        `├─⊷ *${PREFIX}chatbot allowuser @user*\n│  └⊷ Add to allow-list / unblock a user\n` +
+        `├─⊷ *${PREFIX}chatbot removeuser @user*\n│  └⊷ Remove user from filter list\n` +
+        `├─⊷ *${PREFIX}chatbot listusers*\n│  └⊷ Show current user filter for this group\n` +
+        `├─⊷ *${PREFIX}chatbot clearusers*\n│  └⊷ Remove filter — reply to everyone\n` +
+        `├─⌈ 💬 *DM CONTROL* ⌋\n` +
         `├─⊷ *${PREFIX}chatbot adddm <number>*\n│  └⊷ Add a DM\n` +
         `├─⊷ *${PREFIX}chatbot removedm <number>*\n│  └⊷ Remove a DM\n` +
         `├─⊷ *${PREFIX}chatbot listdms*\n│  └⊷ List allowed DMs\n` +
@@ -1499,6 +1543,141 @@ export default {
       return sock.sendMessage(jid, {
         text: `✅ Chatbot name set to: *${newName}*`
       }, { quoted: m });
+    }
+
+    // ── Per-group user filter management ─────────────────────────────────
+    // allowonly  — respond ONLY to listed users in this group
+    // blockuser  — respond to ALL except listed users
+    // allowuser  — add a user to allow-list OR remove from block-list
+    // removeuser — remove a user from the current filter list
+    // listusers  — show the current filter for this group
+    // clearusers — remove the filter entirely (respond to everyone)
+    // Users can be specified via @mention or plain phone number.
+
+    if (['allowonly', 'blockuser', 'allowuser', 'removeuser', 'listusers', 'clearusers'].includes(subCommand)) {
+      if (!jid.endsWith('@g.us')) {
+        return sock.sendMessage(jid, {
+          text: `❌ User filters are per-group. Run this command inside a group.`
+        }, { quoted: m });
+      }
+
+      if (!config.groupUserFilters) config.groupUserFilters = {};
+
+      // ── listusers ────────────────────────────────────────────────────
+      if (subCommand === 'listusers') {
+        const filter = config.groupUserFilters[jid];
+        if (!filter || !filter.users || filter.users.length === 0) {
+          return sock.sendMessage(jid, {
+            text: `ℹ️ *No user filter set for this group.*\nChatbot replies to *everyone*.\n\nUse:\n• \`${PREFIX}chatbot allowonly @user\` — only reply to specific people\n• \`${PREFIX}chatbot blockuser @user\` — block specific people`
+          }, { quoted: m });
+        }
+        const modeLabel = filter.mode === 'allow'
+          ? '✅ *ALLOW ONLY* — replies only to listed users'
+          : '🚫 *BLOCK LIST* — replies to everyone except listed users';
+        let text = `╭─⌈ 👤 *USER FILTER* ⌋\n│\n│ ${modeLabel}\n│\n`;
+        filter.users.forEach((u, i) => {
+          const num = u.split('@')[0].split(':')[0];
+          text += `│ ${i + 1}. +${num}\n`;
+        });
+        text += `│\n╰⊷ ${getFooter(m.key.participant || jid)}`;
+        return sock.sendMessage(jid, { text }, { quoted: m });
+      }
+
+      // ── clearusers ───────────────────────────────────────────────────
+      if (subCommand === 'clearusers') {
+        delete config.groupUserFilters[jid];
+        saveConfig(config);
+        return sock.sendMessage(jid, {
+          text: `✅ User filter cleared — chatbot will reply to *everyone* in this group.`
+        }, { quoted: m });
+      }
+
+      // ── allowonly / blockuser / allowuser / removeuser ───────────────
+      const targets = _extractTargetUsers(m, args);
+      if (targets.length === 0) {
+        const hint = subCommand === 'allowonly'
+          ? `\`${PREFIX}chatbot allowonly @user 2547xxxxxxxx\``
+          : subCommand === 'blockuser'
+            ? `\`${PREFIX}chatbot blockuser @user\``
+            : subCommand === 'allowuser'
+              ? `\`${PREFIX}chatbot allowuser @user\``
+              : `\`${PREFIX}chatbot removeuser @user\``;
+        return sock.sendMessage(jid, {
+          text: `❌ Mention or provide a number.\nExample: ${hint}`
+        }, { quoted: m });
+      }
+
+      const filter = config.groupUserFilters[jid] || { mode: 'block', users: [] };
+
+      if (subCommand === 'allowonly') {
+        // Switch to allow mode and add users
+        filter.mode = 'allow';
+        for (const u of targets) {
+          if (!filter.users.includes(u)) filter.users.push(u);
+        }
+        config.groupUserFilters[jid] = filter;
+        saveConfig(config);
+        const names = targets.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        return sock.sendMessage(jid, {
+          text: `✅ *Allow-only mode* set.\nChatbot will reply *only* to: ${names}\n_Add more with \`${PREFIX}chatbot allowonly @user\`_`
+        }, { quoted: m });
+      }
+
+      if (subCommand === 'blockuser') {
+        // Switch to block mode and add users
+        filter.mode = 'block';
+        const added = [];
+        for (const u of targets) {
+          if (!filter.users.includes(u)) { filter.users.push(u); added.push(u); }
+        }
+        config.groupUserFilters[jid] = filter;
+        saveConfig(config);
+        const names = added.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        return sock.sendMessage(jid, {
+          text: `🚫 *Blocked:* ${names}\nChatbot will ignore them in this group.\n_Use \`${PREFIX}chatbot allowuser @user\` to unblock._`
+        }, { quoted: m });
+      }
+
+      if (subCommand === 'allowuser') {
+        // Remove from block list OR add to allow list depending on current mode
+        let changed = false;
+        for (const u of targets) {
+          const idx = filter.users.indexOf(u);
+          if (filter.mode === 'block' && idx !== -1) {
+            filter.users.splice(idx, 1);
+            changed = true;
+          } else if (filter.mode === 'allow') {
+            if (!filter.users.includes(u)) { filter.users.push(u); changed = true; }
+          } else if (filter.users.length === 0) {
+            // No filter yet — nothing to remove
+          }
+        }
+        config.groupUserFilters[jid] = filter;
+        saveConfig(config);
+        const names = targets.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        const action = filter.mode === 'allow' ? 'Added to allow list' : 'Unblocked';
+        return sock.sendMessage(jid, {
+          text: `✅ *${action}:* ${names}`
+        }, { quoted: m });
+      }
+
+      if (subCommand === 'removeuser') {
+        const removed = [];
+        for (const u of targets) {
+          const idx = filter.users.indexOf(u);
+          if (idx !== -1) { filter.users.splice(idx, 1); removed.push(u); }
+        }
+        if (removed.length === 0) {
+          return sock.sendMessage(jid, { text: `⚠️ None of those users were in the filter list.` }, { quoted: m });
+        }
+        if (filter.users.length === 0) delete config.groupUserFilters[jid];
+        else config.groupUserFilters[jid] = filter;
+        saveConfig(config);
+        const names = removed.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        return sock.sendMessage(jid, {
+          text: `✅ *Removed from filter:* ${names}\n${filter.users?.length ? `_${filter.users.length} user(s) still in list._` : '_Filter cleared — chatbot replies to everyone._'}`
+        }, { quoted: m });
+      }
     }
 
     // Unknown sub-command fallback
