@@ -8928,6 +8928,12 @@ async function handleIncomingMessage(sock, msg) {
                 commandName = 'mygroups';
                 args = [textMsg.trim()];
             }
+            // If the user replied to a ?chatbot listgroups message with a plain number,
+            // route it to the chatbot command so the JID copy button is shown.
+            if (!commandName && stanzaId && globalThis._chatbotGroupListCache?.has(stanzaId)) {
+                commandName = 'chatbot';
+                args = [textMsg.trim()];
+            }
         }
 
         // If the user replied "leave" / "yes" to a mygroups JID bubble,

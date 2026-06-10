@@ -54,7 +54,10 @@ const CONVERSATIONS_DIR = path.join(DATA_DIR, 'conversations');
 // Maps sent message ID → sorted array of { gid, name } so that when the
 // owner replies to a listgroups message with a plain number we can look up
 // the group and show its JID with a copy button.
+// Exposed on globalThis so index.js can route plain-number replies here
+// the same way it routes plain-number replies to mygroups.
 const _lgCache = new Map();
+globalThis._chatbotGroupListCache = _lgCache;
 const _LG_MAX  = 30;
 
 // ── Bot ID helpers ─────────────────────────────────────────────────────────
