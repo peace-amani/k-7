@@ -1113,12 +1113,19 @@ export default {
                 display_text: '📋 Copy JID',
                 copy_code: group.gid
               })
+            },
+            {
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({
+                display_text: '🗑️ Remove Group',
+                id: `${PREFIX}chatbot removegroup ${group.gid}`
+              })
             }
           ]
         });
       } catch {
         return sock.sendMessage(jid, {
-          text: detailText + `\n\n_Long-press the JID above to copy it._`
+          text: detailText + `\n\n_Long-press the JID above to copy it._\n_Or send:_ \`${PREFIX}chatbot removegroup ${group.gid}\` _to remove._`
         }, { quoted: m });
       }
     }
