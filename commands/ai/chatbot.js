@@ -68,17 +68,27 @@ const _LG_MAX  = 30;
 async function _extractTargetUsers(sock, m, args) {
   const chatJid = m.key.remoteJid;
   const users = new Set();
-  const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-  for (const jid of mentions) {
-    if (!jid || jid.includes('status')) continue;
-    try {
-      const resolved = await resolveJid(sock, jid, chatJid);
-      users.add(resolved);
-    } catch { users.add(jid); }
-  }
-  for (let i = 1; i < args.length; i++) {
-    const num = String(args[i]).replace(/[^0-9]/g, '');
-    if (num.length >= 7) users.add(`${num}@s.whatsapp.net`);
+  const mentions = (m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [])
+    .filter(j => j && !j.includes('status'));
+
+  if (mentions.length > 0) {
+    // Prefer @mention JIDs — resolve any LIDs to real phone JIDs.
+    // Do NOT also parse numbers from args: the args text already contains
+    // the phone-number representation of the same mention (e.g. @36817063669874),
+    // which would cause a duplicate entry.
+    for (const jid of mentions) {
+      try {
+        const resolved = await resolveJid(sock, jid, chatJid);
+        users.add(resolved);
+      } catch { users.add(jid); }
+    }
+  } else {
+    // No @mentions — fall back to parsing plain phone numbers from args.
+    // args[0] is the sub-command so start at args[1].
+    for (let i = 1; i < args.length; i++) {
+      const num = String(args[i]).replace(/[^0-9]/g, '');
+      if (num.length >= 7) users.add(`${num}@s.whatsapp.net`);
+    }
   }
   return [...users];
 }
