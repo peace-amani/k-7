@@ -50,6 +50,13 @@ import {
 const DATA_DIR         = './data/chatbot';
 const CONVERSATIONS_DIR = path.join(DATA_DIR, 'conversations');
 
+// ── listgroups reply-with-number cache ────────────────────────────────────
+// Maps sent message ID → sorted array of { gid, name } so that when the
+// owner replies to a listgroups message with a plain number we can look up
+// the group and show its JID with a copy button.
+const _lgCache = new Map();
+const _LG_MAX  = 30;
+
 // ── Bot ID helpers ─────────────────────────────────────────────────────────
 // Each bot number gets its own config and conversation directory so two bot
 // numbers on the same host don't share state.
@@ -1071,6 +1078,48 @@ export default {
     const config     = loadConfig();
     const subCommand = (args[0] || '').toLowerCase();
 
+    // ── Reply-with-number handler for listgroups ─────────────────────────
+    // If the owner replied to a listgroups message with a plain number,
+    // look up that group and show its name + JID with a Copy JID button.
+    const quotedId = m.message?.extendedTextMessage?.contextInfo?.stanzaId;
+    const input    = (args[0] || '').trim();
+    if (quotedId && _lgCache.has(quotedId) && /^\d+$/.test(input)) {
+      const groups = _lgCache.get(quotedId);
+      const idx    = parseInt(input) - 1;
+      const group  = groups[idx];
+      if (!group) {
+        return sock.sendMessage(jid, {
+          text: `❌ No group at position *${input}*. The list has *${groups.length}* groups.`
+        }, { quoted: m });
+      }
+      const detailText =
+        `╭─⌈ 👥 *GROUP DETAIL* ⌋\n` +
+        `├─⊷ *${group.name}*\n` +
+        `╰─⊷ 🆔 \`${group.gid}\``;
+      try {
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const { sendInteractiveMessage } = require('gifted-btns');
+        return await sendInteractiveMessage(sock, jid, {
+          text: detailText,
+          footer: config.chatbotName || 'W.O.L.F',
+          interactiveButtons: [
+            {
+              name: 'cta_copy',
+              buttonParamsJson: JSON.stringify({
+                display_text: '📋 Copy JID',
+                copy_code: group.gid
+              })
+            }
+          ]
+        });
+      } catch {
+        return sock.sendMessage(jid, {
+          text: detailText + `\n\n_Long-press the JID above to copy it._`
+        }, { quoted: m });
+      }
+    }
+
     // ── No sub-command: show help / status card ──────────────────────────
     if (!subCommand || subCommand === 'help') {
       const modeEmoji  = { off: '🔴', on: '🟢', groups: '👥', dms: '💬', both: '🌐' };
@@ -1324,14 +1373,22 @@ export default {
 
       const activeCount = knownGroups.filter(g => !excluded.includes(g.gid)).length;
       let listText = `📋 *Groups (${knownGroups.length} total, ${activeCount} active):*\n\n`;
-      for (const { gid, name } of knownGroups) {
+      for (let i = 0; i < knownGroups.length; i++) {
+        const { gid, name } = knownGroups[i];
         const isExcluded = excluded.includes(gid);
         listText += isExcluded
-          ? `🚫 *${name}*\n   └ \`${gid}\`\n`
-          : `✅ *${name}*\n   └ \`${gid}\`\n`;
+          ? `${i + 1}. 🚫 *${name}*\n`
+          : `${i + 1}. ✅ *${name}*\n`;
       }
-      listText += `\n_✅ active  •  🚫 excluded_\n_Exclude: ${PREFIX}chatbot removegroup <jid>_`;
-      return sock.sendMessage(jid, { text: listText }, { quoted: m });
+      listText += `\n_✅ active  •  🚫 excluded_\n_Reply with a number to copy its JID_`;
+
+      const sent   = await sock.sendMessage(jid, { text: listText }, { quoted: m });
+      const sentId = sent?.key?.id;
+      if (sentId) {
+        _lgCache.set(sentId, knownGroups);
+        if (_lgCache.size > _LG_MAX) _lgCache.delete(_lgCache.keys().next().value);
+      }
+      return;
     }
 
     if (subCommand === 'cleargroups') {
