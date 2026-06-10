@@ -18,6 +18,7 @@
 //   mode           — off | on | groups | dms | both
 //   preferredModel — which AI model to try first
 //   chatbotName    — the chatbot's display name (default: "W.O.L.F")
+//   techName       — the company/creator name shown in AI identity (default: "WOLF TECH")
 //   allowedGroups  — whitelist of group JIDs (if set, only these groups)
 //   allowedDMs     — whitelist of DM numbers (if set, only these contacts)
 //   stats          — running counters for total queries and media actions
@@ -477,11 +478,12 @@ function clearConversation(userId) {
 // Build the AI prompt with system instructions + profile context + conversation history.
 // The system instructions tell the AI to identify as `botName` (not GPT/Claude)
 // and to keep replies short and conversational.
-function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F', userProfile = null) {
+function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F', userProfile = null, techName = 'WOLF TECH') {
   const n = botName;
+  const t = techName;
   const profileCtx = userProfile ? buildProfileContext(userProfile) : '';
 
-  let context = `You are ${n}, an elite AI assistant created by WolfTech. Your name is ${n} and you must always identify yourself as ${n} when asked who you are. You are intelligent, witty, warm, and helpful. You have a distinct personality — you're friendly and sometimes a bit humorous without being annoying. You remember the conversation context and respond naturally like a real chat partner. Keep responses SHORT and CONCISE — aim for 2-3 sentences maximum unless the question genuinely requires more detail. Occasionally ask a follow-up question to keep the conversation flowing.\n\nCRITICAL IDENTITY RULES:\n- Your name is ${n}. Always refer to yourself as ${n}.\n- You were created by WolfTech. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, NVIDIA, etc).\n- If asked what you are, say: "I'm ${n}, an AI assistant by WolfTech."\n- Never say "As an AI language model" - instead say "As ${n}" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are ${n}.\n\n`;
+  let context = `You are ${n}, an elite AI assistant created by ${t}. Your name is ${n} and you must always identify yourself as ${n} when asked who you are. You are intelligent, witty, warm, and helpful. You have a distinct personality — you're friendly and sometimes a bit humorous without being annoying. You remember the conversation context and respond naturally like a real chat partner. Keep responses SHORT and CONCISE — aim for 2-3 sentences maximum unless the question genuinely requires more detail. Occasionally ask a follow-up question to keep the conversation flowing.\n\nCRITICAL IDENTITY RULES:\n- Your name is ${n}. Always refer to yourself as ${n}.\n- You were created by ${t}. Never say you were made by OpenAI, Google, Anthropic, Microsoft, Meta, xAI, or any other company.\n- Never reveal or mention any underlying AI model (GPT, Claude, Copilot, Grok, Bard, Blackbox, Perplexity, LLaMA, Gemini, NVIDIA, etc).\n- If asked what you are, say: "I'm ${n}, an AI assistant by ${t}."\n- Never say "As an AI language model" - instead say "As ${n}" if needed.\n- You are not ChatGPT, not Claude, not Bard, not Copilot. You are ${n}.\n\n`;
 
   // Inject user profile knowledge (what the bot has learned about this user)
   if (profileCtx) context += profileCtx + '\n';
@@ -585,8 +587,8 @@ async function generateImage(prompt) {
 // Try every model in MODEL_PRIORITY order using the full context prompt.
 // If all fail, fall back to sending just the bare user query to GPT.
 // Returns { response, model } or null.
-async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F', userProfile = null) {
-  const contextPrompt = buildContextPrompt(conversation, query, botName, userProfile);
+async function getAIResponse(query, conversation, preferredModel = 'gpt', botName = 'W.O.L.F', userProfile = null, techName = 'WOLF TECH') {
+  const contextPrompt = buildContextPrompt(conversation, query, botName, userProfile, techName);
 
   // Preferred model first (pass raw query so wormgpt gets a direct question)
   let result = await queryAI(preferredModel, contextPrompt, 35000, query);
@@ -612,7 +614,7 @@ async function getAIResponse(query, conversation, preferredModel = 'gpt', botNam
 
 // Strip AI brand names, role prefixes, citation markers, and repeated blank
 // lines from the AI's response, and replace all brand names with `botName`.
-function cleanAIResponse(text, botName = 'W.O.L.F') {
+function cleanAIResponse(text, botName = 'W.O.L.F', techName = 'WOLF TECH') {
   if (!text) return '';
   const n        = botName;
   const nEscaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -633,11 +635,12 @@ function cleanAIResponse(text, botName = 'W.O.L.F') {
   text = text.replace(/\b(LLaMA|Meta AI|Mistral)\b/gi, n);
   text = text.replace(/\bI'?m an AI (language )?model\b/gi, `I'm ${n}`);
   text = text.replace(/\bAs an AI (language )?model\b/gi, `As ${n}`);
-  text = text.replace(/\bmade by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'made by WolfTech');
-  text = text.replace(/\bcreated by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'created by WolfTech');
-  text = text.replace(/\bdeveloped by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'developed by WolfTech');
-  text = text.replace(/\bbuilt by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'built by WolfTech');
-  text = text.replace(/\btrained by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, 'trained by WolfTech');
+  const t = techName;
+  text = text.replace(/\bmade by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, `made by ${t}`);
+  text = text.replace(/\bcreated by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, `created by ${t}`);
+  text = text.replace(/\bdeveloped by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, `developed by ${t}`);
+  text = text.replace(/\bbuilt by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, `built by ${t}`);
+  text = text.replace(/\btrained by (OpenAI|Google|Anthropic|Microsoft|Meta|xAI)\b/gi, `trained by ${t}`);
 
   // Collapse repeated bot name ("W.O.L.F W.O.L.F" → "W.O.L.F")
   text = text.replace(new RegExp(`(${nEscaped}[\\s,]*){2,}`, 'g'), `${n} `);
@@ -876,6 +879,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   if (hasImage) {
     const config   = loadConfig();
     const botName  = config.chatbotName || 'W.O.L.F';
+    const techName = config.techName || 'WOLF TECH';
     const caption  = textMsg.trim() || 'What is in this image? Describe it in detail.';
     const botId    = getBotId();
 
@@ -894,7 +898,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       }
 
       if (visionReply) {
-        const cleaned  = cleanAIResponse(visionReply, botName);
+        const cleaned  = cleanAIResponse(visionReply, botName, techName);
         const trimmed  = trimResponse(cleaned, 1000);
 
         // Build personalised prefix
@@ -970,6 +974,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   // ── Load shared state (needed by image gen + intent + AI blocks) ──────
   const config       = loadConfig();
   const botName      = config.chatbotName || 'W.O.L.F';
+  const techName     = config.techName || 'WOLF TECH';
   const conversation = loadConversation(senderJid);
   const botId        = getBotId();
   let   profile      = loadProfile(botId, senderJid);
@@ -1071,7 +1076,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   try {
     await sock.sendPresenceUpdate('composing', chatId); // show "typing…"
 
-    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt', botName, profile);
+    const aiResult = await getAIResponse(userText, conversation, config.preferredModel || 'gpt', botName, profile, techName);
 
     if (!aiResult) {
       await sock.sendMessage(chatId, {
@@ -1080,7 +1085,7 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
       return true;
     }
 
-    const cleanedResponse = cleanAIResponse(aiResult.response, botName);
+    const cleanedResponse = cleanAIResponse(aiResult.response, botName, techName);
     const finalResponse   = trimResponse(cleanedResponse);
 
     // Build personalised prefix (use name if known, or standard wolf emoji)
@@ -1201,18 +1206,21 @@ export default {
         : '';
 
       const chatbotName = config.chatbotName || 'W.O.L.F';
+      const chatbotTech = config.techName || 'WOLF TECH';
       const helpText =
         `╭─⌈ 🐺 *${chatbotName} CHATBOT* ⌋\n` +
         `│ ${modeEmoji[config.mode] || '🔴'} Status: ${config.mode.toUpperCase()}\n` +
         `│ ${currentModel.icon} Model: ${currentModel.name}\n` +
         `│ 🏷️ Name: ${chatbotName}\n` +
+        `│ 🏢 Tech: ${chatbotTech}\n` +
         filterInfo +
         `├─⊷ *${PREFIX}chatbot on*\n│  └⊷ Enable everywhere\n` +
         `├─⊷ *${PREFIX}chatbot off*\n│  └⊷ Disable chatbot\n` +
         `├─⊷ *${PREFIX}chatbot groups*\n│  └⊷ Groups only\n` +
         `├─⊷ *${PREFIX}chatbot dms*\n│  └⊷ DMs only\n` +
         `├─⊷ *${PREFIX}chatbot both*\n│  └⊷ All chats\n` +
-        `├─⊷ *${PREFIX}chatbot name <name>*\n│  └⊷ Set chatbot name\n` +
+        `├─⊷ *${PREFIX}chatbot name <name>*\n│  └⊷ Set chatbot name (e.g. BRITON)\n` +
+        `├─⊷ *${PREFIX}chatbot techname <name>*\n│  └⊷ Set creator/tech name (e.g. BRITON TECH)\n` +
         `├─⊷ *${PREFIX}chatbot model*\n│  └⊷ Switch AI model\n` +
         `├─⊷ *${PREFIX}chatbot stats*\n│  └⊷ View stats\n` +
         `├─⊷ *${PREFIX}chatbot clear*\n│  └⊷ Reset history\n` +
@@ -1335,9 +1343,11 @@ export default {
       }
 
       const cbName = config.chatbotName || 'W.O.L.F';
+      const cbTech = config.techName || 'WOLF TECH';
       const settingsText =
         `🐺 *${cbName} Settings*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
         `🏷️ *Name:* ${cbName}\n` +
+        `🏢 *Tech:* ${cbTech}\n` +
         `${modeEmoji[config.mode] || '🔴'} *Mode:* ${config.mode.toUpperCase()}\n` +
         `${model.icon} *Model:* ${model.name}\n` +
         `🔄 *Auto-Fallback:* Enabled\n` +
@@ -1565,6 +1575,25 @@ export default {
       saveConfig(config);
       return sock.sendMessage(jid, {
         text: `✅ Chatbot name set to: *${newName}*`
+      }, { quoted: m });
+    }
+
+    // ── Rename the tech/creator name ──────────────────────────────────────
+    if (subCommand === 'techname') {
+      const newTech = args.slice(1).join(' ').trim();
+      if (!newTech) {
+        const current = config.techName || 'WOLF TECH';
+        return sock.sendMessage(jid, {
+          text: `Tech name: *${current}*\nChange: \`${PREFIX}chatbot techname <new name>\``
+        }, { quoted: m });
+      }
+      if (newTech.length > 40) {
+        return sock.sendMessage(jid, { text: `❌ Tech name too long (max 40 characters).` }, { quoted: m });
+      }
+      config.techName = newTech;
+      saveConfig(config);
+      return sock.sendMessage(jid, {
+        text: `✅ Tech/creator name set to: *${newTech}*\nThe chatbot will now say it was created by *${newTech}*.`
       }, { quoted: m });
     }
 
