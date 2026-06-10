@@ -629,9 +629,17 @@ export function isChatbotActiveForChat(chatId) {
   const allowedGroups = config.allowedGroups || [];
   const allowedDMs    = config.allowedDMs    || [];
 
-  // If there is a whitelist for groups, only whitelisted groups get a response
-  if (isGroup && allowedGroups.length > 0) {
-    return allowedGroups.includes(chatId);
+  if (isGroup) {
+    // 'on' / 'both' with no whitelist → respond everywhere
+    if ((config.mode === 'on' || config.mode === 'both') && allowedGroups.length === 0) {
+      return true;
+    }
+    // Whitelist exists → only allow listed groups
+    if (allowedGroups.length > 0) {
+      return allowedGroups.includes(chatId);
+    }
+    // 'groups' mode with empty whitelist → all groups were removed; respond nowhere
+    if (config.mode === 'groups') return false;
   }
 
   // If there is a whitelist for DMs, only whitelisted numbers get a response
