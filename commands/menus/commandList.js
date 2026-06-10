@@ -42,6 +42,7 @@ export const getBoxStyleCommands = () => {
 │  • grouplink
 │  • tagadmin
 │  • tagall
+│  • poll
 │  • hidetag
 │  • link
 │  • invite
@@ -461,6 +462,7 @@ export const getTextOnlyCommands = (botMode) => {
 > • grouplink — get group link
 > • tagadmin — mention admins
 > • tagall — mention all
+> • poll — create a poll
 > • hidetag — hide mentions
 > • link — show group link
 > • invite — generate invite
@@ -803,6 +805,7 @@ export const getQuotedBoxCommands = () => {
 > │ • grouplink
 > │ • tagadmin
 > │ • tagall
+> │ • poll
 > │ • hidetag
 > │ • link
 > │ • invite
@@ -1230,6 +1233,7 @@ export const getPlainBoxCommands = () => {
 │ grouplink
 │ tagadmin
 │ tagall
+│ poll
 │ hidetag
 │ link
 │ invite
