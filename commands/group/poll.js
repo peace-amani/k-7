@@ -70,19 +70,11 @@ export default {
                 poll: {
                     name: question,
                     values: options,
-                    selectableCount: multiChoice ? options.length : 1
+                    selectableCount: multiChoice ? 0 : 1
                 }
             });
 
-            const modeLabel = multiChoice ? '✅ Multiple choice' : '🔘 Single choice';
-            await reply(
-                `╭─⌈ 📊 *POLL CREATED* ⌋\n│\n` +
-                `│ ❓ *${question}*\n│\n` +
-                `│ *Options (${options.length}):*\n` +
-                options.map((o, i) => `│  ${i + 1}. ${o}`).join('\n') +
-                `\n│\n│ *Mode:* ${modeLabel}\n│\n` +
-                `╰⊷ ${getFooter(m.key.participant || m.key.remoteJid)}`
-            );
+            await react('✅');
 
         } catch (err) {
             await react('❌').catch(() => {});
