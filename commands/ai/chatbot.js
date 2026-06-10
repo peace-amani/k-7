@@ -1291,42 +1291,46 @@ export default {
 
     if (subCommand === 'listgroups') {
       const excluded = config.excludedGroups || [];
-      const cache    = globalThis.groupMetadataCache;
 
-      // Collect all known groups from the metadata cache
-      const knownGroups = [];
-      if (cache && cache.size > 0) {
-        for (const [gid, entry] of cache) {
-          if (!gid.endsWith('@g.us')) continue;
-          knownGroups.push({ gid, name: entry?.data?.subject || gid.split('@')[0] });
-        }
-      }
-
-      // Always include excluded groups even if they've fallen out of cache
-      for (const gid of excluded) {
-        if (!knownGroups.find(g => g.gid === gid)) {
-          const cached = cache?.get(gid);
-          knownGroups.push({ gid, name: cached?.data?.subject || gid.split('@')[0] });
-        }
-      }
-
-      knownGroups.sort((a, b) => a.name.localeCompare(b.name));
-
-      if (knownGroups.length === 0) {
+      // Fetch the live group list — same method used by ?mygroups
+      let allGroupEntries = [];
+      try {
+        const fetched = await sock.groupFetchAllParticipating();
+        allGroupEntries = Object.values(fetched || {});
+      } catch (fetchErr) {
         return sock.sendMessage(jid, {
-          text: `📋 No groups known yet.\n_Send a message in any group to populate this list._`
+          text: `❌ Failed to fetch groups: ${fetchErr.message}`
         }, { quoted: m });
       }
 
-      const activeCount  = knownGroups.length - excluded.length;
-      let listText = `📋 *Groups (${knownGroups.length} known, ${activeCount} active):*\n\n`;
+      if (allGroupEntries.length === 0) {
+        return sock.sendMessage(jid, {
+          text: `📋 Bot is not in any groups yet.`
+        }, { quoted: m });
+      }
+
+      // Resolve names (subject from fetch → metaCache fallback)
+      const metaCache = globalThis.groupMetadataCache;
+      const knownGroups = allGroupEntries.map(g => {
+        let name = (g.subject || '').trim();
+        if (!name && metaCache) {
+          const cached = metaCache.get(g.id);
+          if (cached?.data?.subject) name = cached.data.subject.trim();
+        }
+        return { gid: g.id, name: name || g.id.split('@')[0] };
+      });
+
+      knownGroups.sort((a, b) => a.name.localeCompare(b.name));
+
+      const activeCount = knownGroups.filter(g => !excluded.includes(g.gid)).length;
+      let listText = `📋 *Groups (${knownGroups.length} total, ${activeCount} active):*\n\n`;
       for (const { gid, name } of knownGroups) {
         const isExcluded = excluded.includes(gid);
         listText += isExcluded
           ? `🚫 *${name}*\n   └ \`${gid}\`\n`
           : `✅ *${name}*\n   └ \`${gid}\`\n`;
       }
-      listText += `\n_✅ active  •  🚫 excluded_\n_To exclude: ${PREFIX}chatbot removegroup <jid>_`;
+      listText += `\n_✅ active  •  🚫 excluded_\n_Exclude: ${PREFIX}chatbot removegroup <jid>_`;
       return sock.sendMessage(jid, { text: listText }, { quoted: m });
     }
 
