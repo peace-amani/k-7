@@ -317,7 +317,7 @@ function ensureDataDirs() {
 // update (in case the file was lost but the DB row survived).
 function loadConfig() {
   ensureDataDirs();
-  const defaultConfig = { mode: 'off', preferredModel: 'gpt', allowedGroups: [], allowedDMs: [], stats: { totalQueries: 0, modelsUsed: {} } };
+  const defaultConfig = { mode: 'off', preferredModel: 'gpt', excludedGroups: [], allowedDMs: [], stats: { totalQueries: 0, modelsUsed: {} } };
   const configFile    = getConfigFile();
   try {
     if (fs.existsSync(configFile)) {
@@ -626,20 +626,15 @@ export function isChatbotActiveForChat(chatId) {
   const isGroup = chatId.endsWith('@g.us');
   const isDM    = chatId.endsWith('@s.whatsapp.net') || chatId.endsWith('@lid');
 
-  const allowedGroups = config.allowedGroups || [];
-  const allowedDMs    = config.allowedDMs    || [];
+  const excludedGroups = config.excludedGroups || [];
+  const allowedDMs     = config.allowedDMs    || [];
 
   if (isGroup) {
-    // 'on' / 'both' with no whitelist → respond everywhere
-    if ((config.mode === 'on' || config.mode === 'both') && allowedGroups.length === 0) {
-      return true;
+    // Any mode that covers groups: respond in ALL groups EXCEPT explicitly excluded ones
+    if (config.mode === 'groups' || config.mode === 'on' || config.mode === 'both') {
+      return !excludedGroups.includes(chatId);
     }
-    // Whitelist exists → only allow listed groups
-    if (allowedGroups.length > 0) {
-      return allowedGroups.includes(chatId);
-    }
-    // 'groups' mode with empty whitelist → all groups were removed; respond nowhere
-    if (config.mode === 'groups') return false;
+    return false;
   }
 
   // If there is a whitelist for DMs, only whitelisted numbers get a response
@@ -1081,10 +1076,10 @@ export default {
       const modeEmoji  = { off: '🔴', on: '🟢', groups: '👥', dms: '💬', both: '🌐' };
       const currentModel = AI_MODELS[config.preferredModel] || AI_MODELS.gpt;
 
-      const allowedGroups = config.allowedGroups || [];
-      const allowedDMs    = config.allowedDMs    || [];
-      const whitelistInfo = (allowedGroups.length > 0 || allowedDMs.length > 0)
-        ? `│ 📋 Whitelist: ${allowedGroups.length} groups, ${allowedDMs.length} DMs\n`
+      const exGrps     = config.excludedGroups || [];
+      const allowedDMs = config.allowedDMs    || [];
+      const filterInfo = (exGrps.length > 0 || allowedDMs.length > 0)
+        ? `│ 📋 ${exGrps.length} group(s) excluded, ${allowedDMs.length} DM(s) whitelisted\n`
         : '';
 
       const chatbotName = config.chatbotName || 'W.O.L.F';
@@ -1093,7 +1088,7 @@ export default {
         `│ ${modeEmoji[config.mode] || '🔴'} Status: ${config.mode.toUpperCase()}\n` +
         `│ ${currentModel.icon} Model: ${currentModel.name}\n` +
         `│ 🏷️ Name: ${chatbotName}\n` +
-        whitelistInfo +
+        filterInfo +
         `├─⊷ *${PREFIX}chatbot on*\n│  └⊷ Enable everywhere\n` +
         `├─⊷ *${PREFIX}chatbot off*\n│  └⊷ Disable chatbot\n` +
         `├─⊷ *${PREFIX}chatbot groups*\n│  └⊷ Groups only\n` +
@@ -1104,11 +1099,11 @@ export default {
         `├─⊷ *${PREFIX}chatbot stats*\n│  └⊷ View stats\n` +
         `├─⊷ *${PREFIX}chatbot clear*\n│  └⊷ Reset history\n` +
         `├─⊷ *${PREFIX}chatbot settings*\n│  └⊷ View config\n` +
-        `├─⌈ 📋 *WHITELIST* ⌋\n` +
-        `├─⊷ *${PREFIX}chatbot addgroup*\n│  └⊷ Add this group\n` +
-        `├─⊷ *${PREFIX}chatbot removegroup [jid]*\n│  └⊷ Remove this group (or by JID)\n` +
-        `├─⊷ *${PREFIX}chatbot listgroups*\n│  └⊷ List allowed groups\n` +
-        `├─⊷ *${PREFIX}chatbot cleargroups*\n│  └⊷ Clear all groups\n` +
+        `├─⌈ 📋 *GROUP CONTROL* ⌋\n` +
+        `├─⊷ *${PREFIX}chatbot addgroup*\n│  └⊷ Re-enable this group\n` +
+        `├─⊷ *${PREFIX}chatbot removegroup [jid]*\n│  └⊷ Exclude this group (or by JID)\n` +
+        `├─⊷ *${PREFIX}chatbot listgroups*\n│  └⊷ List all groups + status\n` +
+        `├─⊷ *${PREFIX}chatbot cleargroups*\n│  └⊷ Clear all exclusions\n` +
         `├─⊷ *${PREFIX}chatbot adddm <number>*\n│  └⊷ Add a DM\n` +
         `├─⊷ *${PREFIX}chatbot removedm <number>*\n│  └⊷ Remove a DM\n` +
         `├─⊷ *${PREFIX}chatbot listdms*\n│  └⊷ List allowed DMs\n` +
@@ -1204,13 +1199,13 @@ export default {
       const model     = AI_MODELS[config.preferredModel] || AI_MODELS.gpt;
       const modeEmoji = { off: '🔴', on: '🟢', groups: '👥', dms: '💬', both: '🌐' };
 
-      const aGroups = config.allowedGroups || [];
-      const aDMs    = config.allowedDMs    || [];
-      let whitelistSection = '';
-      if (aGroups.length > 0 || aDMs.length > 0) {
-        whitelistSection = `\n📋 *Whitelist:*\n`;
-        if (aGroups.length > 0) whitelistSection += `  👥 ${aGroups.length} group(s)\n`;
-        if (aDMs.length    > 0) whitelistSection += `  💬 ${aDMs.length} DM(s)\n`;
+      const exGroups = config.excludedGroups || [];
+      const aDMs     = config.allowedDMs    || [];
+      let filterSection = '';
+      if (exGroups.length > 0 || aDMs.length > 0) {
+        filterSection = `\n📋 *Filters:*\n`;
+        if (exGroups.length > 0) filterSection += `  🚫 ${exGroups.length} group(s) excluded\n`;
+        if (aDMs.length     > 0) filterSection += `  💬 ${aDMs.length} DM(s) whitelisted\n`;
       }
 
       const cbName = config.chatbotName || 'W.O.L.F';
@@ -1223,7 +1218,7 @@ export default {
         `💾 *Memory:* 20 msgs (1hr timeout)\n` +
         `🎯 *Interactive:* Images, Music, Videos\n` +
         `📊 *Queries:* ${config.stats?.totalQueries || 0}\n` +
-        whitelistSection + `\n` +
+        filterSection + `\n` +
         `🤖 *Models (${Object.keys(AI_MODELS).length}):*\n` +
         Object.entries(AI_MODELS).map(([k, v]) => `  ${v.icon} ${v.name} (\`${k}\`)`).join('\n') +
         `\n\n⚡ ${getFooter(m.key.participant || m.key.remoteJid)}`;
@@ -1236,84 +1231,110 @@ export default {
       if (!jid.endsWith('@g.us')) {
         return sock.sendMessage(jid, { text: `❌ Run this command inside a group.` }, { quoted: m });
       }
-      if (!config.allowedGroups) config.allowedGroups = [];
-      if (config.allowedGroups.includes(jid)) {
-        return sock.sendMessage(jid, { text: `⚠️ This group is already added.` }, { quoted: m });
-      }
-      config.allowedGroups.push(jid);
+      if (!config.excludedGroups) config.excludedGroups = [];
+      let groupName = jid.split('@')[0];
+      const cachedG = globalThis.groupMetadataCache?.get(jid);
+      if (cachedG?.data?.subject) groupName = cachedG.data.subject;
+
       const wasOffG = config.mode === 'off';
       if (wasOffG) config.mode = 'groups';
+
+      const exIdx = config.excludedGroups.indexOf(jid);
+      if (exIdx !== -1) {
+        // Group was excluded — re-include it
+        config.excludedGroups.splice(exIdx, 1);
+        saveConfig(config);
+        return sock.sendMessage(jid, {
+          text: `✅ *${groupName}* re-enabled — chatbot will respond here again.`
+        }, { quoted: m });
+      }
+
+      // Already active
       saveConfig(config);
-      let groupName = jid.split('@')[0];
-      const cached  = globalThis.groupMetadataCache?.get(jid);
-      if (cached?.data?.subject) groupName = cached.data.subject;
       const autoNoteG = wasOffG ? `\n⚠️ Mode auto-set to GROUPS (was OFF)` : '';
       return sock.sendMessage(jid, {
-        text: `✅ *${groupName}* successfully added${autoNoteG}`
+        text: `✅ *${groupName}* is already active${autoNoteG}`
       }, { quoted: m });
     }
 
     if (subCommand === 'removegroup') {
-      if (!config.allowedGroups) config.allowedGroups = [];
+      if (!config.excludedGroups) config.excludedGroups = [];
 
-      // Allow removal by JID argument (e.g. ?chatbot removegroup 1234@g.us)
-      // so the owner can remove a group from anywhere (DM, other group, etc.)
+      // Resolve target JID — from argument or current group
       let targetJid = null;
       if (args[1]) {
-        // Normalise: add @g.us suffix if the user passed just the number part
         targetJid = args[1].includes('@') ? args[1].trim() : `${args[1].trim()}@g.us`;
       } else if (jid.endsWith('@g.us')) {
-        // No argument — use the current group
         targetJid = jid;
       } else {
         return sock.sendMessage(jid, {
-          text: `❌ Provide a group JID: *${PREFIX}chatbot removegroup <jid>*\n_Run ${PREFIX}chatbot listgroups to see JIDs._`
+          text: `❌ Provide a group JID: *${PREFIX}chatbot removegroup <jid>*\n_Run ${PREFIX}chatbot listgroups to see all groups._`
         }, { quoted: m });
       }
 
-      const idx = config.allowedGroups.indexOf(targetJid);
-      if (idx === -1) {
+      if (config.excludedGroups.includes(targetJid)) {
         return sock.sendMessage(jid, {
-          text: `⚠️ That group (*${targetJid}*) is not in the whitelist.\n_Run ${PREFIX}chatbot listgroups to see what's there._`
+          text: `⚠️ That group is already excluded.\n_Use ${PREFIX}chatbot addgroup inside it to re-enable._`
         }, { quoted: m });
       }
 
-      // Get the group name for the confirmation message if we have it cached
       let removedName = targetJid.split('@')[0];
       const cachedMeta = globalThis.groupMetadataCache?.get(targetJid);
       if (cachedMeta?.data?.subject) removedName = cachedMeta.data.subject;
 
-      config.allowedGroups.splice(idx, 1);
+      config.excludedGroups.push(targetJid);
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `✅ *${removedName}* removed from whitelist (${config.allowedGroups.length} remaining)`
+        text: `🚫 *${removedName}* excluded — chatbot won't respond there.\n_Use ${PREFIX}chatbot addgroup inside it to re-enable._`
       }, { quoted: m });
     }
 
     if (subCommand === 'listgroups') {
-      const groups = config.allowedGroups || [];
-      if (groups.length === 0) {
+      const excluded = config.excludedGroups || [];
+      const cache    = globalThis.groupMetadataCache;
+
+      // Collect all known groups from the metadata cache
+      const knownGroups = [];
+      if (cache && cache.size > 0) {
+        for (const [gid, entry] of cache) {
+          if (!gid.endsWith('@g.us')) continue;
+          knownGroups.push({ gid, name: entry?.data?.subject || gid.split('@')[0] });
+        }
+      }
+
+      // Always include excluded groups even if they've fallen out of cache
+      for (const gid of excluded) {
+        if (!knownGroups.find(g => g.gid === gid)) {
+          const cached = cache?.get(gid);
+          knownGroups.push({ gid, name: cached?.data?.subject || gid.split('@')[0] });
+        }
+      }
+
+      knownGroups.sort((a, b) => a.name.localeCompare(b.name));
+
+      if (knownGroups.length === 0) {
         return sock.sendMessage(jid, {
-          text: `📋 No groups in whitelist.`
+          text: `📋 No groups known yet.\n_Send a message in any group to populate this list._`
         }, { quoted: m });
       }
-      let listText = `📋 *Whitelisted Groups (${groups.length}):*\n`;
-      for (let i = 0; i < groups.length; i++) {
-        const gid    = groups[i];
-        let gName    = gid.split('@')[0];
-        const cached = globalThis.groupMetadataCache?.get(gid);
-        if (cached?.data?.subject) gName = cached.data.subject;
-        listText += `${i + 1}. *${gName}*\n   └ \`${gid}\`\n`;
+
+      const activeCount  = knownGroups.length - excluded.length;
+      let listText = `📋 *Groups (${knownGroups.length} known, ${activeCount} active):*\n\n`;
+      for (const { gid, name } of knownGroups) {
+        const isExcluded = excluded.includes(gid);
+        listText += isExcluded
+          ? `🚫 *${name}*\n   └ \`${gid}\`\n`
+          : `✅ *${name}*\n   └ \`${gid}\`\n`;
       }
-      listText += `\n_To remove: ${PREFIX}chatbot removegroup <jid>_`;
+      listText += `\n_✅ active  •  🚫 excluded_\n_To exclude: ${PREFIX}chatbot removegroup <jid>_`;
       return sock.sendMessage(jid, { text: listText }, { quoted: m });
     }
 
     if (subCommand === 'cleargroups') {
-      config.allowedGroups = [];
+      config.excludedGroups = [];
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `✅ All groups cleared`
+        text: `✅ All exclusions cleared — chatbot will respond in all groups again.`
       }, { quoted: m });
     }
 
