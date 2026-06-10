@@ -45,6 +45,7 @@ import { vision as nvidiaVision, image as nvidiaImage } from '../../lib/nvidia.j
 import {
   loadProfile, saveProfile, learnFromMessage, buildProfileContext, getPersonalizedGreeting
 } from '../../lib/userProfile.js';
+import { resolveJid } from '../tools/getjid.js';
 
 // ── Data directory paths ───────────────────────────────────────────────────
 const DATA_DIR         = './data/chatbot';
@@ -61,13 +62,19 @@ globalThis._chatbotGroupListCache = _lgCache;
 const _LG_MAX  = 30;
 
 // ── Per-group user-filter helpers ─────────────────────────────────────────
-// Extracts target user JIDs from @mentions and plain number args.
-// args[0] is the sub-command so we start at args[1].
-function _extractTargetUsers(m, args) {
+// Resolves all @mentions (including LIDs) + plain numbers from args to proper
+// phone-number JIDs (e.g. 254712345678@s.whatsapp.net).
+// args[0] is the sub-command so number parsing starts at args[1].
+async function _extractTargetUsers(sock, m, args) {
+  const chatJid = m.key.remoteJid;
   const users = new Set();
   const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   for (const jid of mentions) {
-    if (jid && !jid.includes('status')) users.add(jid);
+    if (!jid || jid.includes('status')) continue;
+    try {
+      const resolved = await resolveJid(sock, jid, chatJid);
+      users.add(resolved);
+    } catch { users.add(jid); }
   }
   for (let i = 1; i < args.length; i++) {
     const num = String(args[i]).replace(/[^0-9]/g, '');
@@ -77,13 +84,14 @@ function _extractTargetUsers(m, args) {
 }
 
 // Returns false when the sender is blocked by the per-group user filter.
+// senderJid should already be a resolved phone-number JID when possible.
 function _checkGroupUserFilter(config, groupJid, senderJid) {
   const filter = (config.groupUserFilters || {})[groupJid];
   if (!filter || !filter.users || filter.users.length === 0) return true; // no filter
-  const senderNum = senderJid.split('@')[0].split(':')[0];
+  const senderNum = senderJid.split('@')[0].split(':')[0].replace(/\D/g, '');
   const inList = filter.users.some(u => {
-    const uNum = u.split('@')[0].split(':')[0];
-    return uNum === senderNum || u === senderJid;
+    const uNum = u.split('@')[0].split(':')[0].replace(/\D/g, '');
+    return uNum === senderNum;
   });
   if (filter.mode === 'allow') return inList;   // allow-only: must be in list
   if (filter.mode === 'block') return !inList;  // block-list: must NOT be in list
@@ -836,7 +844,12 @@ export async function handleChatbotMessage(sock, msg, commandsMap) {
   // ── Per-group user filter gate ────────────────────────────────────────
   if (chatId.endsWith('@g.us')) {
     const _cfg = loadConfig();
-    if (!_checkGroupUserFilter(_cfg, chatId, senderJid)) return false;
+    // Resolve LID → phone number before comparing against stored phone JIDs
+    let _resolvedSender = senderJid;
+    if (senderJid.endsWith('@lid')) {
+      try { _resolvedSender = await resolveJid(sock, senderJid, chatId); } catch {}
+    }
+    if (!_checkGroupUserFilter(_cfg, chatId, _resolvedSender)) return false;
   }
 
   // Extract plain text from the message
@@ -1593,79 +1606,92 @@ export default {
       }
 
       // ── allowonly / blockuser / allowuser / removeuser ───────────────
-      const targets = _extractTargetUsers(m, args);
+      const targets = await _extractTargetUsers(sock, m, args);
       if (targets.length === 0) {
         const hint = subCommand === 'allowonly'
-          ? `\`${PREFIX}chatbot allowonly @user 2547xxxxxxxx\``
+          ? `\`${PREFIX}chatbot allowonly @user\``
           : subCommand === 'blockuser'
             ? `\`${PREFIX}chatbot blockuser @user\``
             : subCommand === 'allowuser'
               ? `\`${PREFIX}chatbot allowuser @user\``
               : `\`${PREFIX}chatbot removeuser @user\``;
         return sock.sendMessage(jid, {
-          text: `❌ Mention or provide a number.\nExample: ${hint}`
+          text: `❌ @Mention someone or provide a number.\nExample: ${hint}`
         }, { quoted: m });
       }
+
+      // Helper: build "@phonenumber" mention text + mentions array
+      const _mentionLine = (list) => ({
+        text: list.map(u => `@${u.split('@')[0].split(':')[0].replace(/\D/g, '')}`).join(', '),
+        mentions: list
+      });
 
       const filter = config.groupUserFilters[jid] || { mode: 'block', users: [] };
 
       if (subCommand === 'allowonly') {
-        // Switch to allow mode and add users
         filter.mode = 'allow';
         for (const u of targets) {
-          if (!filter.users.includes(u)) filter.users.push(u);
+          const uNum = u.split('@')[0].replace(/\D/g, '');
+          const exists = filter.users.some(x => x.split('@')[0].replace(/\D/g, '') === uNum);
+          if (!exists) filter.users.push(u);
         }
         config.groupUserFilters[jid] = filter;
         saveConfig(config);
-        const names = targets.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        const { text: nameStr, mentions } = _mentionLine(targets);
         return sock.sendMessage(jid, {
-          text: `✅ *Allow-only mode* set.\nChatbot will reply *only* to: ${names}\n_Add more with \`${PREFIX}chatbot allowonly @user\`_`
+          text: `✅ *Allow-only mode* set.\nChatbot will reply *only* to: ${nameStr}\n_Add more anytime with \`${PREFIX}chatbot allowonly @user\`_`,
+          mentions
         }, { quoted: m });
       }
 
       if (subCommand === 'blockuser') {
-        // Switch to block mode and add users
         filter.mode = 'block';
         const added = [];
         for (const u of targets) {
-          if (!filter.users.includes(u)) { filter.users.push(u); added.push(u); }
+          const uNum = u.split('@')[0].replace(/\D/g, '');
+          const exists = filter.users.some(x => x.split('@')[0].replace(/\D/g, '') === uNum);
+          if (!exists) { filter.users.push(u); added.push(u); }
         }
         config.groupUserFilters[jid] = filter;
         saveConfig(config);
-        const names = added.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        if (added.length === 0) {
+          return sock.sendMessage(jid, { text: `⚠️ Those users are already blocked.` }, { quoted: m });
+        }
+        const { text: nameStr, mentions } = _mentionLine(added);
         return sock.sendMessage(jid, {
-          text: `🚫 *Blocked:* ${names}\nChatbot will ignore them in this group.\n_Use \`${PREFIX}chatbot allowuser @user\` to unblock._`
+          text: `🚫 *Blocked:* ${nameStr}\nChatbot will ignore them in this group.\n_Use \`${PREFIX}chatbot allowuser @user\` to unblock._`,
+          mentions
         }, { quoted: m });
       }
 
       if (subCommand === 'allowuser') {
-        // Remove from block list OR add to allow list depending on current mode
-        let changed = false;
         for (const u of targets) {
-          const idx = filter.users.indexOf(u);
-          if (filter.mode === 'block' && idx !== -1) {
-            filter.users.splice(idx, 1);
-            changed = true;
+          const uNum = u.split('@')[0].replace(/\D/g, '');
+          if (filter.mode === 'block') {
+            const idx = filter.users.findIndex(x => x.split('@')[0].replace(/\D/g, '') === uNum);
+            if (idx !== -1) filter.users.splice(idx, 1);
           } else if (filter.mode === 'allow') {
-            if (!filter.users.includes(u)) { filter.users.push(u); changed = true; }
-          } else if (filter.users.length === 0) {
-            // No filter yet — nothing to remove
+            const exists = filter.users.some(x => x.split('@')[0].replace(/\D/g, '') === uNum);
+            if (!exists) filter.users.push(u);
           }
         }
-        config.groupUserFilters[jid] = filter;
+        if (filter.users.length === 0) delete config.groupUserFilters[jid];
+        else config.groupUserFilters[jid] = filter;
         saveConfig(config);
-        const names = targets.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        const { text: nameStr, mentions } = _mentionLine(targets);
         const action = filter.mode === 'allow' ? 'Added to allow list' : 'Unblocked';
         return sock.sendMessage(jid, {
-          text: `✅ *${action}:* ${names}`
+          text: `✅ *${action}:* ${nameStr}`,
+          mentions
         }, { quoted: m });
       }
 
       if (subCommand === 'removeuser') {
         const removed = [];
         for (const u of targets) {
-          const idx = filter.users.indexOf(u);
-          if (idx !== -1) { filter.users.splice(idx, 1); removed.push(u); }
+          const uNum = u.split('@')[0].replace(/\D/g, '');
+          const idx = filter.users.findIndex(x => x.split('@')[0].replace(/\D/g, '') === uNum);
+          if (idx !== -1) { removed.push(filter.users[idx]); filter.users.splice(idx, 1); }
         }
         if (removed.length === 0) {
           return sock.sendMessage(jid, { text: `⚠️ None of those users were in the filter list.` }, { quoted: m });
@@ -1673,9 +1699,10 @@ export default {
         if (filter.users.length === 0) delete config.groupUserFilters[jid];
         else config.groupUserFilters[jid] = filter;
         saveConfig(config);
-        const names = removed.map(u => `+${u.split('@')[0].split(':')[0]}`).join(', ');
+        const { text: nameStr, mentions } = _mentionLine(removed);
         return sock.sendMessage(jid, {
-          text: `✅ *Removed from filter:* ${names}\n${filter.users?.length ? `_${filter.users.length} user(s) still in list._` : '_Filter cleared — chatbot replies to everyone._'}`
+          text: `✅ *Removed from filter:* ${nameStr}\n${filter.users?.length ? `_${filter.users.length} user(s) still in list._` : '_Filter cleared — chatbot replies to everyone._'}`,
+          mentions
         }, { quoted: m });
       }
     }
