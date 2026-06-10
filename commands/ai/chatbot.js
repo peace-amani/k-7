@@ -1098,7 +1098,7 @@ export default {
         `├─⊷ *${PREFIX}chatbot settings*\n│  └⊷ View config\n` +
         `├─⌈ 📋 *WHITELIST* ⌋\n` +
         `├─⊷ *${PREFIX}chatbot addgroup*\n│  └⊷ Add this group\n` +
-        `├─⊷ *${PREFIX}chatbot removegroup*\n│  └⊷ Remove this group\n` +
+        `├─⊷ *${PREFIX}chatbot removegroup [jid]*\n│  └⊷ Remove this group (or by JID)\n` +
         `├─⊷ *${PREFIX}chatbot listgroups*\n│  └⊷ List allowed groups\n` +
         `├─⊷ *${PREFIX}chatbot cleargroups*\n│  └⊷ Clear all groups\n` +
         `├─⊷ *${PREFIX}chatbot adddm <number>*\n│  └⊷ Add a DM\n` +
@@ -1246,18 +1246,39 @@ export default {
     }
 
     if (subCommand === 'removegroup') {
-      if (!jid.endsWith('@g.us')) {
-        return sock.sendMessage(jid, { text: `❌ Run this command inside a group.` }, { quoted: m });
-      }
       if (!config.allowedGroups) config.allowedGroups = [];
-      const idx = config.allowedGroups.indexOf(jid);
-      if (idx === -1) {
-        return sock.sendMessage(jid, { text: `⚠️ This group is not in the list.` }, { quoted: m });
+
+      // Allow removal by JID argument (e.g. ?chatbot removegroup 1234@g.us)
+      // so the owner can remove a group from anywhere (DM, other group, etc.)
+      let targetJid = null;
+      if (args[1]) {
+        // Normalise: add @g.us suffix if the user passed just the number part
+        targetJid = args[1].includes('@') ? args[1].trim() : `${args[1].trim()}@g.us`;
+      } else if (jid.endsWith('@g.us')) {
+        // No argument — use the current group
+        targetJid = jid;
+      } else {
+        return sock.sendMessage(jid, {
+          text: `❌ Provide a group JID: *${PREFIX}chatbot removegroup <jid>*\n_Run ${PREFIX}chatbot listgroups to see JIDs._`
+        }, { quoted: m });
       }
+
+      const idx = config.allowedGroups.indexOf(targetJid);
+      if (idx === -1) {
+        return sock.sendMessage(jid, {
+          text: `⚠️ That group (*${targetJid}*) is not in the whitelist.\n_Run ${PREFIX}chatbot listgroups to see what's there._`
+        }, { quoted: m });
+      }
+
+      // Get the group name for the confirmation message if we have it cached
+      let removedName = targetJid.split('@')[0];
+      const cachedMeta = globalThis.groupMetadataCache?.get(targetJid);
+      if (cachedMeta?.data?.subject) removedName = cachedMeta.data.subject;
+
       config.allowedGroups.splice(idx, 1);
       saveConfig(config);
       return sock.sendMessage(jid, {
-        text: `✅ Group removed (${config.allowedGroups.length} remaining)`
+        text: `✅ *${removedName}* removed from whitelist (${config.allowedGroups.length} remaining)`
       }, { quoted: m });
     }
 
@@ -1274,8 +1295,9 @@ export default {
         let gName    = gid.split('@')[0];
         const cached = globalThis.groupMetadataCache?.get(gid);
         if (cached?.data?.subject) gName = cached.data.subject;
-        listText += `${i + 1}. ${gName}\n`;
+        listText += `${i + 1}. *${gName}*\n   └ \`${gid}\`\n`;
       }
+      listText += `\n_To remove: ${PREFIX}chatbot removegroup <jid>_`;
       return sock.sendMessage(jid, { text: listText }, { quoted: m });
     }
 
