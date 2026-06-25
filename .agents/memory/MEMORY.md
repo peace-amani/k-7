@@ -1,0 +1,1 @@
+- [DM response invisible bug](dm-button-mode.md) — interactive/button messages silently drop in DMs on modern WA; only groups should use gifted-btns interactive send.

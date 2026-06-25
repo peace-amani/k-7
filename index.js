@@ -6132,15 +6132,23 @@ async function startBot(loginMode = 'auto', loginData = null) {
                                 }
                                 
                                 if (isTextOnly && !hasMedia) {
-                                    try {
-                                        const sendResult = await _giftedBtns.sendInteractiveMessage(sock, jid, btnPayload);
+                                    // Only send interactive buttons in group chats.
+                                    // In DMs, WhatsApp silently discards interactive/button messages
+                                    // on modern clients — the bot logs "sent" but the user sees nothing.
+                                    // For DMs we fall through to the plain _sendWithRetry below.
+                                    const isGroupJid = jid.endsWith('@g.us');
+                                    if (isGroupJid) {
                                         try {
-                                            if (sendResult?.key?.id && store) store.addSentMessage(jid, sendResult.key.id, content);
-                                        } catch {}
-                                        return sendResult;
-                                    } catch {
-                                        return await _sendWithRetry(jid, content, options, ...rest);
+                                            const sendResult = await _giftedBtns.sendInteractiveMessage(sock, jid, btnPayload);
+                                            try {
+                                                if (sendResult?.key?.id && store) store.addSentMessage(jid, sendResult.key.id, content);
+                                            } catch {}
+                                            return sendResult;
+                                        } catch {
+                                            return await _sendWithRetry(jid, content, options, ...rest);
+                                        }
                                     }
+                                    // DMs: fall through to plain text send
                                 }
                             }
                         } catch (btnErr) {
