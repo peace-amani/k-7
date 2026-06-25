@@ -12,6 +12,11 @@ try { _giftedBtns = _require('gifted-btns'); } catch {}
 const publicModeChatCooldowns = new Map();
 const PUBLIC_MODE_COOLDOWN_MS = 5000;
 
+// Zero-width character "read more" separator — same technique as menu.js case 1
+const READ_MORE_SEP = Array.from({ length: 550 }, (_, i) =>
+    ['\u200E', '\u200F', '\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF'][i % 7]
+).join('');
+
 // ── Antiedit signature logger (╭─⌈ icon TAG ⌋ … ╰⊷) ─────────────────────────
 // Each row gets its own » line (good for long Keys/IDs). Tone auto-derives from
 // icon: ❌ → red, ⚠️ → yellow, everything else → green (default success/info).
@@ -283,12 +288,10 @@ function extractMessageContent(message) {
         text = msgContent.extendedTextMessage.text;
         type = 'text';
     } else if (msgContent?.imageMessage) {
-        // Only care about the caption — skip the image buffer entirely.
-        // If there is no caption, we treat it as nothing worth storing.
-        const caption = msgContent.imageMessage.caption || '';
-        if (!caption.trim()) return { type: 'image', text: '', hasMedia: false, mimetype: '', skip: true };
+        // Store the caption (may be empty). We still need the record so that
+        // if the user later adds/changes the caption we can show the original.
         type = 'image';
-        text = caption;
+        text = msgContent.imageMessage.caption || '';
         hasMedia = false;   // do NOT download the image
         mimetype = '';
     } else if (msgContent?.videoMessage) {
@@ -382,12 +385,14 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         } else {
             const existing = antieditState.currentMessages.get(msgId);
             if (existing) {
-                // Only a real edit if the text actually changed — re-deliveries
-                // (same message ID, same text on reconnect) are NOT edits
-                if (text === existing.text) return null;
-                isEdit = true;
-                originalMessageData = existing;
-                version = history.length + 1;
+                // Same message ID seen again via messages.upsert → re-delivery or
+                // metadata update (link preview, etc.). This is NOT a user edit.
+                // Real edits arrive exclusively through messages.update →
+                // handleMessageUpdates. Silently update the stored text and bail.
+                if (text && text !== existing.text) {
+                    antieditState.currentMessages.set(msgId, { ...existing, text });
+                }
+                return null;
             }
         }
 
@@ -398,7 +403,10 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
             // Allow empty text through — we still need to fire the notification
             // (original message might have had text even if new version is blank)
         } else {
-            if (!text && !hasMedia) return null;
+            // Allow media-bearing types (image, video, sticker, audio…) with empty
+            // text so we capture the record even before a caption is added.
+            const isMediaType = ['image', 'video', 'sticker', 'audio', 'voice', 'document'].includes(type);
+            if (!text && !hasMedia && !isMediaType) return null;
         }
         
         const messageData = {
@@ -520,19 +528,17 @@ async function handleMessageUpdates(updates) {
                 if (updMsg.protocolMessage.type !== 14) continue;
             }
 
-            // Try every known WhatsApp edit envelope structure
-            let editedContent =
-                updMsg.editedMessage?.message ||
-                updMsg.protocolMessage?.editedMessage?.message ||
-                (updMsg.editedMessage && !updMsg.editedMessage.message ? updMsg.editedMessage : null) ||
-                null;
+            // Only treat the update as a user-edit if it carries an explicit edit
+            // envelope. The old "bare content" fallback incorrectly fired on
+            // WhatsApp link-preview injections and other metadata updates.
+            let editedContent = null;
 
-            // Some clients send the content directly in updMsg without a wrapper
-            if (!editedContent) {
-                if (updMsg.conversation || updMsg.extendedTextMessage ||
-                    updMsg.imageMessage || updMsg.videoMessage) {
-                    editedContent = updMsg;
-                }
+            if (updMsg.protocolMessage?.type === 14) {
+                // Official MESSAGE_EDIT protocol message
+                editedContent = updMsg.protocolMessage?.editedMessage?.message || null;
+            } else if (updMsg.editedMessage) {
+                // Some client versions wrap edits in an editedMessage envelope
+                editedContent = updMsg.editedMessage?.message || updMsg.editedMessage || null;
             }
 
             if (!editedContent) continue;
@@ -704,7 +710,8 @@ async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
             `🕒 ${editTime}  •  v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
 
         const body = buildAlertText(originalMsg, editedMsg, false);
-        const fullText = `${header}\n${body}`;
+        // Header stays visible; body collapses behind "Read more"
+        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
 
         // ── Send with "View Group" button if gifted-btns is available ─────────
         const btnsReady = isButtonModeEnabled() && isGiftedBtnsAvailable() && _giftedBtns && groupInviteLink;
@@ -752,8 +759,8 @@ async function sendEditAlertToChat(originalMsg, editedMsg, history, chatJid) {
             `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})  •  🕒 ${editTime}\n`;
 
         const body = buildAlertText(originalMsg, editedMsg, true);
-
-        await antieditState.sock.sendMessage(chatJid, { text: `${header}\n${body}` });
+        // Header stays visible; body collapses behind "Read more"
+        await antieditState.sock.sendMessage(chatJid, { text: `${header}${READ_MORE_SEP}\n${body}` });
 
         _aeLog('📢', 'ANTIEDIT ALERT', [['Action', 'Shown in chat'], ['Chat', chatJid.endsWith('@g.us') ? 'Group' : 'DM']]);
         return true;
