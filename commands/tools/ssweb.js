@@ -45,10 +45,7 @@ export default {
         const viewport  = isDesktop ? 'desktop' : 'mobile';
         const modeLabel = `${isDesktop ? '🖥️ Desktop' : '📱 Mobile'}${isFullPage ? ' · Full Page' : ''}`;
 
-        await sock.sendMessage(jid, { react: { text: '📸', key: m.key } });
-        await sock.sendMessage(jid, {
-            text: `⏳ Taking *${modeLabel}* screenshot of:\n🌐 ${rawUrl}\n\n_Please wait…_`
-        }, { quoted: m });
+        await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
         try {
             const params = { siteUrl: rawUrl, viewport };
@@ -76,7 +73,7 @@ export default {
                 `📦 *Size:* ${sizekb} KB\n` +
                 `${getFooter(m.key.participant || m.key.remoteJid)}`;
 
-            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+            await sock.sendMessage(jid, { react: { text: '📸', key: m.key } });
             await sock.sendMessage(jid, {
                 image:    buffer,
                 mimetype: 'image/png',

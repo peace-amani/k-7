@@ -1,6 +1,6 @@
-import fs from "fs";
-import path from "path";
 import axios from "axios";
+
+const FALLBACK_PP = "https://files.catbox.moe/lvcwnf.jpg";
 
 export default {
   name: "getpp",
@@ -10,65 +10,56 @@ export default {
   usage: ".getpp [@user | reply to message]",
 
   async execute(sock, m) {
+    const chatId = m.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
+    const isOwner = m.key.fromMe;
+
+    if (!isGroup && !isOwner) {
+      return sock.sendMessage(chatId, {
+        text: "⚠️ Only the Alpha Wolf (Owner) can use this command in DMs.",
+      }, { quoted: m });
+    }
+
+    const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const quoted    = m.message?.extendedTextMessage?.contextInfo?.participant;
+    const target    = mentioned || quoted;
+
+    if (!target) {
+      return sock.sendMessage(chatId, {
+        text: "⚠️ You must *mention* someone or *reply to* their message to fetch their profile picture. 🐾",
+      }, { quoted: m });
+    }
+
+    await sock.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
+
     try {
-      const chatId = m.key.remoteJid;
-
-      const isGroup = chatId.endsWith("@g.us");
-      const isOwner = m.key.fromMe; // This checks if the message is from the linked owner
-
-      // Only enforce owner check in DMs
-      if (!isGroup && !isOwner) {
-        await sock.sendMessage(chatId, {
-          text: "⚠️ Only the Alpha Wolf (Owner) can use this command in DMs.",
-          contextInfo: { stanzaId: m.key.id, participant: m.key.participant, quotedMessage: m.message },
-        });
-        return;
-      }
-
-      // Identify target user
-      const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-      const quoted = m.message?.extendedTextMessage?.contextInfo?.participant;
-      const target = mentioned || quoted;
-
-      if (!target) {
-        await sock.sendMessage(chatId, {
-          text: "⚠️ You must *mention* someone or *reply to* their message to fetch their profile picture. 🐾",
-          contextInfo: { stanzaId: m.key.id, participant: m.key.participant, quotedMessage: m.message },
-        });
-        return;
-      }
-
-      // Fetch profile picture
       let ppUrl;
       try {
         ppUrl = await sock.profilePictureUrl(target, "image");
       } catch {
-        ppUrl = "https://files.catbox.moe/lvcwnf.jpg"; // fallback image
+        ppUrl = FALLBACK_PP;
       }
 
-      // Download image temporarily
-      const filePath = path.join('/tmp', `wolfbot_getpp_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+      const response = await axios.get(ppUrl, {
+        responseType: "arraybuffer",
+        timeout: 15000,
+      });
 
-      try {
-        const response = await axios.get(ppUrl, { responseType: "arraybuffer" });
-        fs.writeFileSync(filePath, Buffer.from(response.data));
+      const buffer = Buffer.from(response.data);
 
-        // Send profile picture as a reply
-        await sock.sendMessage(chatId, {
-          image: { url: filePath },
-          caption: `🐺 *Target:* @${target.split("@")[0]}\n📸 Profile picture retrieved successfully!`,
-          mentions: [target],
-          contextInfo: { stanzaId: m.key.id, participant: m.key.participant, quotedMessage: m.message },
-        });
-      } finally {
-        try { fs.unlinkSync(filePath); } catch {}
-      }
+      await sock.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+      await sock.sendMessage(chatId, {
+        image:   buffer,
+        caption: `🐺 *Target:* @${target.split("@")[0]}\n📸 Profile picture retrieved successfully!`,
+        mentions: [target],
+      }, { quoted: m });
 
     } catch (error) {
+      await sock.sendMessage(chatId, { react: { text: '❌', key: m.key } });
       console.error("🐺 Error in getpp command:", error);
-      await sock.sendMessage(m.key.remoteJid, {
+      await sock.sendMessage(chatId, {
         text: `❌ Failed to retrieve profile picture!\n\n⚙️ Error: ${error.message}`,
-      });
+      }, { quoted: m });
     }
   },
 };

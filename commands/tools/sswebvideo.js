@@ -43,10 +43,7 @@ export default {
         const viewport  = isDesktop ? 'desktop' : 'mobile';
         const modeLabel = isDesktop ? '🖥️ Desktop' : '📱 Mobile';
 
-        await sock.sendMessage(jid, { react: { text: '🎬', key: m.key } });
-        await sock.sendMessage(jid, {
-            text: `⏳ Recording *${modeLabel}* view of:\n🌐 ${rawUrl}\n\n_This takes 15–30 seconds, please wait…_`
-        }, { quoted: m });
+        await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
         try {
             const resp = await axios.get(BASE_URL, {
@@ -77,7 +74,7 @@ export default {
                 `📦 *Size:* ${sizemb} MB\n` +
                 `${getFooter(m.key.participant || m.key.remoteJid)}`;
 
-            await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+            await sock.sendMessage(jid, { react: { text: '🎬', key: m.key } });
             await sock.sendMessage(jid, {
                 video:    buffer,
                 mimetype: ct.includes('webm') ? 'video/webm' : 'video/mp4',
