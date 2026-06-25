@@ -64,16 +64,12 @@ export default {
                 globalThis._saveConfigCache('bot_name', { name: newBotName, setAt: new Date().toISOString() });
             }
             
-            let successMsg = `✅ *Bot Name Updated Successfully!*\n`;
-            successMsg += `┌─────────────────────\n`;
-            successMsg += `│ 📝 Previous: *${previousName}*\n`;
-            successMsg += `│ ✨ New Name: *${newBotName}*\n`;
-            successMsg += `└─────────────────────\n`;
-            successMsg += `💾 Saved to file, .env and database.\n`;
-            successMsg += `♻️ Name is active now and will persist after restart.`;
-            
             await sock.sendMessage(chatId, {
-                text: successMsg
+                text:
+                    `╭─⌈ 🤖 *BOTNAME* ⌋\n` +
+                    `├─⊷ Previous : *${previousName}*\n` +
+                    `├─⊷ New name : *${newBotName}*\n` +
+                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
             }, { quoted: msg });
             
             console.log(`✅ Bot name changed: "${previousName}" → "${newBotName}" by ${cleaned.cleanNumber}`);
