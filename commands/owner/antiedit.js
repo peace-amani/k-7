@@ -1,9 +1,22 @@
 import { downloadMediaMessage, getContentType } from '@whiskeysockets/baileys';
 import { createRequire } from 'module';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import db from '../../lib/database.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Thumbnail image used in alert captions for the "Read More" effect.
+// Same wolfbot.jpg the menu uses — keeps branding consistent.
+const _ALERT_IMG_PATH = path.join(__dirname, '../menus/media/wolfbot.jpg');
+function _loadAlertImg() {
+    try { return fs.existsSync(_ALERT_IMG_PATH) ? fs.readFileSync(_ALERT_IMG_PATH) : null; }
+    catch { return null; }
+}
 
 const _require = createRequire(import.meta.url);
 let _giftedBtns = null;
@@ -771,34 +784,22 @@ async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
             `💬 ${chatLabel}\n` +
             `🕒 ${editTime}  •  v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
 
-        const body = buildAlertText(originalMsg, editedMsg, false);
-        // Header stays visible; body collapses behind "Read more"
-        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
+        const body    = buildAlertText(originalMsg, editedMsg, false);
+        // Header stays visible; body collapses behind "Read More" (caption mode)
+        const caption = `${header}${READ_MORE_SEP}\n${body}`;
 
-        // ── Send with "View Group" button if gifted-btns is available ─────────
-        const btnsReady = isButtonModeEnabled() && isGiftedBtnsAvailable() && _giftedBtns && groupInviteLink;
-        if (btnsReady) {
-            try {
-                await _giftedBtns.sendInteractiveMessage(antieditState.sock, ownerJid, {
-                    text: fullText,
-                    interactiveButtons: [{
-                        name: 'cta_url',
-                        buttonParamsJson: JSON.stringify({
-                            display_text: '👥 View Group',
-                            url: groupInviteLink,
-                            merchant_url: groupInviteLink
-                        })
-                    }]
-                });
-                _aeLog('📤', 'ANTIEDIT ALERT', [['Action', 'Sent to owner DM (button)'], ['Owner', ownerJid]]);
-                return true;
-            } catch (btnErr) {
-                console.log(`[Antiedit] Button send failed, falling back: ${btnErr.message}`);
-            }
+        const imgBuf = _loadAlertImg();
+
+        if (imgBuf) {
+            await antieditState.sock.sendMessage(ownerJid, {
+                image:    imgBuf,
+                caption,
+                mimetype: 'image/jpeg'
+            });
+        } else {
+            // No image available — fall back to plain text
+            await antieditState.sock.sendMessage(ownerJid, { text: caption });
         }
-
-        // Fallback: plain text, no raw URL in body
-        await antieditState.sock.sendMessage(ownerJid, { text: fullText });
 
         _aeLog('📤', 'ANTIEDIT ALERT', [['Action', 'Sent to owner DM'], ['Owner', ownerJid]]);
         return true;
@@ -820,9 +821,20 @@ async function sendEditAlertToChat(originalMsg, editedMsg, history, chatJid) {
         const header =
             `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})  •  🕒 ${editTime}\n`;
 
-        const body = buildAlertText(originalMsg, editedMsg, true);
-        // Header stays visible; body collapses behind "Read more"
-        await antieditState.sock.sendMessage(chatJid, { text: `${header}${READ_MORE_SEP}\n${body}` });
+        const body    = buildAlertText(originalMsg, editedMsg, true);
+        // Header stays visible; body collapses behind "Read More" (caption mode)
+        const caption = `${header}${READ_MORE_SEP}\n${body}`;
+
+        const imgBuf = _loadAlertImg();
+        if (imgBuf) {
+            await antieditState.sock.sendMessage(chatJid, {
+                image:    imgBuf,
+                caption,
+                mimetype: 'image/jpeg'
+            });
+        } else {
+            await antieditState.sock.sendMessage(chatJid, { text: caption });
+        }
 
         _aeLog('📢', 'ANTIEDIT ALERT', [['Action', 'Shown in chat'], ['Chat', chatJid.endsWith('@g.us') ? 'Group' : 'DM']]);
         return true;
