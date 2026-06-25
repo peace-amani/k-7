@@ -385,14 +385,21 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         } else {
             const existing = antieditState.currentMessages.get(msgId);
             if (existing) {
-                // Same message ID seen again via messages.upsert → re-delivery or
-                // metadata update (link preview, etc.). This is NOT a user edit.
-                // Real edits arrive exclusively through messages.update →
-                // handleMessageUpdates. Silently update the stored text and bail.
-                if (text && text !== existing.text) {
-                    antieditState.currentMessages.set(msgId, { ...existing, text });
+                const isDMChat = !chatJid?.endsWith('@g.us');
+                if (isDMChat && text && text !== existing.text) {
+                    // DMs: WhatsApp delivers edits via messages.upsert with the same
+                    // message ID and updated content — treat as a real edit.
+                    isEdit = true;
+                    originalMessageData = existing;
+                    version = history.length + 1;
+                } else {
+                    // Groups: same ID in upsert = re-delivery or link-preview injection,
+                    // NOT a user edit. Update text silently and bail.
+                    if (text && text !== existing.text) {
+                        antieditState.currentMessages.set(msgId, { ...existing, text });
+                    }
+                    return null;
                 }
-                return null;
             }
         }
 
@@ -529,16 +536,25 @@ async function handleMessageUpdates(updates) {
             }
 
             // Only treat the update as a user-edit if it carries an explicit edit
-            // envelope. The old "bare content" fallback incorrectly fired on
-            // WhatsApp link-preview injections and other metadata updates.
+            // envelope. The "bare content" fallback is kept for DMs only — in groups
+            // it incorrectly fires on link-preview injections and metadata updates,
+            // but in DMs those don't occur and bare-content updates ARE real edits.
+            const isDM = !chatJid.endsWith('@g.us');
             let editedContent = null;
 
             if (updMsg.protocolMessage?.type === 14) {
-                // Official MESSAGE_EDIT protocol message
-                editedContent = updMsg.protocolMessage?.editedMessage?.message || null;
+                // Official MESSAGE_EDIT protocol message.
+                // editedMessage IS the message object directly (no inner .message key).
+                editedContent = updMsg.protocolMessage?.editedMessage?.message
+                    || updMsg.protocolMessage?.editedMessage
+                    || null;
             } else if (updMsg.editedMessage) {
                 // Some client versions wrap edits in an editedMessage envelope
                 editedContent = updMsg.editedMessage?.message || updMsg.editedMessage || null;
+            } else if (isDM && (updMsg.conversation || updMsg.extendedTextMessage
+                    || updMsg.imageMessage || updMsg.videoMessage)) {
+                // DMs only: WhatsApp can deliver edits as bare content in messages.update
+                editedContent = updMsg;
             }
 
             if (!editedContent) continue;
