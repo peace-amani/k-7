@@ -328,18 +328,33 @@ function extractMessageContent(message) {
 
 async function storeIncomingMessage(message, isEdit = false, originalMessageData = null) {
     try {
-        if (!antieditState.sock) return null;
+        const _isDMTrace = !message.key?.remoteJid?.endsWith('@g.us') &&
+                           message.key?.remoteJid !== 'status@broadcast';
+
+        if (!antieditState.sock) {
+            if (_isDMTrace) console.log('[AE-DM-TRACE] dropped: no sock');
+            return null;
+        }
         
         const chatJidCheck = message.key?.remoteJid;
         const effectiveConf = getEffectiveConfig(chatJidCheck);
-        if (!effectiveConf.enabled) return null;
+        if (!effectiveConf.enabled) {
+            if (_isDMTrace) console.log('[AE-DM-TRACE] dropped: pm disabled (enabled=' + effectiveConf.enabled + ')');
+            return null;
+        }
         
         const msgKey = message.key;
-        if (!msgKey || !msgKey.id) return null;
+        if (!msgKey || !msgKey.id) {
+            if (_isDMTrace) console.log('[AE-DM-TRACE] dropped: no key/id');
+            return null;
+        }
 
         // Skip protocol messages (revoke/delete, ephemeral, etc.) — not real edits
         const msgContent = message.message;
-        if (msgContent?.protocolMessage) return null;
+        if (msgContent?.protocolMessage) {
+            if (_isDMTrace) console.log('[AE-DM-TRACE] dropped: protocolMessage type=' + msgContent.protocolMessage.type);
+            return null;
+        }
 
         const msgId     = message.key.id;
         const chatJid   = msgKey.remoteJid;
@@ -370,12 +385,19 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         if (antieditState.ownerJid) {
             const ownerNum = antieditState.ownerJid.split('@')[0].split(':')[0];
             const senderNum = senderJid.split('@')[0].split(':')[0];
-            if (senderNum === ownerNum || msgKey.fromMe) return null;
+            if (senderNum === ownerNum || msgKey.fromMe) {
+                if (_isDMTrace) console.log(`[AE-DM-TRACE] dropped: owner skip (senderNum=${senderNum} ownerNum=${ownerNum} fromMe=${msgKey.fromMe})`);
+                return null;
+            }
         }
 
         const _extracted = extractMessageContent(message);
-        if (_extracted.skip) return null;   // image with no caption — nothing to store
+        if (_extracted.skip) {
+            if (_isDMTrace) console.log('[AE-DM-TRACE] dropped: skip flag from extractMessageContent');
+            return null;
+        }
         let { type, text, hasMedia, mimetype } = _extracted;
+        if (_isDMTrace) console.log(`[AE-DM-TRACE] passed all gates — type=${type} text="${text}" isEdit=${isEdit}`);
 
         let version = 1;
         let history = antieditState.messageHistory.get(msgId) || [];
@@ -526,20 +548,38 @@ async function handleMessageUpdates(updates) {
             const chatJid = msgKey.remoteJid;
             if (chatJid === 'status@broadcast') continue;
 
+            const isDM = !chatJid.endsWith('@g.us');
+
+            // Debug trace for DMs
+            if (isDM) {
+                const updKeys = update.update ? Object.keys(update.update) : [];
+                console.log(`[AE-DM-UPDATE] id=${msgId.slice(-8)} keys=${updKeys.join(',')}`);
+            }
+
             const updMsg = update.update?.message;
-            if (!updMsg) continue;
+            if (!updMsg) {
+                if (isDM) console.log(`[AE-DM-UPDATE] no update.message — skipping`);
+                continue;
+            }
+
+            if (isDM) {
+                const updMsgKeys = Object.keys(updMsg);
+                console.log(`[AE-DM-UPDATE] update.message keys=${updMsgKeys.join(',')}`);
+            }
 
             // Skip delete/revoke protocol messages — they are NOT edits
             // type 0 = REVOKE, type 14 = MESSAGE_EDIT
             if (updMsg.protocolMessage) {
-                if (updMsg.protocolMessage.type !== 14) continue;
+                if (updMsg.protocolMessage.type !== 14) {
+                    if (isDM) console.log(`[AE-DM-UPDATE] protocolMessage type=${updMsg.protocolMessage.type} — not an edit, skipping`);
+                    continue;
+                }
             }
 
             // Only treat the update as a user-edit if it carries an explicit edit
             // envelope. The "bare content" fallback is kept for DMs only — in groups
             // it incorrectly fires on link-preview injections and metadata updates,
             // but in DMs those don't occur and bare-content updates ARE real edits.
-            const isDM = !chatJid.endsWith('@g.us');
             let editedContent = null;
 
             if (updMsg.protocolMessage?.type === 14) {
@@ -548,16 +588,22 @@ async function handleMessageUpdates(updates) {
                 editedContent = updMsg.protocolMessage?.editedMessage?.message
                     || updMsg.protocolMessage?.editedMessage
                     || null;
+                if (isDM) console.log(`[AE-DM-UPDATE] proto-14 editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
             } else if (updMsg.editedMessage) {
                 // Some client versions wrap edits in an editedMessage envelope
                 editedContent = updMsg.editedMessage?.message || updMsg.editedMessage || null;
+                if (isDM) console.log(`[AE-DM-UPDATE] editedMessage envelope editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
             } else if (isDM && (updMsg.conversation || updMsg.extendedTextMessage
                     || updMsg.imageMessage || updMsg.videoMessage)) {
                 // DMs only: WhatsApp can deliver edits as bare content in messages.update
                 editedContent = updMsg;
+                if (isDM) console.log(`[AE-DM-UPDATE] bare-content DM edit: ${JSON.stringify(editedContent)?.slice(0,120)}`);
             }
 
-            if (!editedContent) continue;
+            if (!editedContent) {
+                if (isDM) console.log(`[AE-DM-UPDATE] no editedContent resolved — skipping`);
+                continue;
+            }
 
             const editedText =
                 editedContent.conversation ||
