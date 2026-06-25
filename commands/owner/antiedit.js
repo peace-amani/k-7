@@ -992,58 +992,38 @@ export default {
             antieditState.pm.mode    = mode;
         };
 
+        const footer = getFooter(msg.key.participant || msg.key.remoteJid);
+
+        // Helper: builds the status reply after a toggle
+        const statusReply = () =>
+            `╭─⌈ ✏️ *ANTIEDIT* ⌋\n` +
+            `├─⊷ Status : ${modeLabel()}\n` +
+            `╰⊷ ${footer}`;
+
         if (scope === 'off' || scope === 'disable') {
             setMode(false, false, 'private');
             await saveData();
-            await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ❌ *OFF*\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { text: statusReply() }, { quoted: msg });
 
         } else if (['private', 'priv'].includes(scope)) {
             setMode(true, true, 'private');
             await saveData();
-            await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 🔒 *PRIVATE* (→ your DM)\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { text: statusReply() }, { quoted: msg });
 
         } else if (['public', 'chat', 'pub'].includes(scope)) {
             setMode(true, true, 'chat');
             await saveData();
-            await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : Groups + DMs\n├─⊷ Mode  : 📢 *PUBLIC* (shown in chat)\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { text: statusReply() }, { quoted: msg });
 
         } else if (['gc', 'groups', 'group'].includes(scope)) {
-            // Groups only — alerts go to owner DM
             setMode(true, false, 'private');
             await saveData();
-            await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 👥 *GROUPS only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { text: statusReply() }, { quoted: msg });
 
         } else if (['dms', 'dm', 'pm', 'pms'].includes(scope)) {
-            // DMs only — alerts go to owner DM
             setMode(false, true, 'private');
             await saveData();
-            await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ Status: ✅ *ON*\n├─⊷ Scope : 💬 *DMs only*\n├─⊷ Mode  : 🔒 Edits sent to your DM\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
-
-        } else if (scope === 'status' || scope === 'stats' || scope === '') {
-            const tracked = antieditState.currentMessages.size;
-            const edits   = antieditState.stats.editsDetected;
-            const dm      = antieditState.stats.sentToDm;
-            const chat    = antieditState.stats.sentToChat;
-            await sock.sendMessage(chatId, {
-                text:
-                    `╭─⌈ ✏️ *ANTIEDIT STATUS* ⌋\n│\n` +
-                    `├─⊷ Status : ${modeLabel()}\n` +
-                    `├─⊷ Tracked: ${tracked} messages\n` +
-                    `├─⊷ Edits  : ${edits} caught\n` +
-                    `├─⊷ DM     : ${dm} sent\n` +
-                    `├─⊷ Chat   : ${chat} sent\n│\n` +
-                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
-            }, { quoted: msg });
+            await sock.sendMessage(chatId, { text: statusReply() }, { quoted: msg });
 
         } else if (scope === 'clear' || scope === 'reset') {
             antieditState.messageHistory.clear();
@@ -1053,26 +1033,23 @@ export default {
             try { await db.cleanOlderThan('antidelete_messages', 'timestamp', 0); } catch {}
             await saveData();
             await sock.sendMessage(chatId, {
-                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n├─⊷ 🧹 Cache cleared\n│\n╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
+                text: `╭─⌈ ✏️ *ANTIEDIT* ⌋\n├─⊷ 🧹 Cache cleared\n╰⊷ ${footer}`
             }, { quoted: msg });
 
         } else {
+            // No args, 'status', 'stats', or unknown — show help + current status
             await sock.sendMessage(chatId, {
                 text:
-                    `╭─⌈ ✏️ *ANTIEDIT* ⌋\n│\n` +
-                    `├─⊷ *${prefix}antiedit off*\n` +
-                    `│  └ Disable antiedit\n` +
-                    `├─⊷ *${prefix}antiedit private*\n` +
-                    `│  └ Groups + DMs → alert to your DM\n` +
-                    `├─⊷ *${prefix}antiedit public*\n` +
-                    `│  └ Groups + DMs → alert shown in chat\n` +
-                    `├─⊷ *${prefix}antiedit gc*\n` +
-                    `│  └ Groups only → alert to your DM\n` +
-                    `├─⊷ *${prefix}antiedit dms*\n` +
-                    `│  └ DMs only → alert to your DM\n` +
-                    `├─⊷ *${prefix}antiedit status*\n` +
-                    `│  └ Current mode & stats\n│\n` +
-                    `╰⊷ ${getFooter(msg.key.participant || msg.key.remoteJid)}`
+                    `╭─⌈ ✏️ *ANTIEDIT* ⌋\n` +
+                    `├─⊷ Status : ${modeLabel()}\n` +
+                    `│\n` +
+                    `├─⊷ *${prefix}antiedit off* — disable\n` +
+                    `├─⊷ *${prefix}antiedit private* — groups + DMs → your DM\n` +
+                    `├─⊷ *${prefix}antiedit public* — groups + DMs → shown in chat\n` +
+                    `├─⊷ *${prefix}antiedit gc* — groups only → your DM\n` +
+                    `├─⊷ *${prefix}antiedit dms* — DMs only → your DM\n` +
+                    `├─⊷ *${prefix}antiedit clear* — reset cache\n` +
+                    `╰⊷ ${footer}`
             }, { quoted: msg });
         }
     }
