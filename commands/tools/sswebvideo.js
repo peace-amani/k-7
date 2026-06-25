@@ -3,17 +3,8 @@ import { getFooter } from '../../lib/menuHelper.js';
 
 const BASE_URL = 'https://snapshot.xwolf.space/api/record';
 
-const HELP_TEXT = (PREFIX) =>
-    `╭─⌈ 🎬 *WEBSITE SCREEN RECORD* ⌋
-├─⊷ *Usage:*
-│  ├⊷ \`${PREFIX}sswebvideo <url>\` — mobile recording
-│  └⊷ \`${PREFIX}sswebvideo <url> desktop\` — desktop recording
-├─⊷ *Examples:*
-│  ├⊷ \`${PREFIX}sswebvideo google.com\`
-│  └⊷ \`${PREFIX}sswebvideo youtube.com desktop\`
-├─⊷ *Notes:*
-│  └⊷ Recording takes 15–30s — please be patient
-╰⊷ Powered by snapshot.xwolf.space`;
+const HELP_TEXT = (PREFIX, jid) =>
+    `╭─⌈ 🎬 *WEBSITE SCREEN RECORD* ⌋\n├─⊷ *${PREFIX}sswebvideo <url>* — mobile recording\n├─⊷ *${PREFIX}sswebvideo <url> desktop* — desktop recording\n├─⊷ Recording takes 15–30s, please be patient\n╰⊷ ${getFooter(jid)}`;
 
 export default {
     name: 'sswebvideo',
@@ -25,7 +16,7 @@ export default {
         const jid = m.key.remoteJid;
 
         if (!args.length) {
-            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX) }, { quoted: m });
+            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX, jid) }, { quoted: m });
         }
 
         // Parse flags
@@ -36,7 +27,7 @@ export default {
         let rawUrl = args.find(a => !FLAG_WORDS.has(a.toLowerCase())) || '';
 
         if (!rawUrl) {
-            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX) }, { quoted: m });
+            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX, jid) }, { quoted: m });
         }
 
         // Auto-prepend https:// if missing
@@ -45,7 +36,7 @@ export default {
         // Validate URL shape
         try { new URL(rawUrl); } catch {
             return sock.sendMessage(jid, {
-                text: `❌ *Invalid URL:* \`${rawUrl}\`\n\nMake sure it's a valid website address.\n💡 Example: \`${PREFIX}sswebvideo google.com\``
+                text: `❌ *Invalid URL:* ${rawUrl}\n\nMake sure it's a valid website address.\n💡 Example: ${PREFIX}sswebvideo google.com`
             }, { quoted: m });
         }
 

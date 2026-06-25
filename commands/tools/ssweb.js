@@ -3,17 +3,8 @@ import { getFooter } from '../../lib/menuHelper.js';
 
 const BASE_URL = 'https://snapshot.xwolf.space/api/capture';
 
-const HELP_TEXT = (PREFIX) =>
-    `╭─⌈ 📸 *WEBSITE SCREENSHOT* ⌋
-├─⊷ *Usage:*
-│  ├⊷ \`${PREFIX}ssweb <url>\` — mobile screenshot
-│  ├⊷ \`${PREFIX}ssweb <url> desktop\` — desktop view
-│  ├⊷ \`${PREFIX}ssweb <url> full\` — full-page scroll
-│  └⊷ \`${PREFIX}ssweb <url> desktop full\` — desktop full-page
-├─⊷ *Examples:*
-│  ├⊷ \`${PREFIX}ssweb google.com\`
-│  └⊷ \`${PREFIX}ssweb github.com desktop full\`
-╰⊷ Powered by snapshot.xwolf.space`;
+const HELP_TEXT = (PREFIX, jid) =>
+    `╭─⌈ 📸 *WEBSITE SCREENSHOT* ⌋\n├─⊷ *${PREFIX}ssweb <url>* — mobile screenshot\n├─⊷ *${PREFIX}ssweb <url> desktop* — desktop view\n├─⊷ *${PREFIX}ssweb <url> full* — full-page scroll\n├─⊷ *${PREFIX}ssweb <url> desktop full* — desktop full-page\n╰⊷ ${getFooter(jid)}`;
 
 export default {
     name: 'ssweb',
@@ -25,7 +16,7 @@ export default {
         const jid = m.key.remoteJid;
 
         if (!args.length) {
-            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX) }, { quoted: m });
+            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX, jid) }, { quoted: m });
         }
 
         // Parse flags — viewport and fullPage can appear anywhere after the URL
@@ -38,7 +29,7 @@ export default {
         let rawUrl = args.find(a => !FLAG_WORDS.has(a.toLowerCase())) || '';
 
         if (!rawUrl) {
-            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX) }, { quoted: m });
+            return sock.sendMessage(jid, { text: HELP_TEXT(PREFIX, jid) }, { quoted: m });
         }
 
         // Auto-prepend https:// if missing
@@ -47,7 +38,7 @@ export default {
         // Validate URL shape
         try { new URL(rawUrl); } catch {
             return sock.sendMessage(jid, {
-                text: `❌ *Invalid URL:* \`${rawUrl}\`\n\nMake sure it's a valid website address.\n💡 Example: \`${PREFIX}ssweb google.com\``
+                text: `❌ *Invalid URL:* ${rawUrl}\n\nMake sure it's a valid website address.\n💡 Example: ${PREFIX}ssweb google.com`
             }, { quoted: m });
         }
 
