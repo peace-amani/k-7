@@ -1,5 +1,33 @@
 import axios from 'axios';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs';
 import { getFooter } from '../../lib/menuHelper.js';
+import FFMPEG from '../../lib/ffmpegPath.js';
+
+const execFileAsync = promisify(execFile);
+
+async function webmToMp4(webmBuffer) {
+    const ts   = Date.now();
+    const rand = Math.random().toString(36).slice(2, 7);
+    const inPath  = `/tmp/wolfbot_sswebv_in_${ts}_${rand}.webm`;
+    const outPath = `/tmp/wolfbot_sswebv_out_${ts}_${rand}.mp4`;
+    try {
+        await fs.promises.writeFile(inPath, webmBuffer);
+        await execFileAsync(FFMPEG, [
+            '-y', '-i', inPath,
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+            '-preset', 'fast', '-crf', '26',
+            '-movflags', '+faststart',
+            '-c:a', 'aac', '-b:a', '128k',
+            outPath
+        ], { timeout: 60000 });
+        return await fs.promises.readFile(outPath);
+    } finally {
+        try { fs.unlinkSync(inPath);  } catch {}
+        try { fs.unlinkSync(outPath); } catch {}
+    }
+}
 
 const BASE_URL = 'https://snapshot.xwolf.space/api/record';
 
@@ -60,10 +88,16 @@ export default {
             const buffer = Buffer.from(resp.data);
             if (buffer.length < 1000) throw new Error('Recording too small — site may not have loaded');
 
-            const sizemb = (buffer.length / (1024 * 1024)).toFixed(2);
+            // WhatsApp only accepts video/mp4 — convert webm if needed
+            let videoBuffer = buffer;
+            if (ct.includes('webm')) {
+                videoBuffer = await webmToMp4(buffer);
+            }
+
+            const sizemb = (videoBuffer.length / (1024 * 1024)).toFixed(2);
 
             // WhatsApp has a ~64 MB video limit; warn if close
-            if (buffer.length > 60 * 1024 * 1024) {
+            if (videoBuffer.length > 60 * 1024 * 1024) {
                 throw new Error(`Recording too large for WhatsApp (${sizemb} MB). Try a simpler page.`);
             }
 
@@ -76,8 +110,8 @@ export default {
 
             await sock.sendMessage(jid, { react: { text: '🎬', key: m.key } });
             await sock.sendMessage(jid, {
-                video:    buffer,
-                mimetype: ct.includes('webm') ? 'video/webm' : 'video/mp4',
+                video:    videoBuffer,
+                mimetype: 'video/mp4',
                 caption
             }, { quoted: m });
 
