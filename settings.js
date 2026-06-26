@@ -76,13 +76,13 @@ export default {
     // Repository URLs - UPDATED
     repository: {
       // Your main repository (your current bot)
-      main: "https://github.com/WOLFTECH-254/silentwolf",
+      main: "https://github.com/WOLVAREX/silentwolf",
       
       // Remote repository (where updates come from)
       upstream: "https://github.com/peace-amani/k-7.git",
       
       // Backup owner repository (if needed)
-      owner: "https://github.com/WOLFTECH-254/silentwolf"
+      owner: "https://github.com/WOLVAREX/silentwolf"
     },
     
     // ZIP update URL (fallback method)

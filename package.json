@@ -13,16 +13,16 @@
     "monitor",
     "session-protection"
   ],
-  "homepage": "https://github.com/WOLFTECH-254/silentwolf#readme",
+  "homepage": "https://github.com/WOLVAREX/silentwolf#readme",
   "bugs": {
-    "url": "https://github.com/WOLFTECH-254/silentwolf/issues"
+    "url": "https://github.com/WOLVAREX/silentwolf/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WOLFTECH-254/silentwolf.git"
+    "url": "git+https://github.com/WOLVAREX/silentwolf.git"
   },
   "license": "MIT",
-  "author": "WOLFTECH-254",
+  "author": "WOLVAREX",
   "type": "module",
   "main": "index.js",
   "directories": {
