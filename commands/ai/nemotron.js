@@ -6,6 +6,7 @@ import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
+import FFMPEG from '../../lib/ffmpegPath.js';
 
 const MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
 
@@ -56,7 +57,7 @@ async function extractFrames(videoPath, frameCount, duration, workDir) {
   const fps = frameCount / duration;
   const pattern = path.join(workDir, 'frame_%02d.jpg');
 
-  await runCmd('ffmpeg', [
+  await runCmd(FFMPEG, [
     '-y',
     '-i', videoPath,
     '-vf', `fps=${fps.toFixed(6)},scale=640:-2:force_original_aspect_ratio=decrease`,

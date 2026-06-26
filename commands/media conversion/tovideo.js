@@ -5,6 +5,7 @@ import('sharp').then(m => { sharp = m.default; }).catch(() => {});
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import FFMPEG from '../../lib/ffmpegPath.js';
 import { getBotName } from '../../lib/botname.js';
 
 const execFileAsync = promisify(execFile);
@@ -85,7 +86,7 @@ export default {
 
       fs.writeFileSync(gifPath, gifBuffer);
 
-      await execFileAsync('ffmpeg', [
+      await execFileAsync(FFMPEG, [
         '-i', gifPath,
         '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
         '-c:v', 'libx264',

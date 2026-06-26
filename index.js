@@ -219,6 +219,7 @@ process.env.PINO_DISABLE = 'true';
 //   commandButtons.js — tracks which command is active per chat; builds button lists
 //   fontTransformer.js — converts reply text to fancy Unicode fonts
 //   platformDetect.js — detects Heroku / Railway / Replit / local
+import './lib/ffmpegPath.js'; // patches process.env.PATH so ffmpeg is always found
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';

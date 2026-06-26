@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
+import FFMPEG from '../../lib/ffmpegPath.js';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
@@ -75,7 +76,7 @@ export default {
 
       // Center-crop to square, scale to SIZE_PX, cap duration, re-encode for PTV
       // -movflags +faststart so WhatsApp can start playback before full download
-      await execFileAsync('ffmpeg', [
+      await execFileAsync(FFMPEG, [
         '-y',
         '-i', inputPath,
         '-t', String(MAX_DURATION_S),
