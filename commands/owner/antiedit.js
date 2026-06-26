@@ -1,22 +1,9 @@
 import { downloadMediaMessage, getContentType } from '@whiskeysockets/baileys';
 import { createRequire } from 'module';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import db from '../../lib/database.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Thumbnail image used in alert captions for the "Read More" effect.
-// Same wolfbot.jpg the menu uses — keeps branding consistent.
-const _ALERT_IMG_PATH = path.join(__dirname, '../menus/media/wolfbot.jpg');
-function _loadAlertImg() {
-    try { return fs.existsSync(_ALERT_IMG_PATH) ? fs.readFileSync(_ALERT_IMG_PATH) : null; }
-    catch { return null; }
-}
 
 const _require = createRequire(import.meta.url);
 let _giftedBtns = null;
@@ -784,22 +771,12 @@ async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
             `💬 ${chatLabel}\n` +
             `🕒 ${editTime}  •  v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
 
-        const body    = buildAlertText(originalMsg, editedMsg, false);
-        // Header stays visible; body collapses behind "Read More" (caption mode)
-        const caption = `${header}${READ_MORE_SEP}\n${body}`;
+        const body = buildAlertText(originalMsg, editedMsg, false);
+        // text1 (header) stays visible; text2 (body) collapses behind "Read More"
+        // — same createReadMoreEffect pattern from 5.js
+        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
 
-        const imgBuf = _loadAlertImg();
-
-        if (imgBuf) {
-            await antieditState.sock.sendMessage(ownerJid, {
-                image:    imgBuf,
-                caption,
-                mimetype: 'image/jpeg'
-            });
-        } else {
-            // No image available — fall back to plain text
-            await antieditState.sock.sendMessage(ownerJid, { text: caption });
-        }
+        await antieditState.sock.sendMessage(ownerJid, { text: fullText });
 
         _aeLog('📤', 'ANTIEDIT ALERT', [['Action', 'Sent to owner DM'], ['Owner', ownerJid]]);
         return true;
@@ -821,20 +798,12 @@ async function sendEditAlertToChat(originalMsg, editedMsg, history, chatJid) {
         const header =
             `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})  •  🕒 ${editTime}\n`;
 
-        const body    = buildAlertText(originalMsg, editedMsg, true);
-        // Header stays visible; body collapses behind "Read More" (caption mode)
-        const caption = `${header}${READ_MORE_SEP}\n${body}`;
+        const body = buildAlertText(originalMsg, editedMsg, true);
+        // text1 (header) stays visible; text2 (body) collapses behind "Read More"
+        // — same createReadMoreEffect pattern from 5.js
+        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
 
-        const imgBuf = _loadAlertImg();
-        if (imgBuf) {
-            await antieditState.sock.sendMessage(chatJid, {
-                image:    imgBuf,
-                caption,
-                mimetype: 'image/jpeg'
-            });
-        } else {
-            await antieditState.sock.sendMessage(chatJid, { text: caption });
-        }
+        await antieditState.sock.sendMessage(chatJid, { text: fullText });
 
         _aeLog('📢', 'ANTIEDIT ALERT', [['Action', 'Shown in chat'], ['Chat', chatJid.endsWith('@g.us') ? 'Group' : 'DM']]);
         return true;
