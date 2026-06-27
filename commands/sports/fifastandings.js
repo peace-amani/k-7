@@ -29,28 +29,21 @@ function qualEmoji(color) {
     return '🔴';
 }
 
-function pad(str, len) {
-    const s = String(str ?? '');
-    return s.length >= len ? s.substring(0, len) : s + ' '.repeat(len - s.length);
-}
-
-function rpad(num, len) {
-    const s = String(num ?? '-');
-    return s.length >= len ? s : ' '.repeat(len - s.length) + s;
-}
+const POS_ICON = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
 
 function buildGroup(group) {
     const rows = group.table?.all ?? [];
     const name = group.leagueName.replace('Grp. ', 'Group ');
-    let txt = `┌─ ⚽ *${name}*\n`;
-    txt += `│  ${pad('Team', 16)} MP  W  D  L  GD  Pts\n`;
-    txt += `│  ${'─'.repeat(44)}\n`;
-    for (const r of rows) {
-        const q  = qualEmoji(r.qualColor);
-        const gd = r.goalConDiff > 0 ? `+${r.goalConDiff}` : `${r.goalConDiff}`;
-        txt += `│ ${q} ${pad(r.shortName || r.name, 14)} ${rpad(r.played,2)} ${rpad(r.wins,2)} ${rpad(r.draws,2)} ${rpad(r.losses,2)} ${rpad(gd,3)}  ${rpad(r.pts,3)}\n`;
-    }
-    txt += `└${'─'.repeat(46)}`;
+    let txt = `╭─ ⚽ *${name}*\n│\n`;
+    rows.forEach((r, i) => {
+        const q   = qualEmoji(r.qualColor);
+        const pos = POS_ICON[i] ?? `${i + 1}.`;
+        const gd  = r.goalConDiff > 0 ? `+${r.goalConDiff}` : `${r.goalConDiff}`;
+        const rec = `${r.wins}W ${r.draws}D ${r.losses}L`;
+        txt += `│ ${pos} ${q} *${r.shortName || r.name}*\n`;
+        txt += `│    🏅 *${r.pts}pts*  ·  ${rec}  ·  GD ${gd}\n`;
+    });
+    txt += `╰${'─'.repeat(24)}`;
     return txt;
 }
 
