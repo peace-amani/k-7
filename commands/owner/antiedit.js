@@ -1,6 +1,7 @@
 import { downloadMediaMessage, getContentType } from '@whiskeysockets/baileys';
 import { createRequire } from 'module';
 import db from '../../lib/database.js';
+import { getBotName } from '../../lib/botname.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { isGiftedBtnsAvailable } from '../../lib/buttonHelper.js';
@@ -707,23 +708,26 @@ function resolveOwnerJid(jid) {
     return cleaned;
 }
 
-function buildAlertText(originalMsg, editedMsg, forChat = false) {
+function buildAlertText(originalMsg, editedMsg, { forChat = false, senderNumber = '', chatLabel = '', editTime = '', groupInviteLink = null } = {}) {
+    const limit = forChat ? 200 : 400;
     const orig = originalMsg.text?.trim()
-        ? originalMsg.text.substring(0, forChat ? 200 : 400) + (originalMsg.text.length > (forChat ? 200 : 400) ? '…' : '')
+        ? originalMsg.text.substring(0, limit) + (originalMsg.text.length > limit ? '…' : '')
         : originalMsg.hasMedia ? `[${originalMsg.type.toUpperCase()}]` : '[empty]';
 
     const edited = editedMsg.text?.trim()
-        ? editedMsg.text.substring(0, forChat ? 200 : 400) + (editedMsg.text.length > (forChat ? 200 : 400) ? '…' : '')
+        ? editedMsg.text.substring(0, limit) + (editedMsg.text.length > limit ? '…' : '')
         : editedMsg.hasMedia ? `[${editedMsg.type.toUpperCase()}]` : '[empty]';
 
-    return (
-        `✏️ *MESSAGE EDITED*\n` +
-        `━━━━━━━━━━━━━━━━━━━━━\n` +
-        `📜 *Original:*\n${orig}\n` +
-        `━━━━━━━━━━━━━━━━━━━━━\n` +
-        `✏️ *Edited to:*\n${edited}\n` +
-        `━━━━━━━━━━━━━━━━━━━━━`
-    );
+    let text = `\n\n✧ ${getBotName()} message antiedit🐺\n`;
+    text += `✧ 𝙵𝚛𝚘𝚖 : ${senderNumber} (${originalMsg.pushName || 'Unknown'})\n`;
+    if (!forChat && chatLabel) text += `✧ 𝙲𝚑𝚊𝚝 : ${chatLabel}\n`;
+    text += `✧ 𝚃𝚒𝚖𝚎 : ${editTime}\n`;
+    text += `✧ 𝚅𝚎𝚛𝚜𝚒𝚘𝚗 : v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
+    text += `\n✧ 𝗢𝗿𝗶𝗴𝗶𝗻𝗮𝗹 𝗠𝗲𝘀𝘀𝗮𝗴𝗲:\n${orig}\n`;
+    text += `\n✧ 𝗘𝗱𝗶𝘁𝗲𝗱 𝗧𝗼:\n${edited}`;
+    if (!forChat && groupInviteLink) text += `\n\n${groupInviteLink}`;
+
+    return text;
 }
 
 async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
@@ -766,15 +770,13 @@ async function sendEditAlertToOwnerDM(originalMsg, editedMsg, history) {
             chatLabel = `+${dmNum}`;
         }
 
-        const header =
-            `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})\n` +
-            `💬 ${chatLabel}\n` +
-            `🕒 ${editTime}  •  v${originalMsg.version || 1}→v${editedMsg.version || 2}\n`;
-
-        const body = buildAlertText(originalMsg, editedMsg, false);
-        // text1 (header) stays visible; text2 (body) collapses behind "Read More"
-        // — same createReadMoreEffect pattern from 5.js
-        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
+        const fullText = buildAlertText(originalMsg, editedMsg, {
+            forChat: false,
+            senderNumber,
+            chatLabel,
+            editTime,
+            groupInviteLink
+        });
 
         await antieditState.sock.sendMessage(ownerJid, { text: fullText });
 
@@ -795,13 +797,11 @@ async function sendEditAlertToChat(originalMsg, editedMsg, history, chatJid) {
             || await resolveNumberWithGroup(originalMsg.senderJid, chatJid);
         const editTime     = new Date(editedMsg.editTime || Date.now()).toLocaleTimeString();
 
-        const header =
-            `👤 *${originalMsg.pushName || 'Unknown'}* (+${senderNumber})  •  🕒 ${editTime}\n`;
-
-        const body = buildAlertText(originalMsg, editedMsg, true);
-        // text1 (header) stays visible; text2 (body) collapses behind "Read More"
-        // — same createReadMoreEffect pattern from 5.js
-        const fullText = `${header}${READ_MORE_SEP}\n${body}`;
+        const fullText = buildAlertText(originalMsg, editedMsg, {
+            forChat: true,
+            senderNumber,
+            editTime
+        });
 
         await antieditState.sock.sendMessage(chatJid, { text: fullText });
 
