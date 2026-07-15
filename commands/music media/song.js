@@ -6,6 +6,7 @@ import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 import { isButtonModeEnabled } from '../../lib/buttonMode.js';
 import { setMusicSession } from '../../lib/musicSession.js';
 import { xwolfSearch } from '../../lib/xwolfApi.js';
+import { giftedYtsSearch } from '../../lib/giftedApi.js';
 import { downloadAudioWithFallback } from '../../lib/audioDownloader.js';
 import { sigLog } from '../../lib/sigLog.js';
 
@@ -13,21 +14,38 @@ const require = createRequire(import.meta.url);
 let giftedBtns;
 try { giftedBtns = require('gifted-btns'); } catch (e) {}
 
-// ── Search fallback: yt-search ────────────────────────────────────────────
-async function ytsSearch(query, limit = 5) {
+// ── Search chain: gifted yts → xwolf → yt-search ─────────────────────────
+async function searchVideos(query, limit = 5) {
+  // 1. gifted yts (primary — fast, rich metadata)
+  let items = await giftedYtsSearch(query, limit);
+  if (items.length) {
+    sigLog('✅', 'SONG/search', 'gifted yts hit', { Count: items.length });
+    return items;
+  }
+  sigLog('⚠️', 'SONG/search', 'gifted yts empty — trying xwolf', null, 'yellow');
+
+  // 2. xwolf
+  items = await xwolfSearch(query, limit);
+  if (items.length) {
+    sigLog('✅', 'SONG/search', 'xwolf hit', { Count: items.length });
+    return items;
+  }
+  sigLog('⚠️', 'SONG/search', 'xwolf empty — trying yt-search', null, 'yellow');
+
+  // 3. yt-search (last resort)
   try {
     const { videos } = await yts(query);
-    if (!videos?.length) return [];
-    return videos.slice(0, limit).map(v => ({
-      id:           v.videoId,
-      title:        v.title,
-      channelTitle: v.author?.name || '',
-      duration:     v.timestamp   || '',
-      thumbnail:    v.thumbnail   || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`
-    }));
-  } catch {
-    return [];
-  }
+    if (videos?.length) {
+      return videos.slice(0, limit).map(v => ({
+        id:           v.videoId,
+        title:        v.title,
+        channelTitle: v.author?.name || '',
+        duration:     v.timestamp   || '',
+        thumbnail:    v.thumbnail   || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`
+      }));
+    }
+  } catch {}
+  return [];
 }
 
 export default {
@@ -60,12 +78,8 @@ export default {
       let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
 
       if (!isUrl) {
-        sigLog('🔎', 'SONG', 'Searching xwolf/search…');
-        let items = await xwolfSearch(searchQuery, 5);
-        if (!items.length) {
-          sigLog('🎵', 'SONG', 'xwolf/search empty — trying yt-search', null, 'yellow');
-          items = await ytsSearch(searchQuery, 5);
-        }
+        sigLog('🔎', 'SONG', 'Searching via gifted yts → xwolf → yt-search…');
+        const items = await searchVideos(searchQuery, 5);
         if (items.length) {
           const top = items[0];
           videoInfo = {

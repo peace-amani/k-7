@@ -4,38 +4,58 @@ import { getBotName } from '../../lib/botname.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 import { downloadAudioWithFallback } from '../../lib/audioDownloader.js';
 import { xwolfSearch } from '../../lib/xwolfApi.js';
+import { giftedYtsSearch } from '../../lib/giftedApi.js';
 import { sigLog } from '../../lib/sigLog.js';
 
-// ── xwolf/search → metadata + YouTube URL ─────────────────────────────────
-async function xwolfMeta(query) {
-  try {
-    const items = await xwolfSearch(query, 1);
-    if (!items?.length) return null;
-    const top = items[0];
+// ── Search chain: gifted yts → xwolf → yt-search ─────────────────────────
+async function resolveTrack(query) {
+  // 1. gifted yts (primary — fast, rich metadata)
+  let items = await giftedYtsSearch(query, 1);
+  if (items?.length) {
+    sigLog('✅', 'PLAY/search', 'gifted yts hit', { Title: items[0].title });
+    const v = items[0];
     return {
-      title:        top.title        || query,
-      channelTitle: top.channelTitle || '',
-      duration:     top.duration     || '',
-      thumbnail:    top.thumbnail    || `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`,
-      videoUrl:     `https://youtube.com/watch?v=${top.id}`,
+      title:        v.title,
+      channelTitle: v.channelTitle || '',
+      duration:     v.duration     || '',
+      thumbnail:    v.thumbnail    || `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`,
+      videoUrl:     `https://youtube.com/watch?v=${v.id}`
     };
-  } catch { return null; }
-}
+  }
+  sigLog('⚠️', 'PLAY/search', 'gifted yts empty — trying xwolf', null, 'yellow');
 
-// ── yt-search fallback ─────────────────────────────────────────────────────
-async function ytsSearch(query) {
+  // 2. xwolf
+  try {
+    const xItems = await xwolfSearch(query, 1);
+    if (xItems?.length) {
+      sigLog('✅', 'PLAY/search', 'xwolf hit', { Title: xItems[0].title });
+      const top = xItems[0];
+      return {
+        title:        top.title        || query,
+        channelTitle: top.channelTitle || '',
+        duration:     top.duration     || '',
+        thumbnail:    top.thumbnail    || `https://img.youtube.com/vi/${top.id}/hqdefault.jpg`,
+        videoUrl:     `https://youtube.com/watch?v=${top.id}`
+      };
+    }
+  } catch {}
+  sigLog('⚠️', 'PLAY/search', 'xwolf empty — trying yt-search', null, 'yellow');
+
+  // 3. yt-search (last resort)
   try {
     const { videos } = await yts(query);
-    if (!videos?.length) return null;
-    const v = videos[0];
-    return {
-      title:     v.title     || query,
-      channelTitle: v.author?.name || '',
-      duration:  v.timestamp || '',
-      thumbnail: v.thumbnail || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`,
-      videoUrl:  `https://youtube.com/watch?v=${v.videoId}`
-    };
-  } catch { return null; }
+    if (videos?.length) {
+      const v = videos[0];
+      return {
+        title:        v.title          || query,
+        channelTitle: v.author?.name   || '',
+        duration:     v.timestamp      || '',
+        thumbnail:    v.thumbnail      || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`,
+        videoUrl:     `https://youtube.com/watch?v=${v.videoId}`
+      };
+    }
+  } catch {}
+  return null;
 }
 
 export default {
@@ -76,14 +96,8 @@ export default {
       let videoInfo = { title: searchQuery, channelTitle: '', duration: '', thumbnail: '' };
 
       if (!isUrl) {
-        let found = await xwolfMeta(searchQuery);
-        if (found) {
-          sigLog('✅', 'PLAY', 'xwolf/search hit', { Title: found.title });
-        } else {
-          sigLog('🎵', 'PLAY', 'xwolf/search empty — trying yt-search', null, 'yellow');
-          found = await ytsSearch(searchQuery);
-          if (found) sigLog('✅', 'PLAY', 'yt-search hit', { Title: found.title });
-        }
+        sigLog('🔎', 'PLAY', 'Searching via gifted yts → xwolf → yt-search…');
+        const found = await resolveTrack(searchQuery);
         if (!found) {
           throw new Error('Could not find that song. Try a more specific title or paste a YouTube link.');
         }
