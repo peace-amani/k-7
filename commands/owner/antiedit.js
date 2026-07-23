@@ -408,19 +408,17 @@ async function storeIncomingMessage(message, isEdit = false, originalMessageData
         } else {
             const existing = antieditState.currentMessages.get(msgId);
             if (existing) {
-                const isDMChat = !chatJid?.endsWith('@g.us');
-                if (isDMChat && text && text !== existing.text) {
-                    // DMs: WhatsApp delivers edits via messages.upsert with the same
-                    // message ID and updated content — treat as a real edit.
+                if (text && text !== existing.text) {
+                    // Same message ID arriving via messages.upsert with DIFFERENT text.
+                    // For DMs this is always a real user edit.
+                    // For groups: link-preview injections keep the SAME text (they only
+                    // add URL-preview metadata), so a text change is a genuine user edit.
                     isEdit = true;
                     originalMessageData = existing;
                     version = history.length + 1;
+                    if (_isDMTrace) console.log(`[AE-DM-TRACE] upsert-edit detected in DM — new text="${text}"`);
                 } else {
-                    // Groups: same ID in upsert = re-delivery or link-preview injection,
-                    // NOT a user edit. Update text silently and bail.
-                    if (text && text !== existing.text) {
-                        antieditState.currentMessages.set(msgId, { ...existing, text });
-                    }
+                    // Same ID, same text → re-delivery or metadata update, not a user edit.
                     return null;
                 }
             }
@@ -563,46 +561,44 @@ async function handleMessageUpdates(updates) {
                 continue;
             }
 
-            if (isDM) {
-                const updMsgKeys = Object.keys(updMsg);
-                console.log(`[AE-DM-UPDATE] update.message keys=${updMsgKeys.join(',')}`);
-            }
+            // Debug trace for ALL chats (DM + group)
+            const updMsgKeys = Object.keys(updMsg);
+            const tracePrefix = isDM ? '[AE-DM-UPDATE]' : '[AE-GC-UPDATE]';
+            console.log(`${tracePrefix} id=${msgId.slice(-8)} keys=${updMsgKeys.join(',')}`);
 
             // Skip delete/revoke protocol messages — they are NOT edits
             // type 0 = REVOKE, type 14 = MESSAGE_EDIT
             if (updMsg.protocolMessage) {
                 if (updMsg.protocolMessage.type !== 14) {
-                    if (isDM) console.log(`[AE-DM-UPDATE] protocolMessage type=${updMsg.protocolMessage.type} — not an edit, skipping`);
+                    console.log(`${tracePrefix} protocolMessage type=${updMsg.protocolMessage.type} — not an edit, skipping`);
                     continue;
                 }
             }
 
-            // Only treat the update as a user-edit if it carries an explicit edit
-            // envelope. The "bare content" fallback is kept for DMs only — in groups
-            // it incorrectly fires on link-preview injections and metadata updates,
-            // but in DMs those don't occur and bare-content updates ARE real edits.
+            // Resolve edit content from all known Baileys structures
             let editedContent = null;
 
             if (updMsg.protocolMessage?.type === 14) {
-                // Official MESSAGE_EDIT protocol message.
-                // editedMessage IS the message object directly (no inner .message key).
+                // Official MESSAGE_EDIT protocol message (type 14).
+                // editedMessage is the new message object directly.
                 editedContent = updMsg.protocolMessage?.editedMessage?.message
                     || updMsg.protocolMessage?.editedMessage
                     || null;
-                if (isDM) console.log(`[AE-DM-UPDATE] proto-14 editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
+                console.log(`${tracePrefix} proto-14 editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
             } else if (updMsg.editedMessage) {
                 // Some client versions wrap edits in an editedMessage envelope
                 editedContent = updMsg.editedMessage?.message || updMsg.editedMessage || null;
-                if (isDM) console.log(`[AE-DM-UPDATE] editedMessage envelope editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
-            } else if (isDM && (updMsg.conversation || updMsg.extendedTextMessage
-                    || updMsg.imageMessage || updMsg.videoMessage)) {
-                // DMs only: WhatsApp can deliver edits as bare content in messages.update
+                console.log(`${tracePrefix} editedMessage envelope editedContent=${JSON.stringify(editedContent)?.slice(0,120)}`);
+            } else if (updMsg.conversation || updMsg.extendedTextMessage
+                    || updMsg.imageMessage || updMsg.videoMessage) {
+                // Bare-content update: WhatsApp delivers the new message body directly
+                // in the update without a wrapper. Occurs in DMs and some group clients.
                 editedContent = updMsg;
-                if (isDM) console.log(`[AE-DM-UPDATE] bare-content DM edit: ${JSON.stringify(editedContent)?.slice(0,120)}`);
+                console.log(`${tracePrefix} bare-content edit: ${JSON.stringify(editedContent)?.slice(0,120)}`);
             }
 
             if (!editedContent) {
-                if (isDM) console.log(`[AE-DM-UPDATE] no editedContent resolved — skipping`);
+                console.log(`${tracePrefix} no editedContent resolved — skipping`);
                 continue;
             }
 
@@ -611,7 +607,10 @@ async function handleMessageUpdates(updates) {
                 editedContent.extendedTextMessage?.text ||
                 editedContent.imageMessage?.caption ||
                 editedContent.videoMessage?.caption || '';
-            if (!editedText.trim()) continue; // No text content at all → skip
+            if (!editedText.trim()) {
+                console.log(`${tracePrefix} editedText empty — skipping`);
+                continue;
+            }
 
             // Look up original message — memory first, then DB
             let existingMessage = antieditState.currentMessages.get(msgId);

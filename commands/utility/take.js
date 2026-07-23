@@ -226,17 +226,14 @@ export default {
           participant: m.sender
         };
         
-        // Download the sticker
+        // Download the sticker — pass m.quoted directly so Baileys has the
+        // full media URL/key fields needed to fetch from WhatsApp CDN.
         const stickerBuffer = await downloadMediaMessage(
-          {
-            key: messageKey,
-            message: { stickerMessage },
-            messageType: 'stickerMessage'
-          },
+          m.quoted,
           'buffer',
           {},
           {
-            logger: console,
+            logger: { level: 'silent', child: () => ({ level: 'silent' }) },
             reuploadRequest: sock.updateMediaMessage
           }
         );
