@@ -4,9 +4,16 @@ Silent WolfBot is a WhatsApp bot that integrates AI, anime features, group manag
 
 ## Run & Operate
 
-The bot runs on Node.js.
-*   **Run:** `npm start`
+The bot runs on Node.js via the **"WhatsApp Bot"** workflow.
+*   **Run:** `npm start` (or use the WhatsApp Bot workflow in Replit)
 *   **Required Env Vars:** `PORT` (for health check server, default 3000)
+*   **Optional Env Vars:**
+    *   `SESSION_ID` — pre-encoded WhatsApp session string (WOLF-BOT: prefix or base64/JSON). Paste your pair code output here to auto-authenticate on startup.
+    *   `DATABASE_URL` — PostgreSQL connection string (optional; SQLite used by default)
+    *   `BOT_PREFIX` — command prefix (default `/`)
+    *   `BOT_MODE` — `public` / `private` / `groups` / `dms`
+    *   `BOT_TIMEZONE` — e.g. `Africa/Nairobi`
+*   **WhatsApp Pairing:** Get a session string from https://7-w.vercel.app/wolf.html, then set it as `SESSION_ID` in Secrets.
 
 ## Stack
 
