@@ -219,17 +219,23 @@ export default {
       // await sendMessage(`📦 *Processing Sticker*\n\n✨ Pack: *WolfBot*\n👤 By: ${pushname}\n🎭 Emoji: ${emoji}\n⏳ Please wait...`);
       
       try {
-        // Get the message key for download
-        const messageKey = m.quoted?.key || {
-          remoteJid: chatId,
-          id: m.message?.extendedTextMessage?.contextInfo?.stanzaId || m.key.id,
-          participant: m.sender
+        // Build the download target — prefer m.quoted (has full CDN URL/key fields).
+        // Fall back to a reconstructed object when m.quoted is absent (sticker arrived
+        // only via contextInfo, not as a Baileys-populated quoted object).
+        const stanzaId = m.message?.extendedTextMessage?.contextInfo?.stanzaId;
+        const ctxParticipant = m.message?.extendedTextMessage?.contextInfo?.participant;
+        const downloadTarget = m.quoted ?? {
+          key: {
+            remoteJid: chatId,
+            id: stanzaId,
+            participant: ctxParticipant || m.key.participant
+          },
+          message: { stickerMessage }
         };
-        
-        // Download the sticker — pass m.quoted directly so Baileys has the
-        // full media URL/key fields needed to fetch from WhatsApp CDN.
+
+        // Download the sticker
         const stickerBuffer = await downloadMediaMessage(
-          m.quoted,
+          downloadTarget,
           'buffer',
           {},
           {

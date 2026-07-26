@@ -28,12 +28,17 @@ export default {
       let inviteCode;
       try {
         inviteCode = await sock.groupInviteCode(jid);
-      } catch {
+      } catch (e1) {
+        // rate-overlimit: WhatsApp is throttling — do NOT retry/revoke, just surface it
+        if (e1.message?.includes('rate') || e1.output?.error === 'rate-overlimit' ||
+            JSON.stringify(e1).includes('rate-overlimit')) {
+          throw new Error('rate-overlimit');
+        }
+        // Any other failure — try once more after a brief pause
         try {
-          await sock.groupRevokeInvite(jid);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           inviteCode = await sock.groupInviteCode(jid);
-        } catch (e2) {
+        } catch {
           throw new Error('Bot needs admin permissions to get group link');
         }
       }
@@ -132,7 +137,9 @@ export default {
       console.error('GroupLink error:', error);
 
       let errorMsg = `❌ *Failed to get group link*\n`;
-      if (error.message?.includes('admin') || error.message?.includes('permission')) {
+      if (error.message?.includes('rate-overlimit') || error.message?.includes('rate')) {
+        errorMsg += `\nWhatsApp is rate-limiting this request.\nPlease wait a minute and try again.`;
+      } else if (error.message?.includes('admin') || error.message?.includes('permission')) {
         errorMsg += `\nBot needs admin permissions.\nMake me admin and try again.`;
       } else {
         errorMsg += `\n${error.message}`;
