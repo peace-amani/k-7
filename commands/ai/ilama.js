@@ -1,11 +1,9 @@
-import axios from 'axios';
+import { callAI } from '../../lib/aiHelper.js';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { vision } from '../../lib/nvidia.js';
 import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
-const LLAMA_FAST    = 'https://apis.xwolf.space/api/nvidia/llama-fast';
 const VISION_MODEL  = 'meta/llama-3.2-11b-vision-instruct';
-const API_KEY       = process.env.XWOLF_NVIDIA_KEY || 'wxa_u_f5wfr2vez6';
 
 export default {
     name: 'ilama',
@@ -55,15 +53,8 @@ export default {
                     { model: VISION_MODEL, maxTokens: 1024, timeoutMs: 60000 }
                 );
             } else {
-                // Text mode — use fast xwolf llama endpoint
-                const res = await axios.get(LLAMA_FAST, {
-                    params: { key: API_KEY, q: query },
-                    timeout: 45000
-                });
-                if (!res.data?.success || !res.data?.result) {
-                    throw new Error(res.data?.error || 'No result returned from API');
-                }
-                reply = res.data.result.trim();
+                // Text mode — use active AI providers via aiHelper
+                reply = await callAI('llama', query);
             }
 
             if (reply.length > 4000) reply = reply.substring(0, 4000) + '\n\n_...(truncated)_';

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { callAI } from '../../lib/aiHelper.js';
 import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
 
 export default {
@@ -82,84 +82,17 @@ export default {
       await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
       // ====== API REQUEST ======
-      const apiUrl = 'https://apis.xwolf.space/api/ai/blackbox';
-      
       console.log(`🤖 Blackbox Query [${mode}]: ${query}`);
-      
-      const _AI_KEY = process.env.XWOLF_API_KEY || process.env.XWOLF_BOT_KEY || 'wxa_u_xwk7sch6xj';
-      const response = await axios({
-        method: 'GET',
-        url: apiUrl,
-        params: {
-          q: enhancedPrompt || query,
-          key: _AI_KEY
-        },
-        timeout: 40000,
-        headers: {
-          'User-Agent': 'WolfBot/1.0',
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        validateStatus: function (status) {
-          return status >= 200 && status < 500;
-        }
-      });
 
-      console.log(`✅ Blackbox Response status: ${response.status}`);
-      
+      let aiResponse = await callAI('blackbox', enhancedPrompt || query);
 
-      // ====== PARSE RESPONSE ======
-      let aiResponse = '';
-      let metadata = {
-        creator: response.data?.creator || 'Silent Wolf',
-        model: 'Blackbox AI',
-        status: true
-      };
-      
-      // Parse Keith API response format
-      if (response.data && typeof response.data === 'object') {
-        const data = response.data;
-        
-        // Extract based on Keith API structure
-        if (data.status === true && data.result) {
-          aiResponse = data.result;
-        } else if (data.response) {
-          aiResponse = data.response;
-        } else if (data.answer) {
-          aiResponse = data.answer;
-        } else if (data.solution) {
-          aiResponse = data.solution;
-        } else if (data.text) {
-          aiResponse = data.text;
-        } else if (data.message) {
-          aiResponse = data.message;
-        } else if (data.error) {
-          // API returned an error
-          throw new Error(data.error || 'Blackbox API error');
-        } else {
-          // Try to extract any text
-          aiResponse = extractBlackboxResponse(data);
-        }
-      } else if (typeof response.data === 'string') {
-        aiResponse = response.data;
-      } else {
-        throw new Error('Invalid API response format');
-      }
-      
       // Check if response is empty or indicates error
       if (!aiResponse || aiResponse.trim() === '') {
         throw new Error('Blackbox returned empty response');
       }
-      
+
       // Clean and format response
       aiResponse = aiResponse.trim();
-      
-      // Remove any error indicators
-      if (aiResponse.toLowerCase().includes('error') || 
-          aiResponse.toLowerCase().includes('failed') ||
-          aiResponse.toLowerCase().includes('unavailable')) {
-        throw new Error(aiResponse);
-      }
       
       // Format based on mode
       aiResponse = formatBlackboxResponse(aiResponse, mode, query);

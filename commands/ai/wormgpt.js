@@ -1,8 +1,5 @@
-import axios from 'axios';
+import { callAI } from '../../lib/aiHelper.js';
 import { getOwnerName, getFooter } from '../../lib/menuHelper.js';
-
-const WORMGPT_API = 'https://apis.xwolf.space/api/ai/wormgpt';
-const WORMGPT_KEY = 'wxa_u_xwk7sch6xj';
 
 export default {
   name: 'wormgpt',
@@ -24,12 +21,7 @@ export default {
     try {
       await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
-      const { data } = await axios.get(WORMGPT_API, {
-        params: { q: query, key: WORMGPT_KEY },
-        timeout: 30000
-      });
-
-      let reply = data?.result || data?.response || data?.answer || data?.text || JSON.stringify(data);
+      let reply = await callAI('wormgpt', query);
       if (reply.length > 4000) reply = reply.substring(0, 4000) + '\n\n_...(truncated)_';
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });

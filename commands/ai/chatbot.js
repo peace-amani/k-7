@@ -36,10 +36,8 @@ import { getPhoneFromLid } from '../../lib/sudo-store.js';
 import {
   AI_MODELS,
   MODEL_PRIORITY,
-  XWOLF_API_BASE,
-  XWOLF_API_KEY,
   extractXWolfResponse,
-  buildTextUrl,
+  getAIQuerySources,
   getModelList
 } from '../../lib/aiModels.js';
 import { vision as nvidiaVision, image as nvidiaImage } from '../../lib/nvidia.js';
@@ -502,52 +500,51 @@ function buildContextPrompt(conversation, newQuery, botName = 'W.O.L.F', userPro
   return context;
 }
 
-// Call a single AI model via apis.xwolf.space.
+// Call a single AI model.
+// apis.xwolf.space is offline — routes through bk9.dev → cod3uchiha fallbacks.
 // Returns the extracted response text, or null on failure.
-// rawQuery: the bare user message — used for models (like wormgpt) that expect a
-// direct question rather than a long system-prompt+history context string.
 async function queryAI(modelKey, prompt, timeout = 35000, rawQuery = null) {
   if (!AI_MODELS[modelKey]) return null;
 
-  // WormGPT works best with a short direct query, not a full context dump.
-  // Using the context prompt causes URL-length failures and poor responses.
+  // Use the bare query for short-form models; full context for everything else
   const queryParam = (modelKey === 'wormgpt' && rawQuery) ? rawQuery : prompt;
-  const url = buildTextUrl(modelKey, queryParam);
-  if (!url) return null;
 
-  try {
-    const response = await axios.get(url, {
-      timeout,
-      headers: {
-        'User-Agent':    'WOLF-Chatbot/2.0',
-        'Accept':        'application/json, text/plain',
-        'Cache-Control': 'no-cache'
-      },
-      validateStatus: (s) => s >= 200 && s < 500
-    });
+  const sources = getAIQuerySources(queryParam);
 
-    if (!response.data) return null;
+  for (const { url, params } of sources) {
+    try {
+      const response = await axios.get(url, {
+        params,
+        timeout,
+        headers: {
+          'User-Agent':    'WOLF-Chatbot/2.0',
+          'Accept':        'application/json, text/plain',
+          'Cache-Control': 'no-cache'
+        },
+        validateStatus: (s) => s >= 200 && s < 500
+      });
 
-    // Parse JSON if the response came back as a string
-    let data = response.data;
-    if (typeof data === 'string') {
-      try { data = JSON.parse(data); } catch { /* keep as string */ }
-    }
+      if (!response.data) continue;
 
-    const text = extractXWolfResponse(data);
-    if (!text || text.length < 3) return null;
+      let data = response.data;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch { /* keep as string */ }
+      }
 
-    // Reject HTML (endpoint returned an error page) and provider-level errors
-    const lower = text.toLowerCase();
-    if (lower.startsWith('<!') || lower.startsWith('<html') ||
-        lower.includes('<!doctype')) return null;
-    if (lower.startsWith('error') || lower.includes('rate limit') ||
-        lower.includes('invalid key') || lower.includes('unauthorized')) return null;
+      const text = extractXWolfResponse(data);
+      if (!text || text.length < 3) continue;
 
-    return text.trim();
-  } catch {
-    return null;
+      const lower = text.toLowerCase();
+      if (lower.startsWith('<!') || lower.startsWith('<html') ||
+          lower.includes('<!doctype')) continue;
+      if (lower.startsWith('error') || lower.includes('rate limit') ||
+          lower.includes('invalid key') || lower.includes('unauthorized')) continue;
+
+      return text.trim();
+    } catch { /* try next source */ }
   }
+
+  return null;
 }
 
 // Analyse an image using NVIDIA Nemotron VL via lib/nvidia.js (same path as the
