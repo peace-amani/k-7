@@ -36,10 +36,8 @@ async function xcasperVideo(ytUrl) {
 }
 
 // ── BK9 YouTube video APIs ────────────────────────────────────────────────
-// youtube  → BK9.url (proxy CDN, not IP-locked), BK9.quality, BK9.filename
-// youtube3 → BK9.downloadUrl, BK9.title, BK9.thumbnail
 async function bk9Video(ytUrl, preferred = '360p') {
-  // 1️⃣ youtube endpoint — returns a proxy CDN URL, reliable
+  // 1️⃣ youtube endpoint — proxy CDN URL, not IP-locked
   try {
     const res = await axios.get(`${BK9_BASE}/youtube`, {
       params: { url: ytUrl, quality: preferred, type: 'video' },
@@ -48,19 +46,17 @@ async function bk9Video(ytUrl, preferred = '360p') {
     });
     const d = res.data;
     if (d?.status === true && d?.BK9?.url) {
-      console.log(`[BK9/youtube] got proxy URL (${d.BK9.quality || preferred}), downloading...`);
       const dl = await axios.get(d.BK9.url, {
         responseType: 'arraybuffer', timeout: 180000, maxRedirects: 5,
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       const buf = Buffer.from(dl.data);
-      if (buf.length < 10000) throw new Error('BK9/youtube: buffer too small');
+      if (buf.length < 10000) throw new Error('buffer too small');
       buf._meta = { quality: d.BK9.quality || preferred, title: d.BK9.filename || '' };
-      console.log(`✅ [BK9/youtube] ${(buf.length/1024/1024).toFixed(1)}MB`);
       return buf;
     }
   } catch (e) {
-    console.log(`[BK9/youtube] failed: ${e.message}`);
+    console.log(`[YTMP4] BK9/youtube failed: ${e.message}`);
   }
 
   // 2️⃣ youtube3 endpoint — downloadUrl field
@@ -73,23 +69,17 @@ async function bk9Video(ytUrl, preferred = '360p') {
     const d = res.data;
     const dlUrl = d?.BK9?.downloadUrl;
     if (d?.status === true && dlUrl && !dlUrl.includes('googlevideo.com')) {
-      console.log(`[BK9/youtube3] got downloadUrl, downloading...`);
       const dl = await axios.get(dlUrl, {
         responseType: 'arraybuffer', timeout: 180000, maxRedirects: 5,
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       const buf = Buffer.from(dl.data);
-      if (buf.length < 10000) throw new Error('BK9/youtube3: buffer too small');
-      buf._meta = {
-        quality: d.BK9.quality || '360p',
-        title: d.BK9.title || '',
-        thumbnail: d.BK9.thumbnail || ''
-      };
-      console.log(`✅ [BK9/youtube3] ${(buf.length/1024/1024).toFixed(1)}MB`);
+      if (buf.length < 10000) throw new Error('buffer too small');
+      buf._meta = { quality: d.BK9.quality || '360p', title: d.BK9.title || '' };
       return buf;
     }
   } catch (e) {
-    console.log(`[BK9/youtube3] failed: ${e.message}`);
+    console.log(`[YTMP4] BK9/youtube3 failed: ${e.message}`);
   }
 
   throw new Error('All BK9 YouTube video endpoints failed');
@@ -177,80 +167,65 @@ export default {
       return sock.sendMessage(jid, { text: `❌ Please provide a video name or YouTube URL.` }, { quoted: m });
     }
 
-    console.log(`🎬 [YTMP4] Query: "${input}" | Quality: ${preferredQuality}`);
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      // ── Step 1: Resolve to a YouTube URL + metadata ───────────────────────
+      // ── Step 1: Resolve to a YouTube URL ─────────────────────────────────
       const isUrl = /^https?:\/\//i.test(input);
-      let ytUrl    = input;
-      let metaTitle     = 'YouTube Video';
-      let metaThumbnail = '';
+      let ytUrl = input;
+      let title = 'YouTube Video';
 
       if (!isUrl) {
-        console.log(`🎬 [YTMP4] Searching YouTube for: "${input}"`);
         const found = await searchYouTube(input);
-        ytUrl         = found.url;
-        metaTitle     = found.title     || metaTitle;
-        metaThumbnail = found.thumbnail || metaThumbnail;
-        console.log(`🎬 [YTMP4] Found: ${ytUrl}`);
-      } else {
-        const vid = ytUrl.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (vid) metaThumbnail = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
+        ytUrl  = found.url;
+        title  = found.title || title;
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      // ── Step 2: Download — BK9 primary, XCasper + Keith as fallbacks ────────
+      // ── Step 2: Download — BK9 primary, XCasper + Keith as fallbacks ─────
       let videoBuffer = null;
-      let title       = metaTitle;
-      let thumbnail   = metaThumbnail;
       let quality     = preferredQuality;
 
-      // 1️⃣ BK9 (youtube → youtube3)
-      if (!videoBuffer) {
-        console.log(`🎬 [YTMP4] Trying BK9...`);
-        try {
-          const bk9Buf = await bk9Video(ytUrl, preferredQuality);
-          videoBuffer  = bk9Buf;
-          if (bk9Buf._meta?.title)     title     = bk9Buf._meta.title     || title;
-          if (bk9Buf._meta?.thumbnail) thumbnail = bk9Buf._meta.thumbnail || thumbnail;
-          if (bk9Buf._meta?.quality)   quality   = bk9Buf._meta.quality   || quality;
-          console.log(`✅ [YTMP4] BK9: ${(videoBuffer.length/1024/1024).toFixed(1)}MB`);
-        } catch (bk9Err) {
-          console.log(`⚠️ [YTMP4] BK9 failed: ${bk9Err.message}`);
-        }
+      // 1️⃣ BK9
+      try {
+        const bk9Buf = await bk9Video(ytUrl, preferredQuality);
+        videoBuffer = bk9Buf;
+        if (bk9Buf._meta?.title)   title   = bk9Buf._meta.title   || title;
+        if (bk9Buf._meta?.quality) quality = bk9Buf._meta.quality || quality;
+      } catch (bk9Err) {
+        console.log(`[YTMP4] BK9 failed: ${bk9Err.message}`);
       }
 
-      // 3️⃣ XCasper
+      // 2️⃣ XCasper
       if (!videoBuffer) {
-        console.log(`🎬 [YTMP4] Trying XCasper...`);
         try {
           const data   = await xcasperVideo(ytUrl);
           const chosen = pickQuality(data.videos, preferredQuality);
-          if (!chosen) throw new Error('no usable format from XCasper');
-          title     = data.title     || title;
-          thumbnail = data.thumbnail || thumbnail;
-          quality   = chosen.quality;
-          console.log(`🎬 [YTMP4] XCasper: ${quality} — downloading...`);
+          if (!chosen) throw new Error('no usable format');
+          title   = data.title   || title;
+          quality = chosen.quality;
           const dlRes = await axios.get(chosen.url, {
             responseType: 'arraybuffer', timeout: 180000, maxRedirects: 5,
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+            headers: { 'User-Agent': 'Mozilla/5.0' }
           });
           videoBuffer = Buffer.from(dlRes.data);
-          if (videoBuffer.length < 10000) throw new Error('XCasper: buffer too small');
-          console.log(`✅ [YTMP4] XCasper: ${(videoBuffer.length/1024/1024).toFixed(1)}MB`);
+          if (videoBuffer.length < 10000) throw new Error('buffer too small');
         } catch (xcErr) {
-          console.log(`⚠️ [YTMP4] XCasper failed: ${xcErr.message} — trying Keith...`);
-          videoBuffer = await keithVideo(ytUrl);
-          quality     = 'HD';
+          console.log(`[YTMP4] XCasper failed: ${xcErr.message}`);
         }
+      }
+
+      // 3️⃣ Keith
+      if (!videoBuffer) {
+        videoBuffer = await keithVideo(ytUrl);
+        quality = 'HD';
       }
 
       if (!videoBuffer) throw new Error('All video sources failed. Try again later.');
 
       const sizeMB = (videoBuffer.length / 1024 / 1024).toFixed(1);
-      if (videoBuffer.length < 10000) throw new Error('Downloaded file is too small — possible error response.');
+      if (videoBuffer.length < 10000) throw new Error('Downloaded file is too small.');
 
       if (parseFloat(sizeMB) > 64) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
@@ -259,43 +234,21 @@ export default {
         }, { quoted: m });
       }
 
-      console.log(`🎬 [YTMP4] Downloaded ${sizeMB}MB — sending...`);
-
-      // ── Step 4: Get thumbnail buffer ──────────────────────────────────────
-      let thumbnailBuffer = null;
-      if (thumbnail) {
-        try {
-          const tr = await axios.get(thumbnail, { responseType: 'arraybuffer', timeout: 10000 });
-          if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
-        } catch {}
-      }
-
       const cleanTitle = title.replace(/[^\w\s.-]/gi, '').substring(0, 50);
 
-      // ── Step 5: Send ──────────────────────────────────────────────────────
+      // ── Step 3: Send ──────────────────────────────────────────────────────
       await sock.sendMessage(jid, {
         video:    videoBuffer,
         mimetype: 'video/mp4',
         fileName: `${cleanTitle}.mp4`,
-        caption:  `🎬 *${title}*\n📹 ${quality} • ${sizeMB}MB\n🐺 ${getBotName()}`,
-        contextInfo: {
-          externalAdReply: {
-            title:               title.substring(0, 60),
-            body:                `📹 ${quality} • ${sizeMB}MB | ${getBotName()}`,
-            mediaType:           2,
-            thumbnail:           thumbnailBuffer,
-            sourceUrl:           ytUrl,
-            mediaUrl:            ytUrl,
-            renderLargerThumbnail: true
-          }
-        }
+        caption:  `🎬 *${title}*\n📹 ${quality} • ${sizeMB}MB\n🐺 ${getBotName()}`
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTMP4] Sent: "${title}" (${quality}, ${sizeMB}MB)`);
+      console.log(`[YTMP4] ✅ "${title}" ${quality} ${sizeMB}MB`);
 
     } catch (err) {
-      console.error(`❌ [YTMP4] ${err.message}`);
+      console.error(`[YTMP4] ❌ ${err.message}`);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
         text: `❌ *Video download failed.*\n\n_${err.message}_`

@@ -49,12 +49,10 @@ async function tryKeithVideo(ytUrl) {
       const d = res.data;
       if (!(d?.status === true || d?.success === true)) continue;
       if (typeof d?.result !== 'string' || !d.result.startsWith('http')) continue;
-      if (d.result.includes('googlevideo.com')) { console.log(`[ytv/${ep}] skipping IP-locked Google CDN URL`); continue; }
-      if (d.result === 'Waiting...') continue;
-      console.log(`[ytv/${ep}] got URL, downloading...`);
+      if (d.result.includes('googlevideo.com') || d.result === 'Waiting...') continue;
       return await downloadBuffer(d.result);
     } catch (e) {
-      console.log(`[ytv/${ep}] failed: ${e.message}`);
+      console.log(`[YTV] keith/${ep} failed: ${e.message}`);
     }
   }
   throw new Error('all Keith video endpoints failed');
@@ -70,17 +68,12 @@ async function tryBk9Video(ytUrl) {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const d = res.data;
-    if (d?.status === true && d?.BK9?.url) {
-      console.log(`[BK9/youtube] got proxy URL, downloading...`);
-      const buf = await downloadBuffer(d.BK9.url);
-      console.log(`✅ [BK9/youtube] ${(buf.length/1024/1024).toFixed(1)}MB`);
-      return buf;
-    }
+    if (d?.status === true && d?.BK9?.url) return await downloadBuffer(d.BK9.url);
   } catch (e) {
-    console.log(`[BK9/youtube] failed: ${e.message}`);
+    console.log(`[YTV] BK9/youtube failed: ${e.message}`);
   }
 
-  // 2️⃣ youtube3 endpoint — downloadUrl field (skip Google CDN)
+  // 2️⃣ youtube3 endpoint — skip IP-locked Google CDN
   try {
     const res = await axios.get(`${BK9_BASE}/youtube3`, {
       params: { url: ytUrl },
@@ -90,13 +83,10 @@ async function tryBk9Video(ytUrl) {
     const d = res.data;
     const dlUrl = d?.BK9?.downloadUrl;
     if (d?.status === true && dlUrl && !dlUrl.includes('googlevideo.com')) {
-      console.log(`[BK9/youtube3] got downloadUrl, downloading...`);
-      const buf = await downloadBuffer(dlUrl);
-      console.log(`✅ [BK9/youtube3] ${(buf.length/1024/1024).toFixed(1)}MB`);
-      return buf;
+      return await downloadBuffer(dlUrl);
     }
   } catch (e) {
-    console.log(`[BK9/youtube3] failed: ${e.message}`);
+    console.log(`[YTV] BK9/youtube3 failed: ${e.message}`);
   }
 
   throw new Error('all BK9 YouTube video endpoints failed');
@@ -148,64 +138,45 @@ export default {
       }, { quoted: m });
     }
 
-    console.log(`🎬 [YTV] Query: "${input}"`);
     await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
     try {
-      // ── Step 1: Resolve to YouTube URL + metadata ─────────────────────────
+      // ── Step 1: Resolve to YouTube URL ───────────────────────────────────
       const isUrl = /^https?:\/\//i.test(input);
-      let ytUrl    = input;
-      let title     = 'YouTube Video';
-      let thumbnail = '';
+      let ytUrl = input;
+      let title = 'YouTube Video';
 
       if (!isUrl) {
-        console.log(`🎬 [YTV] Searching: "${input}"`);
         const found = await searchYouTube(input);
-        ytUrl     = found.url;
-        title     = found.title;
-        thumbnail = found.thumbnail;
-        console.log(`🎬 [YTV] Found: ${title} → ${ytUrl}`);
-      } else {
-        const vid = ytUrl.match(/(?:v=|youtu\.be\/)([^&?\/\s]{11})/i)?.[1] || '';
-        if (vid) thumbnail = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
+        ytUrl = found.url;
+        title = found.title;
       }
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      // ── Step 2: Download — BK9 primary, Keith + XCasper as fallbacks ────────
+      // ── Step 2: Download — BK9 primary, Keith + XCasper as fallbacks ─────
       let videoBuffer = null;
 
-      // 1️⃣ BK9 (youtube → youtube3)
-      if (!videoBuffer) {
-        try {
-          console.log(`🎬 [YTV] Trying BK9...`);
-          videoBuffer = await tryBk9Video(ytUrl);
-          console.log(`🎬 [YTV] BK9 success`);
-        } catch (e) {
-          console.log(`🎬 [YTV] BK9 failed: ${e.message}`);
-        }
+      // 1️⃣ BK9
+      try {
+        videoBuffer = await tryBk9Video(ytUrl);
+      } catch (e) {
+        console.log(`[YTV] BK9 failed: ${e.message}`);
       }
 
-      // 3️⃣ Keith (ytv → ytv4 → mp4)
+      // 2️⃣ Keith
       if (!videoBuffer) {
         try {
-          console.log(`🎬 [YTV] Trying Keith video endpoints...`);
           videoBuffer = await tryKeithVideo(ytUrl);
-          console.log(`🎬 [YTV] Keith success`);
         } catch (e) {
-          console.log(`🎬 [YTV] Keith all failed: ${e.message}`);
+          console.log(`[YTV] Keith failed: ${e.message}`);
         }
       }
 
-      // 4️⃣ XCasper 360p
-      if (!videoBuffer) {
-        console.log(`🎬 [YTV] Trying XCasper...`);
-        videoBuffer = await tryXcasper(ytUrl);
-        console.log(`🎬 [YTV] XCasper success`);
-      }
+      // 3️⃣ XCasper
+      if (!videoBuffer) videoBuffer = await tryXcasper(ytUrl);
 
       const sizeMB = (videoBuffer.length / 1024 / 1024).toFixed(1);
-      console.log(`🎬 [YTV] Downloaded ${sizeMB}MB`);
 
       if (parseFloat(sizeMB) > 64) {
         await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
@@ -214,41 +185,21 @@ export default {
         }, { quoted: m });
       }
 
-      // ── Step 4: Fetch thumbnail buffer ────────────────────────────────────
-      let thumbnailBuffer = null;
-      if (thumbnail) {
-        try {
-          const tr = await axios.get(thumbnail, { responseType: 'arraybuffer', timeout: 10000 });
-          if (tr.data.length > 1000) thumbnailBuffer = Buffer.from(tr.data);
-        } catch {}
-      }
-
       const cleanTitle = title.replace(/[^\w\s.-]/gi, '').substring(0, 50);
 
-      // ── Step 5: Send ──────────────────────────────────────────────────────
+      // ── Step 3: Send ──────────────────────────────────────────────────────
       await sock.sendMessage(jid, {
         video:    videoBuffer,
         mimetype: 'video/mp4',
         fileName: `${cleanTitle}.mp4`,
-        caption:  `🎬 *${title}*\n📹 ${sizeMB}MB\n🐺 ${getBotName()}`,
-        contextInfo: {
-          externalAdReply: {
-            title:               title.substring(0, 60),
-            body:                `📹 ${sizeMB}MB | ${getBotName()}`,
-            mediaType:           2,
-            thumbnail:           thumbnailBuffer,
-            sourceUrl:           ytUrl,
-            mediaUrl:            ytUrl,
-            renderLargerThumbnail: true
-          }
-        }
+        caption:  `🎬 *${title}*\n📹 ${sizeMB}MB\n🐺 ${getBotName()}`
       }, { quoted: m });
 
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
-      console.log(`✅ [YTV] Sent: "${title}" (${sizeMB}MB)`);
+      console.log(`[YTV] ✅ "${title}" ${sizeMB}MB`);
 
     } catch (err) {
-      console.error(`❌ [YTV] ${err.message}`);
+      console.error(`[YTV] ❌ ${err.message}`);
       await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
       await sock.sendMessage(jid, {
         text: `❌ *YTV download failed.*\n\n_${err.message}_`
