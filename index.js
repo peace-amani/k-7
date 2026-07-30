@@ -7146,7 +7146,16 @@ async function startBot(loginMode = 'auto', loginData = null) {
                         const _msgTxt = normC0?.conversation || normC0?.extendedTextMessage?.text || '';
                         const isCommand = _msgTxt.trim().startsWith(_pfx);
 
-                        if (!hasBtn && !hasReaction && !hasEdit && !isCommand) return;
+                        // Allow owner sticker replies and emoji-only replies through —
+                        // these trigger the view-once download path in handleIncomingMessage.
+                        const isSticker_ = !!(c0?.stickerMessage || normC0?.stickerMessage);
+                        const _trimmed   = _msgTxt.trim();
+                        const isEmojiReply_ = _trimmed.length > 0 && _trimmed.length <= 20
+                            && /^[\p{Emoji_Presentation}\p{Emoji}\u200d\ufe0f\s]+$/u.test(_trimmed)
+                            && !!(normC0?.extendedTextMessage?.contextInfo?.quotedMessage
+                                || c0?.extendedTextMessage?.contextInfo?.quotedMessage);
+
+                        if (!hasBtn && !hasReaction && !hasEdit && !isCommand && !isSticker_ && !isEmojiReply_) return;
                         // fall through — button responses, reactions, edits, and owner DM commands
                     } else {
                         return;
