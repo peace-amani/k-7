@@ -2,7 +2,8 @@ import axios from 'axios';
 import yts from 'yt-search';
 import { getBotName } from '../../lib/botname.js';
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
-import { xwolfDownloadVideo } from '../../lib/xwolfApi.js';
+// xwolf disabled — APIs currently down
+// import { xwolfDownloadVideo } from '../../lib/xwolfApi.js';
 
 const XCASPER_VIDEO_API = 'https://apis.xcasper.space/api/downloader/yt-video';
 const KEITH_VIDEO_API   = 'https://apiskeith.top/download/video';
@@ -200,27 +201,13 @@ export default {
 
       await sock.sendMessage(jid, { react: { text: '📥', key: m.key } });
 
-      // ── Step 2: Try xwolf first, then XCasper, then Keith as fallback ─────
+      // ── Step 2: Download — BK9 primary, XCasper + Keith as fallbacks ────────
       let videoBuffer = null;
       let title       = metaTitle;
       let thumbnail   = metaThumbnail;
       let quality     = preferredQuality;
 
-      console.log(`🎬 [YTMP4] Trying xwolf (primary)...`);
-      try {
-        const xwBuf = await xwolfDownloadVideo(ytUrl);
-        if (xwBuf) {
-          videoBuffer = xwBuf;
-          if (xwBuf._meta?.title)     title     = xwBuf._meta.title;
-          if (xwBuf._meta?.thumbnail) thumbnail = xwBuf._meta.thumbnail;
-          if (xwBuf._meta?.quality)   quality   = xwBuf._meta.quality;
-          console.log(`✅ [YTMP4] xwolf: ${(videoBuffer.length/1024/1024).toFixed(1)}MB @ ${quality}`);
-        }
-      } catch (xwErr) {
-        console.log(`⚠️ [YTMP4] xwolf failed: ${xwErr.message}`);
-      }
-
-      // 2️⃣ BK9 (youtube → youtube3)
+      // 1️⃣ BK9 (youtube → youtube3)
       if (!videoBuffer) {
         console.log(`🎬 [YTMP4] Trying BK9...`);
         try {

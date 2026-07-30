@@ -123,7 +123,7 @@ async function fetchXCasper(url) {
 }
 
 async function fetchFbInfo(url) {
-  return (await fetchXWolf(url)) || (await fetchBK9(url)) || (await fetchXCasper(url));
+  return (await fetchBK9(url)) || (await fetchXCasper(url));
 }
 
 export default {
