@@ -28,10 +28,6 @@ export default {
     try {
       await sock.sendMessage(jid, { react: { text: '⏳', key: m.key } });
 
-      const statusMsg = await sock.sendMessage(jid, {
-        text: `🍌 *Generating image...*\n📝 _${prompt.substring(0, 60)}_`
-      }, { quoted: m });
-
       const res = await axios.get(NANO_URL, {
         params: { prompt },
         responseType: 'arraybuffer',
@@ -45,7 +41,6 @@ export default {
         caption: `🍌 *NANOBANANA AI*\n📝 _${prompt}_\n\n_Powered by ${getBotName()}_`
       }, { quoted: m });
 
-      await sock.sendMessage(jid, { delete: statusMsg.key }).catch(() => {});
       await sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
     } catch (err) {

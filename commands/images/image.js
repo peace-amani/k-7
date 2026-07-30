@@ -1,7 +1,25 @@
 import axios from "axios";
 import { getOwnerName, getFooter} from '../../lib/menuHelper.js';
 
-// ── Primary API ───────────────────────────────────────────────────────────────
+// ── Primary API — cod3uchiha image search ─────────────────────────────────────
+async function searchCod3Images(query, limit = 8) {
+    const resp = await axios.get('https://api.cod3uchiha.com/downloaders/img', {
+        params: { text: query, limit: Math.min(limit, 10) },
+        timeout: 15000
+    });
+    const data = resp.data;
+    if (!data?.status || !data?.result?.images?.length) {
+        throw new Error('No results from cod3uchiha image API');
+    }
+    return data.result.images.slice(0, limit).map(r => ({
+        url:       r.url,
+        thumbnail: r.url,
+        title:     r.title || '',
+        source:    ''
+    })).filter(r => r.url?.startsWith('http'));
+}
+
+// ── Fallback 1 — XWolf ────────────────────────────────────────────────────────
 async function searchXWolfImages(query, limit = 8) {
     const resp = await axios.get('https://apis.xwolf.space/api/search/images', {
         params: { q: query },
@@ -19,7 +37,7 @@ async function searchXWolfImages(query, limit = 8) {
     })).filter(r => r.url && r.url.startsWith('http'));
 }
 
-// ── Fallback 1 — DuckDuckGo ───────────────────────────────────────────────────
+// ── Fallback 2 — DuckDuckGo ───────────────────────────────────────────────────
 const DDG_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -143,26 +161,32 @@ export default {
         let images  = [];
         let apiUsed = '';
 
-        // Try XWolf API first, fall back to DDG then Google
+        // Try cod3uchiha first, fall back to XWolf → DDG → Google
         try {
-            images  = await searchXWolfImages(query, limit + 5);
-            apiUsed = 'XWolf';
-        } catch (e1) {
-            console.log(`[IMAGE] XWolf API failed: ${e1.message}`);
+            images  = await searchCod3Images(query, limit + 5);
+            apiUsed = 'cod3uchiha';
+        } catch (e0) {
+            console.log(`[IMAGE] cod3uchiha failed: ${e0.message}`);
             try {
-                images  = await searchDDGImages(query, limit + 5);
-                apiUsed = 'DuckDuckGo';
-            } catch (e2) {
-                console.log(`[IMAGE] DDG failed: ${e2.message}`);
+                images  = await searchXWolfImages(query, limit + 5);
+                apiUsed = 'XWolf';
+            } catch (e1) {
+                console.log(`[IMAGE] XWolf API failed: ${e1.message}`);
                 try {
-                    images  = await searchGoogleImages(query, limit + 5);
-                    apiUsed = 'Google';
-                } catch (e3) {
-                    console.log(`[IMAGE] Google failed: ${e3.message}`);
-                    await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
-                    return sock.sendMessage(jid, {
-                        text: `❌ *Image search failed*\n\nCould not find images for "*${query}*".\n\n💡 Try different keywords or try again shortly.`
-                    }, { quoted: m });
+                    images  = await searchDDGImages(query, limit + 5);
+                    apiUsed = 'DuckDuckGo';
+                } catch (e2) {
+                    console.log(`[IMAGE] DDG failed: ${e2.message}`);
+                    try {
+                        images  = await searchGoogleImages(query, limit + 5);
+                        apiUsed = 'Google';
+                    } catch (e3) {
+                        console.log(`[IMAGE] Google failed: ${e3.message}`);
+                        await sock.sendMessage(jid, { react: { text: '❌', key: m.key } });
+                        return sock.sendMessage(jid, {
+                            text: `❌ *Image search failed*\n\nCould not find images for "*${query}*".\n\n💡 Try different keywords or try again shortly.`
+                        }, { quoted: m });
+                    }
                 }
             }
         }
