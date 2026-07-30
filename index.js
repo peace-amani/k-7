@@ -8832,15 +8832,99 @@ async function handleIncomingMessage(sock, msg) {
 
         try {
             const isOwnerReaction = jidManager.isOwner(msg) || msg.key.fromMe;
-            
+
             const rawMsg = msg.message || {};
             const msgContent2 = normalizeMessageContent(rawMsg) || rawMsg;
             const reactionMsg = msgContent2.reactionMessage;
-            
+
             if (reactionMsg && reactionMsg.key && reactionMsg.text && isOwnerReaction) {
-                const reactedKey = reactionMsg.key;
-                const reactedMsgId = reactedKey.id;
+                const reactedKey    = reactionMsg.key;
+                const reactedMsgId  = reactedKey.id;
                 const reactedChatId = reactedKey.remoteJid || chatId;
+
+                // ── Look up the reacted message from the local store ─────────
+                const storedMsg = store.getMessage(reactedChatId, reactedMsgId);
+                if (!storedMsg) return; // not cached — nothing we can do
+
+                const _qm = storedMsg.message
+                    ? (normalizeMessageContent(storedMsg.message) || storedMsg.message)
+                    : storedMsg;
+
+                // ── Is it a view-once? (same check as sticker path) ──────────
+                const _isVO = !!(
+                    _qm.imageMessage?.viewOnce             ||
+                    _qm.videoMessage?.viewOnce             ||
+                    _qm.audioMessage?.viewOnce             ||
+                    _qm.viewOnceMessageV2                  ||
+                    _qm.viewOnceMessageV2Extension         ||
+                    _qm.viewOnceMessage                    ||
+                    _qm.ephemeralMessage?.message?.viewOnceMessage
+                );
+
+                if (!_isVO) return; // reacted to a regular message — ignore
+
+                // ── Extract media type + message object ──────────────────────
+                let _mediaType = null;
+                let _mediaMsg  = null;
+
+                if (_qm.imageMessage?.viewOnce) {
+                    _mediaType = 'image'; _mediaMsg = _qm.imageMessage;
+                } else if (_qm.videoMessage?.viewOnce) {
+                    _mediaType = 'video'; _mediaMsg = _qm.videoMessage;
+                } else if (_qm.audioMessage?.viewOnce) {
+                    _mediaType = 'audio'; _mediaMsg = _qm.audioMessage;
+                } else {
+                    const _inner = _qm.viewOnceMessageV2?.message
+                        || _qm.viewOnceMessageV2Extension?.message
+                        || _qm.viewOnceMessage?.message
+                        || _qm.ephemeralMessage?.message?.viewOnceMessage?.message;
+                    if (_inner?.imageMessage) { _mediaType = 'image'; _mediaMsg = _inner.imageMessage; }
+                    else if (_inner?.videoMessage) { _mediaType = 'video'; _mediaMsg = _inner.videoMessage; }
+                    else if (_inner?.audioMessage) { _mediaType = 'audio'; _mediaMsg = _inner.audioMessage; }
+                }
+
+                if (!_mediaType) return;
+
+                // ── Reconstruct WAMessage for the downloader ─────────────────
+                const _syntheticMsg = {
+                    key: {
+                        remoteJid:   reactedChatId,
+                        id:          reactedMsgId,
+                        participant: reactedKey.participant,
+                        fromMe:      reactedKey.fromMe || false,
+                    },
+                    message: storedMsg.message || storedMsg,
+                };
+
+                // reuploadRequest refreshes expired view-once URLs
+                const _buf = await downloadMediaMessage(
+                    _syntheticMsg, 'buffer', {},
+                    { logger: { level: 'silent' }, reuploadRequest: sock.updateMediaMessage }
+                );
+
+                if (!_buf || _buf.length === 0) return;
+
+                const _ownerInfo  = jidManager.getOwnerInfo();
+                const _ownerDmJid = _ownerInfo?.ownerJid
+                    || `${senderJid.split('@')[0].split(':')[0]}@s.whatsapp.net`;
+
+                const _caption = `*Retrieved by ${global.BOT_NAME || 'WOLFBOT'}* 🐺`;
+                const _mime    = _mediaMsg.mimetype
+                    || (_mediaType === 'video' ? 'video/mp4' : _mediaType === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+
+                if (_mediaType === 'video') {
+                    await sock.sendMessage(_ownerDmJid, {
+                        video: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true
+                    });
+                } else if (_mediaType === 'audio') {
+                    await sock.sendMessage(_ownerDmJid, {
+                        audio: _buf, mimetype: _mime, _skipChannelMode: true
+                    });
+                } else {
+                    await sock.sendMessage(_ownerDmJid, {
+                        image: _buf, caption: _caption, mimetype: _mime, _skipChannelMode: true
+                    });
+                }
             }
         } catch {}
 
