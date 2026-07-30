@@ -32,6 +32,35 @@ function isReel(url) {
   return /\/reel\/|\/share\/v\//i.test(url);
 }
 
+const BK9_FB = 'https://api.bk9.dev/download/fb';
+
+/**
+ * BK9 Facebook API — returns { videoUrl, hdUrl, sdUrl, title, thumbnail } or null.
+ */
+async function fetchBK9(url) {
+  try {
+    console.log(`[FB] Trying BK9...`);
+    const res = await axios.get(BK9_FB, { params: { url }, timeout: 30000 });
+    const d = res.data?.BK9;
+    if (!res.data?.status || !d) { console.log(`[FB/BK9] not success`); return null; }
+    const hdUrl = d.hd || null;
+    const sdUrl = d.sd || null;
+    const videoUrl = hdUrl || sdUrl || null;
+    if (!videoUrl) { console.log(`[FB/BK9] no video URL`); return null; }
+    console.log(`[FB/BK9] ✅ resolved`);
+    return {
+      videoUrl,
+      hdUrl,
+      sdUrl,
+      title:     d.title     || 'Facebook Video',
+      thumbnail: d.thumbnail || d.thumb || null
+    };
+  } catch (e) {
+    console.log(`[FB/BK9] error: ${e.message}`);
+    return null;
+  }
+}
+
 /**
  * Primary: xwolf API — tries /facebook/reel for reels, /facebook for all others.
  * Returns { videoUrl, title, thumbnail } or null.
@@ -94,7 +123,7 @@ async function fetchXCasper(url) {
 }
 
 async function fetchFbInfo(url) {
-  return (await fetchXWolf(url)) || (await fetchXCasper(url));
+  return (await fetchXWolf(url)) || (await fetchBK9(url)) || (await fetchXCasper(url));
 }
 
 export default {

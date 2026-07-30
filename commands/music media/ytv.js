@@ -6,6 +6,7 @@ import { xwolfDownloadVideo } from '../../lib/xwolfApi.js';
 
 const KEITH_BASE  = 'https://apiskeith.top/download';
 const XCASPER_API = 'https://apis.xcasper.space/api/downloader/yt-video';
+const BK9_BASE    = 'https://api.bk9.dev/download';
 
 // ── Search YouTube and return first result ────────────────────────────────
 async function searchYouTube(query) {
@@ -56,6 +57,48 @@ async function tryKeithVideo(ytUrl) {
     }
   }
   throw new Error('all Keith video endpoints failed');
+}
+
+// ── BK9 YouTube video APIs ────────────────────────────────────────────────
+async function tryBk9Video(ytUrl) {
+  // 1️⃣ youtube endpoint — proxy CDN URL, not IP-locked
+  try {
+    const res = await axios.get(`${BK9_BASE}/youtube`, {
+      params: { url: ytUrl, quality: '720p', type: 'video' },
+      timeout: 30000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const d = res.data;
+    if (d?.status === true && d?.BK9?.url) {
+      console.log(`[BK9/youtube] got proxy URL, downloading...`);
+      const buf = await downloadBuffer(d.BK9.url);
+      console.log(`✅ [BK9/youtube] ${(buf.length/1024/1024).toFixed(1)}MB`);
+      return buf;
+    }
+  } catch (e) {
+    console.log(`[BK9/youtube] failed: ${e.message}`);
+  }
+
+  // 2️⃣ youtube3 endpoint — downloadUrl field (skip Google CDN)
+  try {
+    const res = await axios.get(`${BK9_BASE}/youtube3`, {
+      params: { url: ytUrl },
+      timeout: 30000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const d = res.data;
+    const dlUrl = d?.BK9?.downloadUrl;
+    if (d?.status === true && dlUrl && !dlUrl.includes('googlevideo.com')) {
+      console.log(`[BK9/youtube3] got downloadUrl, downloading...`);
+      const buf = await downloadBuffer(dlUrl);
+      console.log(`✅ [BK9/youtube3] ${(buf.length/1024/1024).toFixed(1)}MB`);
+      return buf;
+    }
+  } catch (e) {
+    console.log(`[BK9/youtube3] failed: ${e.message}`);
+  }
+
+  throw new Error('all BK9 YouTube video endpoints failed');
 }
 
 // ── Source 3: XCasper (360p) ──────────────────────────────────────────────
@@ -145,7 +188,18 @@ export default {
         console.log(`🎬 [YTV] xwolf failed: ${e.message}`);
       }
 
-      // 2️⃣ Keith (ytv → ytv4 → mp4)
+      // 2️⃣ BK9 (youtube → youtube3)
+      if (!videoBuffer) {
+        try {
+          console.log(`🎬 [YTV] Trying BK9...`);
+          videoBuffer = await tryBk9Video(ytUrl);
+          console.log(`🎬 [YTV] BK9 success`);
+        } catch (e) {
+          console.log(`🎬 [YTV] BK9 failed: ${e.message}`);
+        }
+      }
+
+      // 3️⃣ Keith (ytv → ytv4 → mp4)
       if (!videoBuffer) {
         try {
           console.log(`🎬 [YTV] Trying Keith video endpoints...`);
@@ -156,7 +210,7 @@ export default {
         }
       }
 
-      // 3️⃣ XCasper 360p
+      // 4️⃣ XCasper 360p
       if (!videoBuffer) {
         console.log(`🎬 [YTV] Trying XCasper...`);
         videoBuffer = await tryXcasper(ytUrl);

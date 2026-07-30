@@ -6,6 +6,7 @@ import { xwolfDownloadVideo } from '../../lib/xwolfApi.js';
 
 const XCASPER_VIDEO_API = 'https://apis.xcasper.space/api/downloader/yt-video';
 const KEITH_VIDEO_API   = 'https://apiskeith.top/download/video';
+const BK9_BASE          = 'https://api.bk9.dev/download';
 
 // ── Search YouTube and return first result URL ────────────────────────────
 async function searchYouTube(query) {
@@ -31,6 +32,66 @@ async function xcasperVideo(ytUrl) {
     throw new Error(d?.message || 'XCasper returned no video links');
   }
   return d;
+}
+
+// ── BK9 YouTube video APIs ────────────────────────────────────────────────
+// youtube  → BK9.url (proxy CDN, not IP-locked), BK9.quality, BK9.filename
+// youtube3 → BK9.downloadUrl, BK9.title, BK9.thumbnail
+async function bk9Video(ytUrl, preferred = '360p') {
+  // 1️⃣ youtube endpoint — returns a proxy CDN URL, reliable
+  try {
+    const res = await axios.get(`${BK9_BASE}/youtube`, {
+      params: { url: ytUrl, quality: preferred, type: 'video' },
+      timeout: 30000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const d = res.data;
+    if (d?.status === true && d?.BK9?.url) {
+      console.log(`[BK9/youtube] got proxy URL (${d.BK9.quality || preferred}), downloading...`);
+      const dl = await axios.get(d.BK9.url, {
+        responseType: 'arraybuffer', timeout: 180000, maxRedirects: 5,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      const buf = Buffer.from(dl.data);
+      if (buf.length < 10000) throw new Error('BK9/youtube: buffer too small');
+      buf._meta = { quality: d.BK9.quality || preferred, title: d.BK9.filename || '' };
+      console.log(`✅ [BK9/youtube] ${(buf.length/1024/1024).toFixed(1)}MB`);
+      return buf;
+    }
+  } catch (e) {
+    console.log(`[BK9/youtube] failed: ${e.message}`);
+  }
+
+  // 2️⃣ youtube3 endpoint — downloadUrl field
+  try {
+    const res = await axios.get(`${BK9_BASE}/youtube3`, {
+      params: { url: ytUrl },
+      timeout: 30000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const d = res.data;
+    const dlUrl = d?.BK9?.downloadUrl;
+    if (d?.status === true && dlUrl && !dlUrl.includes('googlevideo.com')) {
+      console.log(`[BK9/youtube3] got downloadUrl, downloading...`);
+      const dl = await axios.get(dlUrl, {
+        responseType: 'arraybuffer', timeout: 180000, maxRedirects: 5,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      const buf = Buffer.from(dl.data);
+      if (buf.length < 10000) throw new Error('BK9/youtube3: buffer too small');
+      buf._meta = {
+        quality: d.BK9.quality || '360p',
+        title: d.BK9.title || '',
+        thumbnail: d.BK9.thumbnail || ''
+      };
+      console.log(`✅ [BK9/youtube3] ${(buf.length/1024/1024).toFixed(1)}MB`);
+      return buf;
+    }
+  } catch (e) {
+    console.log(`[BK9/youtube3] failed: ${e.message}`);
+  }
+
+  throw new Error('All BK9 YouTube video endpoints failed');
 }
 
 // ── Download video buffer via Keith API ───────────────────────────────────
@@ -159,6 +220,22 @@ export default {
         console.log(`⚠️ [YTMP4] xwolf failed: ${xwErr.message}`);
       }
 
+      // 2️⃣ BK9 (youtube → youtube3)
+      if (!videoBuffer) {
+        console.log(`🎬 [YTMP4] Trying BK9...`);
+        try {
+          const bk9Buf = await bk9Video(ytUrl, preferredQuality);
+          videoBuffer  = bk9Buf;
+          if (bk9Buf._meta?.title)     title     = bk9Buf._meta.title     || title;
+          if (bk9Buf._meta?.thumbnail) thumbnail = bk9Buf._meta.thumbnail || thumbnail;
+          if (bk9Buf._meta?.quality)   quality   = bk9Buf._meta.quality   || quality;
+          console.log(`✅ [YTMP4] BK9: ${(videoBuffer.length/1024/1024).toFixed(1)}MB`);
+        } catch (bk9Err) {
+          console.log(`⚠️ [YTMP4] BK9 failed: ${bk9Err.message}`);
+        }
+      }
+
+      // 3️⃣ XCasper
       if (!videoBuffer) {
         console.log(`🎬 [YTMP4] Trying XCasper...`);
         try {

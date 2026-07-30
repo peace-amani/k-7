@@ -1,1 +1,2 @@
 - [DM response invisible bug](dm-button-mode.md) — interactive/button messages silently drop in DMs on modern WA; only groups should use gifted-btns interactive send.
+- [BK9 downloader APIs](bk9-apis.md) — response shapes + IP-lock caveats for api.bk9.dev YouTube/Facebook endpoints; Baileys upgraded to rc14 for DM fix.
